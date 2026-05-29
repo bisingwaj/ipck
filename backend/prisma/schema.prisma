@@ -1,5 +1,5 @@
-// Schéma Prisma — Phase 2 : minimal (connexion + /health).
-// Les modèles métier complets sont ajoutés en Phase 3.
+// Schéma Prisma IPCK — modèle de domaine complet (Phase 3).
+// Voir docs/api-spec.md pour le contrat d'API correspondant.
 
 generator client {
   provider = "prisma-client-js"
@@ -10,12 +10,490 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Modèle sentinelle pour valider la chaîne de migration en Phase 2.
-// Remplacé/complété par le modèle de domaine complet en Phase 3.
-model HealthCheck {
+// ──────────────────────────────── Enums ────────────────────────────────
+
+enum Role {
+  member
+  group_leader
+  pastor
+  admin
+}
+
+enum ContentStatus {
+  draft
+  scheduled
+  published
+}
+
+enum GroupRole {
+  member
+  leader
+}
+
+enum PrayerVisibility {
+  public
+  anon
+  private
+}
+
+enum PrayerStatus {
+  pending
+  approved
+  answered
+  rejected
+}
+
+enum RsvpStatus {
+  going
+  cancelled
+}
+
+enum PaymentKind {
+  momo
+  card
+}
+
+enum DonationStatus {
+  pending
+  received
+  failed
+}
+
+enum AmenTxnKind {
+  topup
+  amen
+  redeem
+  refund
+}
+
+enum AmenTxnStatus {
+  completed
+  pending
+  failed
+}
+
+enum AppointmentStatus {
+  tentative
+  confirmed
+  cancelled
+}
+
+enum LiveState {
+  offline
+  live
+  ended
+}
+
+// ──────────────────────────────── Users ────────────────────────────────
+
+model User {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  firstName   String?
+  lastName    String?
+  avatarUrl   String?
+  role        Role     @default(member)
+  interests   String[] @default([])
+  streakCount Int      @default(0)
+  lastReadDay DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  refreshTokens    RefreshToken[]
+  pushTokens       PushToken[]
+  devotionalReads  DevotionalRead[]
+  memberships      GroupMembership[]
+  messages         GroupMessage[]
+  prayers          Prayer[]
+  prayerAmens      PrayerAmen[]
+  rsvps            EventRsvp[]
+  donations        Donation[]
+  wallet           AmenWallet?
+  appointments     Appointment[]    @relation("AppointmentMember")
+  pastorAppointments Appointment[]  @relation("AppointmentPastor")
+  notifications    Notification[]
+  ledGroups        Group[]          @relation("GroupLeader")
+
+  @@map("users")
+}
+
+model RefreshToken {
   id        String   @id @default(cuid())
-  label     String   @default("ok")
+  userId    String
+  tokenHash String   @unique
+  revokedAt DateTime?
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
-  @@map("health_checks")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  expoToken String   @unique
+  platform  String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
+// ───────────────────────────── Devotionals ─────────────────────────────
+
+model Devotional {
+  id         String        @id @default(cuid())
+  date       String
+  title      String
+  verseRef   String
+  verseText  String
+  body       String
+  prayer     String
+  applyTitle String
+  applySteps String[]      @default([])
+  status     ContentStatus @default(published)
+  publishAt  DateTime      @default(now())
+  author     String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  reads DevotionalRead[]
+
+  @@index([publishAt])
+  @@map("devotionals")
+}
+
+model DevotionalRead {
+  id           String   @id @default(cuid())
+  userId       String
+  devotionalId String
+  readAt       DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, devotionalId])
+  @@map("devotional_reads")
+}
+
+// ──────────────────────────── Sermons / Live ───────────────────────────
+
+model Sermon {
+  id           String        @id @default(cuid())
+  title        String
+  speaker      String
+  date         String
+  duration     String
+  series       String
+  live         Boolean       @default(false)
+  videoUrl     String?
+  thumbnailUrl String?
+  status       ContentStatus @default(published)
+  publishAt    DateTime      @default(now())
+  author       String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  liveSession LiveSession?
+
+  @@index([publishAt])
+  @@map("sermons")
+}
+
+model LiveSession {
+  id          String    @id @default(cuid())
+  sermonId    String?   @unique
+  state       LiveState @default(offline)
+  title       String
+  series      String?
+  speaker     String?
+  startedAt   DateTime?
+  viewersLive Int       @default(0)
+  viewersPeak Int       @default(0)
+  inPerson    Int       @default(0)
+  quality     String?
+  sceneActive String?
+  scenes      String[]  @default([])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  sermon Sermon? @relation(fields: [sermonId], references: [id], onDelete: SetNull)
+
+  @@map("live_sessions")
+}
+
+// ──────────────────────────── Groups / Chat ────────────────────────────
+
+model Group {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  leaderId    String?
+  meets       String?
+  color       String   @default("#1F6FEB")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  leader      User?             @relation("GroupLeader", fields: [leaderId], references: [id], onDelete: SetNull)
+  memberships GroupMembership[]
+  messages    GroupMessage[]
+
+  @@map("groups")
+}
+
+model GroupMembership {
+  id         String    @id @default(cuid())
+  userId     String
+  groupId    String
+  role       GroupRole @default(member)
+  lastReadAt DateTime  @default(now())
+  joinedAt   DateTime  @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+  @@map("group_memberships")
+}
+
+model GroupMessage {
+  id        String   @id @default(cuid())
+  groupId   String
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  group  Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  author User  @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([groupId, createdAt])
+  @@map("group_messages")
+}
+
+// ─────────────────────────────── Prayers ───────────────────────────────
+
+model Prayer {
+  id         String           @id @default(cuid())
+  authorId   String
+  text       String
+  visibility PrayerVisibility @default(public)
+  status     PrayerStatus     @default(pending)
+  response   String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  author User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  amens  PrayerAmen[]
+
+  @@index([status, visibility])
+  @@map("prayers")
+}
+
+model PrayerAmen {
+  id        String   @id @default(cuid())
+  prayerId  String
+  userId    String
+  createdAt DateTime @default(now())
+
+  prayer Prayer @relation(fields: [prayerId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([prayerId, userId])
+  @@map("prayer_amens")
+}
+
+// ──────────────────────────────── Events ───────────────────────────────
+
+model ChurchEvent {
+  id          String   @id @default(cuid())
+  name        String
+  startsAt    DateTime
+  whenLabel   String?
+  location    String?
+  capacity    Int?
+  color       String   @default("#1F6FEB")
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rsvps EventRsvp[]
+
+  @@index([startsAt])
+  @@map("church_events")
+}
+
+model EventRsvp {
+  id        String     @id @default(cuid())
+  eventId   String
+  userId    String
+  status    RsvpStatus @default(going)
+  createdAt DateTime   @default(now())
+
+  event ChurchEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, userId])
+  @@map("event_rsvps")
+}
+
+// ─────────────────────────── Giving / Wallet ───────────────────────────
+
+model Fund {
+  id          String   @id
+  name        String
+  description String?
+  accent      String   @default("#1F6FEB")
+  budget      Int?
+  createdAt   DateTime @default(now())
+
+  donations Donation[]
+
+  @@map("funds")
+}
+
+model PaymentMethod {
+  id      String      @id
+  name    String
+  kind    PaymentKind
+  logo    String?
+  color   String?
+  instant Boolean     @default(true)
+  enabled Boolean     @default(true)
+
+  @@map("payment_methods")
+}
+
+model Donation {
+  id        String         @id @default(cuid())
+  ref       String         @unique
+  userId    String
+  amount    Int
+  fundId    String
+  method    String
+  status    DonationStatus @default(pending)
+  anonymous Boolean        @default(false)
+  providerRef String?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fund Fund @relation(fields: [fundId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("donations")
+}
+
+model AmenWallet {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  balanceCoins      Int      @default(0)
+  pendingTopupCoins Int      @default(0)
+  defaultFundId     String   @default("general")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions AmenTransaction[]
+
+  @@map("amen_wallets")
+}
+
+model AmenTransaction {
+  id        String        @id @default(cuid())
+  walletId  String
+  kind      AmenTxnKind
+  coins     Int
+  service   String?
+  fundId    String?
+  method    String?
+  status    AmenTxnStatus @default(completed)
+  createdAt DateTime      @default(now())
+
+  wallet AmenWallet @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId, createdAt])
+  @@map("amen_transactions")
+}
+
+// ────────────────────────────── Appointments ───────────────────────────
+
+model AppointmentTopic {
+  id          String   @id
+  label       String
+  description String?
+  enabled     Boolean  @default(true)
+
+  appointments Appointment[]
+
+  @@map("appointment_topics")
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  userId    String
+  topicId   String
+  pastorId  String?
+  slotStart DateTime
+  location  String?
+  notes     String?
+  status    AppointmentStatus @default(tentative)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  user   User             @relation("AppointmentMember", fields: [userId], references: [id], onDelete: Cascade)
+  pastor User?            @relation("AppointmentPastor", fields: [pastorId], references: [id], onDelete: SetNull)
+  topic  AppointmentTopic @relation(fields: [topicId], references: [id])
+
+  @@index([slotStart])
+  @@index([userId])
+  @@map("appointments")
+}
+
+// ──────────────────────── Notifications / Activity ─────────────────────
+
+model Notification {
+  id       String    @id @default(cuid())
+  userId   String
+  group    String    @default("Today")
+  icon     String    @default("verse")
+  title    String
+  subtitle String?
+  color    String    @default("#1F6FEB")
+  sentAt   DateTime  @default(now())
+  readAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, sentAt])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  kind        String
+  actorLabel  String
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// ────────────────────────────── Reference ──────────────────────────────
+
+model ServiceTime {
+  id          String @id @default(cuid())
+  time        String
+  name        String
+  description String?
+  sortOrder   Int    @default(0)
+
+  @@map("service_times")
 }

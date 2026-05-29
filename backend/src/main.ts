@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import { Env } from './config/env.validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create(AppModule, { bufferLogs: false, rawBody: true });
   const config = app.get(ConfigService<Env, true>);
   const logger = new Logger('Bootstrap');
 
