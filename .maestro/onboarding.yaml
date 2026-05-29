@@ -1,0 +1,24 @@
+# Flow Maestro — Onboarding OTP (S1)
+# Pré-requis : build EAS development/preview installé ; backend joignable via EXPO_PUBLIC_API_URL.
+# Le code OTP est saisi manuellement (provider console en dev) ou via une variable Maestro.
+appId: cd.ipck.connect
+---
+- launchApp:
+    clearState: true
+- tapOn: 'Get started'        # Splash / Onboarding → CTA
+# Saisie du téléphone
+- tapOn:
+    id: 'phone-input'         # à exposer côté UI (testID) ; sinon : tapOn index du champ
+    optional: true
+- inputText: '+243810000099'
+- tapOn: 'Send code'
+# Saisie OTP (remplacer par le code reçu en dev : visible dans les logs backend)
+- tapOn:
+    id: 'otp-input'
+    optional: true
+- inputText: '${OTP_CODE}'
+- tapOn: 'Verify'
+# Assertion : on atteint l'app principale
+- assertVisible:
+    text: 'Today'
+    optional: true

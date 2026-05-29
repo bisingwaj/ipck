@@ -1,0 +1,21 @@
+# Flow Maestro — Don de bout en bout (S4)
+# Pré-requis : utilisateur déjà authentifié (exécuter onboarding.yaml avant, ou état persistant).
+appId: cd.ipck.connect
+---
+- launchApp
+- tapOn: 'Give'                 # onglet Give
+- tapOn:
+    text: '50'                  # montant prédéfini
+    optional: true
+- tapOn: 'Continue'
+- tapOn: 'General fund'
+- tapOn: 'Continue'
+- tapOn: 'M-Pesa'
+- tapOn: 'Confirm'
+# Provider mock règle immédiatement → écran de succès
+- assertVisible:
+    text: 'Thank you'
+    optional: true
+- assertVisible:
+    text: 'received'
+    optional: true
