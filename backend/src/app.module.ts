@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
+import { Env } from './config/env.validation';
 import { TypedConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
@@ -25,6 +29,21 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 @Module({
   imports: [
     TypedConfigModule,
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>) => ({
+        pinoHttp: {
+          level: config.get('LOG_LEVEL', { infer: true }),
+          transport:
+            config.get('NODE_ENV', { infer: true }) === 'production'
+              ? undefined
+              : { target: 'pino-pretty', options: { singleLine: true } },
+          redact: ['req.headers.authorization', 'req.headers.cookie'],
+          autoLogging: { ignore: (req) => req.url === '/health' },
+        },
+      }),
+    }),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 120 }]),
     JwtModule.register({ global: true }),
     PrismaModule,
     RedisModule,
@@ -44,6 +63,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     ReferenceModule,
   ],
   providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },

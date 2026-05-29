@@ -103,4 +103,12 @@ export class TokenService {
       data: { revokedAt: new Date() },
     });
   }
+
+  /** Purge les refresh tokens expirés ou révoqués (tâche d'entretien / cron). */
+  async purgeExpired(): Promise<number> {
+    const res = await this.prisma.refreshToken.deleteMany({
+      where: { OR: [{ expiresAt: { lt: new Date() } }, { revokedAt: { not: null } }] },
+    });
+    return res.count;
+  }
 }
