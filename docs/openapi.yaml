@@ -1,0 +1,296 @@
+openapi: 3.1.0
+info:
+  title: IPCK API
+  description: >
+    API de la plateforme IPCK (app mobile IPCK Connect + dashboard IPCK House).
+    Squelette initial (Phase 1) — la source de vérité runtime sera l'OpenAPI
+    généré par NestJS/Swagger sur `/docs` (Phase 3).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Dev local
+  - url: https://api.ipck.example/api/v1
+    description: Production
+security:
+  - bearerAuth: []
+tags:
+  - { name: auth, description: Authentification OTP + JWT }
+  - { name: users, description: Profil & membres }
+  - { name: devotionals }
+  - { name: sermons }
+  - { name: live }
+  - { name: groups }
+  - { name: prayers }
+  - { name: events }
+  - { name: giving, description: Dons, fonds, wallet }
+  - { name: appointments }
+  - { name: notifications }
+  - { name: admin, description: Dashboard }
+  - { name: reference }
+
+paths:
+  /health:
+    get:
+      tags: [reference]
+      summary: Santé du service (DB + Redis)
+      security: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  db: { type: string, example: up }
+                  redis: { type: string, example: up }
+
+  /auth/otp/request:
+    post:
+      tags: [auth]
+      summary: Demande un code OTP par SMS
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, example: '+243810000000' }
+      responses:
+        '200':
+          description: OTP envoyé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  requestId: { type: string }
+                  expiresIn: { type: integer, example: 300 }
+        '429': { $ref: '#/components/responses/Error' }
+
+  /auth/otp/verify:
+    post:
+      tags: [auth]
+      summary: Vérifie l'OTP et émet les tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { type: string }
+                code: { type: string, example: '123456' }
+      responses:
+        '200':
+          description: Authentifié
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  isNewUser: { type: boolean }
+                  user: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Error' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotation du refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties: { refreshToken: { type: string } }
+      responses:
+        '200':
+          description: Nouveaux tokens
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+
+  /auth/me:
+    get:
+      tags: [auth]
+      summary: Utilisateur courant
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Error' }
+
+  /devotionals/today:
+    get:
+      tags: [devotionals]
+      summary: Dévotion du jour
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Devotional' }
+
+  /devotionals:
+    get:
+      tags: [devotionals]
+      summary: Historique des dévotions (paginé)
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/PageSize' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Paginated'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Devotional' }
+
+  /giving/donations:
+    post:
+      tags: [giving]
+      summary: Crée un don (initie le paiement)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, fundId, method]
+              properties:
+                amount: { type: number, example: 50 }
+                fundId: { type: string, example: general }
+                method: { type: string, example: mpesa }
+                anonymous: { type: boolean, default: false }
+      responses:
+        '201':
+          description: Don créé (pending)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Donation' }
+
+  /giving/wallet:
+    get:
+      tags: [giving]
+      summary: Wallet Amen du membre
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AmenWallet' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, default: 1, minimum: 1 }
+    PageSize:
+      name: pageSize
+      in: query
+      schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+  responses:
+    Error:
+      description: Erreur
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Error:
+      type: object
+      properties:
+        statusCode: { type: integer, example: 400 }
+        code: { type: string, example: VALIDATION_ERROR }
+        message: { type: string }
+    Paginated:
+      type: object
+      properties:
+        data: { type: array, items: {} }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        phone: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        avatarUrl: { type: string, nullable: true }
+        role: { type: string, enum: [member, group_leader, pastor, admin] }
+        interests: { type: array, items: { type: string } }
+        streakCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    Devotional:
+      type: object
+      properties:
+        id: { type: string }
+        date: { type: string }
+        title: { type: string }
+        verseRef: { type: string }
+        verseText: { type: string }
+        body: { type: string }
+        prayer: { type: string }
+        applyTitle: { type: string }
+        applySteps: { type: array, items: { type: string } }
+        read: { type: boolean }
+    Donation:
+      type: object
+      properties:
+        id: { type: string }
+        ref: { type: string, example: GFT-024-381 }
+        amount: { type: number }
+        fundId: { type: string }
+        method: { type: string }
+        status: { type: string, enum: [pending, received, failed] }
+        anonymous: { type: boolean }
+        createdAt: { type: string, format: date-time }
+    AmenWallet:
+      type: object
+      properties:
+        balanceCoins: { type: integer }
+        pendingTopupCoins: { type: integer }
+        defaultFund: { type: string }
+        recent:
+          type: array
+          items: { $ref: '#/components/schemas/AmenTransaction' }
+    AmenTransaction:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [topup, amen, redeem, refund] }
+        coins: { type: integer }
+        when: { type: string }
+        service: { type: string, nullable: true }
+        fund: { type: string, nullable: true }
+        method: { type: string, nullable: true }
+        status: { type: string, enum: [completed, pending, failed] }

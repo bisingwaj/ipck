@@ -1,0 +1,21 @@
+// Schéma Prisma — Phase 2 : minimal (connexion + /health).
+// Les modèles métier complets sont ajoutés en Phase 3.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Modèle sentinelle pour valider la chaîne de migration en Phase 2.
+// Remplacé/complété par le modèle de domaine complet en Phase 3.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  label     String   @default("ok")
+  createdAt DateTime @default(now())
+
+  @@map("health_checks")
+}

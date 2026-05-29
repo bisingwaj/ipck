@@ -1,0 +1,33 @@
+{
+  "expo": {
+    "name": "IPCK Connect",
+    "slug": "ipck-connect",
+    "scheme": "ipckconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F7F5F0",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "cd.ipck.connect"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1F6FEB"
+      },
+      "package": "cd.ipck.connect"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-font"
+    ]
+  }
+}

@@ -1,0 +1,119 @@
+/* ─────────────────────────────────────────────────────────────
+   IBM Carbon — Design tokens (g10 white theme)
+   Reference: https://carbondesignsystem.com/elements/colors/tokens/
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Gray scale ── */
+  --gray-10:  #f4f4f4;
+  --gray-20:  #e0e0e0;
+  --gray-30:  #c6c6c6;
+  --gray-40:  #a8a8a8;
+  --gray-50:  #8d8d8d;
+  --gray-60:  #6f6f6f;
+  --gray-70:  #525252;
+  --gray-80:  #393939;
+  --gray-90:  #262626;
+  --gray-100: #161616;
+
+  /* ── Blue (interactive) ── */
+  --blue-20:  #d0e2ff;
+  --blue-60:  #0f62fe;
+  --blue-70:  #0043ce;
+  --blue-80:  #002d9c;
+
+  /* ── Status ── */
+  --red-50:   #fa4d56;
+  --red-60:   #da1e28;
+  --red-70:   #a2191f;
+  --red-light:#ffd7d9;
+  --green-40: #42be65;
+  --green-50: #24a148;
+  --green-60: #198038;
+  --green-light: #defbe6;
+  --yellow-30:#f1c21b;
+  --yellow-20:#fddc69;
+  --yellow-light: #fcf4d6;
+  --purple-60:#8a3ffc;
+  --teal-50:  #009d9a;
+  --magenta-60:#d02670;
+
+  /* ── Theme: g10 (white) ── */
+  --ui-background:  #ffffff;
+  --ui-01:          #f4f4f4;     /* secondary surface */
+  --ui-02:          #ffffff;
+  --ui-03:          #e0e0e0;     /* subtle borders */
+  --ui-04:          #8d8d8d;     /* medium borders */
+  --ui-05:          #161616;
+  --interactive-01: #0f62fe;
+  --interactive-02: #393939;
+  --interactive-03: #0f62fe;
+  --interactive-04: #0f62fe;
+
+  --text-01:        #161616;
+  --text-02:        #525252;
+  --text-03:        #a8a8a8;
+  --text-04:        #ffffff;     /* inverse */
+  --text-05:        #6f6f6f;     /* helper */
+  --text-error:     #da1e28;
+  --link-01:        #0f62fe;
+
+  --field-01:       #f4f4f4;
+  --field-02:       #ffffff;
+  --hover-ui:       #e5e5e5;
+  --hover-row:      #e5e5e5;
+  --selected-ui:    #cacaca;
+  --focus:          #0f62fe;
+  --inverse-01:     #ffffff;
+  --inverse-02:     #393939;
+
+  /* ── Header (always dark in Carbon UI Shell) ── */
+  --header-bg:      #161616;
+  --header-text:    #f4f4f4;
+  --header-active:  #393939;
+  --header-border:  #393939;
+
+  /* ── Spacing scale (Carbon) ── */
+  --spacing-01: 0.125rem;  /*  2px */
+  --spacing-02: 0.25rem;   /*  4px */
+  --spacing-03: 0.5rem;    /*  8px */
+  --spacing-04: 0.75rem;   /* 12px */
+  --spacing-05: 1rem;      /* 16px */
+  --spacing-06: 1.5rem;    /* 24px */
+  --spacing-07: 2rem;      /* 32px */
+  --spacing-08: 2.5rem;    /* 40px */
+  --spacing-09: 3rem;      /* 48px */
+  --spacing-10: 4rem;      /* 64px */
+  --spacing-11: 5rem;      /* 80px */
+  --spacing-12: 6rem;      /* 96px */
+  --spacing-13: 10rem;     /* 160px */
+
+  /* ── Layout ── */
+  --layout-header-height: 3rem;       /* 48px */
+  --layout-sidenav-width: 16rem;      /* 256px */
+  --layout-sidenav-rail:  3rem;       /* 48px */
+
+  /* ── Type ── */
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+}
+
+/* ── Type scale: Productive ── */
+.t-caption-01    { font: 400 0.75rem/1rem var(--font-sans); letter-spacing: 0.32px; }
+.t-helper-text   { font: 400 0.75rem/1rem var(--font-sans); letter-spacing: 0.32px; color: var(--text-05); }
+.t-label-01      { font: 400 0.75rem/1rem var(--font-sans); letter-spacing: 0.32px; }
+.t-body-short-01 { font: 400 0.875rem/1.125rem var(--font-sans); letter-spacing: 0.16px; }
+.t-body-long-01  { font: 400 0.875rem/1.25rem var(--font-sans); letter-spacing: 0.16px; }
+.t-body-short-02 { font: 400 1rem/1.375rem var(--font-sans); letter-spacing: 0; }
+.t-body-long-02  { font: 400 1rem/1.5rem var(--font-sans); letter-spacing: 0; }
+.t-heading-01    { font: 600 0.875rem/1.125rem var(--font-sans); letter-spacing: 0.16px; }
+.t-heading-02    { font: 600 1rem/1.375rem var(--font-sans); letter-spacing: 0; }
+.t-heading-03    { font: 400 1.25rem/1.75rem var(--font-sans); letter-spacing: 0; }
+.t-heading-04    { font: 400 1.75rem/2.25rem var(--font-sans); letter-spacing: 0; }
+.t-heading-05    { font: 400 2rem/2.5rem var(--font-sans); letter-spacing: 0; }
+.t-heading-06    { font: 300 2.625rem/3.125rem var(--font-sans); letter-spacing: 0; }
+.t-heading-07    { font: 300 3.375rem/4rem var(--font-sans); letter-spacing: 0; }
+.t-code-01       { font: 400 0.75rem/1rem var(--font-mono); letter-spacing: 0.32px; }
+.t-code-02       { font: 400 0.875rem/1.25rem var(--font-mono); letter-spacing: 0.32px; }
+
+.t-mono          { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
