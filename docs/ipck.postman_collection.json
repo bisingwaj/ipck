@@ -1,0 +1,174 @@
+{
+  "info": {
+    "name": "IPCK API",
+    "description": "Collection de l'API IPCK (mobile + dashboard). Voir docs/api-spec.md. Variables: baseUrl, phone, otp, accessToken, refreshToken.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3333/api/v1" },
+    { "key": "phone", "value": "+243810000099" },
+    { "key": "otp", "value": "" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Request OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/request",
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP (saves tokens)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const j = pm.response.json();",
+                  "if (j.accessToken) pm.collectionVariables.set('accessToken', j.accessToken);",
+                  "if (j.refreshToken) pm.collectionVariables.set('refreshToken', j.refreshToken);",
+                  "pm.test('tokens reçus', () => pm.expect(j.accessToken).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/verify",
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"{{phone}}\",\n  \"code\": \"{{otp}}\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        { "name": "Me", "request": { "method": "GET", "url": "{{baseUrl}}/auth/me" } },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/logout",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Today",
+      "item": [
+        { "name": "Devotional today", "request": { "method": "GET", "url": "{{baseUrl}}/devotionals/today" } },
+        { "name": "Devotionals (history)", "request": { "method": "GET", "url": "{{baseUrl}}/devotionals?page=1&pageSize=20" } },
+        { "name": "Streak", "request": { "method": "GET", "url": "{{baseUrl}}/users/me/streak" } }
+      ]
+    },
+    {
+      "name": "Watch / Live",
+      "item": [
+        { "name": "Sermons", "request": { "method": "GET", "url": "{{baseUrl}}/sermons" } },
+        { "name": "Live current", "request": { "method": "GET", "url": "{{baseUrl}}/live/current" } }
+      ]
+    },
+    {
+      "name": "Give",
+      "item": [
+        { "name": "Funds", "request": { "method": "GET", "url": "{{baseUrl}}/giving/funds" } },
+        { "name": "Payment methods", "request": { "method": "GET", "url": "{{baseUrl}}/giving/payment-methods" } },
+        {
+          "name": "Create donation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/giving/donations",
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 50,\n  \"fundId\": \"general\",\n  \"method\": \"mpesa\"\n}" }
+          }
+        },
+        { "name": "My donations", "request": { "method": "GET", "url": "{{baseUrl}}/giving/donations" } },
+        { "name": "Wallet", "request": { "method": "GET", "url": "{{baseUrl}}/giving/wallet" } },
+        {
+          "name": "Wallet topup",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/giving/wallet/topup",
+            "body": { "mode": "raw", "raw": "{\n  \"coins\": 50,\n  \"method\": \"mpesa\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Community",
+      "item": [
+        { "name": "My groups", "request": { "method": "GET", "url": "{{baseUrl}}/groups?mine=true" } },
+        { "name": "Group messages", "request": { "method": "GET", "url": "{{baseUrl}}/groups/:id/messages" } },
+        {
+          "name": "Send message",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/groups/:id/messages",
+            "body": { "mode": "raw", "raw": "{\n  \"text\": \"Hello group\"\n}" }
+          }
+        },
+        { "name": "Prayer wall", "request": { "method": "GET", "url": "{{baseUrl}}/prayers" } },
+        {
+          "name": "Submit prayer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/prayers",
+            "body": { "mode": "raw", "raw": "{\n  \"text\": \"Please pray for...\",\n  \"visibility\": \"public\"\n}" }
+          }
+        },
+        { "name": "Events", "request": { "method": "GET", "url": "{{baseUrl}}/events" } }
+      ]
+    },
+    {
+      "name": "Profile / Appointments",
+      "item": [
+        { "name": "Topics", "request": { "method": "GET", "url": "{{baseUrl}}/appointments/topics" } },
+        { "name": "Slots", "request": { "method": "GET", "url": "{{baseUrl}}/appointments/slots" } },
+        { "name": "My appointments", "request": { "method": "GET", "url": "{{baseUrl}}/appointments/mine" } },
+        { "name": "Notifications", "request": { "method": "GET", "url": "{{baseUrl}}/notifications" } },
+        { "name": "Service times", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "{{baseUrl}}/reference/service-times" } }
+      ]
+    },
+    {
+      "name": "Dashboard (pastor+)",
+      "item": [
+        { "name": "Overview", "request": { "method": "GET", "url": "{{baseUrl}}/admin/overview" } },
+        { "name": "Prayer queue", "request": { "method": "GET", "url": "{{baseUrl}}/prayers/queue" } },
+        { "name": "Appointments agenda", "request": { "method": "GET", "url": "{{baseUrl}}/appointments" } },
+        { "name": "Giving summary", "request": { "method": "GET", "url": "{{baseUrl}}/giving/admin/summary" } },
+        { "name": "Activity", "request": { "method": "GET", "url": "{{baseUrl}}/admin/activity" } },
+        { "name": "Upcoming content", "request": { "method": "GET", "url": "{{baseUrl}}/admin/content/upcoming" } }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        { "name": "Health", "request": { "auth": { "type": "noauth" }, "method": "GET", "url": "http://localhost:3333/health" } }
+      ]
+    }
+  ]
+}
