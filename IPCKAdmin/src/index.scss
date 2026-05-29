@@ -1,0 +1,28 @@
+@use '@carbon/styles';
+
+.ipck-page {
+  padding: 2rem;
+  max-width: 1200px;
+}
+.ipck-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.ipck-kpi {
+  padding: 1rem 1.25rem;
+  background: var(--cds-layer);
+  border-left: 3px solid var(--cds-border-interactive);
+}
+.ipck-kpi .value {
+  font-size: 2rem;
+  font-weight: 600;
+}
+.ipck-login {
+  max-width: 360px;
+  margin: 12vh auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
