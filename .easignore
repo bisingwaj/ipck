@@ -1,0 +1,28 @@
+# EAS Build archive la racine du dépôt git (monorepo) → on exclut tout ce qui
+# n'est PAS nécessaire au build de l'app mobile (IPCKConnectMobile).
+# Réduit l'archive (sinon ~546 Mo de node_modules) et accélère/fiabilise le build.
+
+# Dépendances (EAS réinstalle côté serveur)
+**/node_modules/
+
+# Autres apps du monorepo, non requises pour le build mobile
+backend/
+IPCKAdmin/
+IPCKHouse-Dashboard/
+docs/
+.agents/
+.maestro/
+
+# Caches / sorties de build
+**/.expo/
+**/dist/
+**/build/
+**/web-build/
+*.tsbuildinfo
+
+# Médias volumineux
+**/*.mp4
+**/*.mov
+
+# Divers
+.git/

@@ -1,0 +1,19 @@
+# Expo / React Native
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+ios/
+android/
+
+# Logs & caches
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# Médias volumineux (vidéos auto-hébergées côté backend)
+*.mp4
+*.mov
