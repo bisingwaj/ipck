@@ -35,5 +35,5 @@ COPY backend/package.json ./
 RUN mkdir -p media/videos
 
 EXPOSE 3000
-# Applique les migrations puis démarre l'API
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node dist/main.js"]
+# Migrations Prisma puis API — via start.sh (le && est dans un vrai shell, fiable)
+CMD ["sh", "start.sh"]
