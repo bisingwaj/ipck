@@ -1,0 +1,18 @@
+# Contexte Docker (build Railway depuis la racine) — n'embarquer que le backend.
+**/node_modules
+**/dist
+**/build
+**/.expo
+**/web-build
+**/*.mp4
+**/*.mov
+.git
+.github
+
+# Autres apps du monorepo (inutiles pour le backend)
+IPCKConnectMobile
+IPCKAdmin
+IPCKHouse-Dashboard
+docs
+.agents
+.maestro

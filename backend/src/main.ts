@@ -56,8 +56,9 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   const port = config.get('PORT', { infer: true });
-  await app.listen(port);
-  logger.log(`IPCK backend démarré sur http://localhost:${port} (docs: /docs)`);
+  // 0.0.0.0 requis par Railway/conteneurs (sinon l'app n'est pas joignable → 502).
+  await app.listen(port, '0.0.0.0');
+  logger.log(`IPCK backend démarré sur le port ${port} (docs: /docs)`);
 }
 
 void bootstrap();
