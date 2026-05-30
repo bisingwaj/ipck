@@ -55,10 +55,12 @@ async function bootstrap() {
 
   app.enableShutdownHooks();
 
-  const port = config.get('PORT', { infer: true });
+  // Lecture DIRECTE de la variable PORT injectée par Railway (priorité absolue),
+  // pour éliminer toute ambiguïté de config. Fallback sur la config validée puis 3000.
+  const port = Number(process.env.PORT) || config.get('PORT', { infer: true }) || 3000;
   // 0.0.0.0 requis par Railway/conteneurs (sinon l'app n'est pas joignable → 502).
   await app.listen(port, '0.0.0.0');
-  logger.log(`IPCK backend démarré sur le port ${port} (docs: /docs)`);
+  logger.log(`IPCK backend démarré et à l'écoute sur 0.0.0.0:${port} (docs: /docs)`);
 }
 
 void bootstrap();
