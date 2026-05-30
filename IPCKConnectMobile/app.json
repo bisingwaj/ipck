@@ -31,6 +31,12 @@
       "expo-asset",
       "expo-secure-store",
       "expo-video"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ec98537f-836b-4bcd-ad13-7e885ddf8989"
+      }
+    },
+    "owner": "david24300"
   }
 }
