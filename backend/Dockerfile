@@ -24,6 +24,11 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package.json ./
 
+# Dossier des vidéos auto-hébergées servies sur /media (vide par défaut ;
+# en prod, montez un Volume Railway sur /app/media pour la persistance,
+# ou pointez videoUrl vers un stockage objet S3/R2). Voir DEPLOY.md.
+RUN mkdir -p media/videos
+
 EXPOSE 3000
 # Applique les migrations puis démarre l'API
 CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node dist/main.js"]
