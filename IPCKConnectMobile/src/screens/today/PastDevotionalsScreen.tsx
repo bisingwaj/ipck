@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar } from '../../components';
-import { pastDevotionals } from '../../data/mock';
+import { usePastDevotionals } from '../../api/hooks';
 
 export default function PastDevotionalsScreen() {
   const nav = useNavigation<any>();
+  const pastDevotionals = usePastDevotionals();
   return (
     <ScreenContainer>
       <TopBar back title="Past devotionals" />

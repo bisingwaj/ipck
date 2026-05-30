@@ -5,7 +5,7 @@ import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, TopBar } from '../../components';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { todayDevotional } from '../../data/mock';
+import { useTodayDevotional } from '../../api/hooks';
 
 type Section = 'read' | 'prayer' | 'apply';
 
@@ -18,6 +18,7 @@ const TABS: { id: Section; label: string }[] = [
 export default function DevotionalScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const todayDevotional = useTodayDevotional();
   const [section, setSection] = useState<Section>('read');
   const [doneApply, setDoneApply] = useState<number[]>([]);
 

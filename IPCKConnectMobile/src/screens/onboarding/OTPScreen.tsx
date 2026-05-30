@@ -1,15 +1,20 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, Alert } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, ScreenContainer, TopBar } from '../../components';
+import { useAuth } from '../../auth/AuthContext';
+import { USE_MOCKS } from '../../api/config';
+import { apiMessage } from '../../api/errors';
 
 export default function OTPScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
+  const { verifyOtp } = useAuth();
   const phone = route.params?.phone || '+243 •• ••• ••••';
   const [digits, setDigits] = useState(['', '', '', '', '', '']);
+  const [busy, setBusy] = useState(false);
   const refs = useRef<(TextInput | null)[]>([]);
   const filled = digits.every(d => d.length === 1);
 
@@ -18,11 +23,28 @@ export default function OTPScreen() {
     if (v && i < 5) refs.current[i + 1]?.focus();
   };
 
+  const onConfirm = async () => {
+    if (USE_MOCKS) {
+      nav.navigate('ProfileSetup');
+      return;
+    }
+    try {
+      setBusy(true);
+      const { isNewUser } = await verifyOtp(phone, digits.join(''));
+      if (isNewUser) nav.navigate('ProfileSetup');
+      else nav.reset({ index: 0, routes: [{ name: 'Main' }] });
+    } catch (e) {
+      Alert.alert('Code invalide', apiMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <ScreenContainer
       scroll={false}
       padded={false}
-      footer={<Button fullWidth disabled={!filled} onPress={() => nav.navigate('ProfileSetup')}>Confirm</Button>}
+      footer={<Button fullWidth disabled={!filled || busy} onPress={onConfirm}>{busy ? 'Verifying…' : 'Confirm'}</Button>}
     >
       <TopBar back />
       <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 8 }}>

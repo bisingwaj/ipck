@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-import { funds } from '../../data/mock';
+import { useFunds } from '../../api/hooks';
 
 export default function GiveFundScreen() {
   const nav = useNavigation<any>();
+  const funds = useFunds();
   const [picked, setPicked] = useState('general');
   return (
     <ScreenContainer

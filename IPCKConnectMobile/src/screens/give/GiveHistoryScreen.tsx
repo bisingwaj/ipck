@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar } from '../../components';
-import { giftHistory } from '../../data/mock';
+import { useGiftHistory } from '../../api/hooks';
 
 export default function GiveHistoryScreen() {
   const nav = useNavigation<any>();
+  const giftHistory = useGiftHistory();
   const total = giftHistory.reduce((s, g) => s + g.amount, 0);
   return (
     <ScreenContainer>

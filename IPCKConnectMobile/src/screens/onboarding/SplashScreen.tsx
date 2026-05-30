@@ -4,10 +4,21 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { BrandMark } from '../../components';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function SplashScreen() {
   const nav = useNavigation<any>();
-  useEffect(() => { const t = setTimeout(() => nav.replace('Onboarding'), 1100); return () => clearTimeout(t); }, [nav]);
+  const { bootstrapped, isAuthenticated } = useAuth();
+
+  // Garde d'auth : route vers Main si déjà connecté (token persistant), sinon onboarding.
+  useEffect(() => {
+    if (!bootstrapped) return;
+    const t = setTimeout(() => {
+      if (isAuthenticated) nav.reset({ index: 0, routes: [{ name: 'Main' }] });
+      else nav.replace('Onboarding');
+    }, 600);
+    return () => clearTimeout(t);
+  }, [nav, bootstrapped, isAuthenticated]);
   return (
     <View style={styles.wrap}>
       <BrandMark size={72} />

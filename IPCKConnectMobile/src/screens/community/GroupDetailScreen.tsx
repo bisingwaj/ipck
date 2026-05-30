@@ -4,11 +4,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-import { allGroups } from '../../data/mock';
+import { useAllGroups } from '../../api/hooks';
 
 export default function GroupDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
+  const allGroups = useAllGroups();
   const id = route.params?.id;
   const group = allGroups.find(g => g.id === id) || allGroups[0];
 

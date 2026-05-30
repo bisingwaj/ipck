@@ -4,11 +4,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar, GeoArt, Pill } from '../../components';
-import { sermons } from '../../data/mock';
+import { useSermons } from '../../api/hooks';
 
 export default function SermonDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
+  const sermons = useSermons();
   const id = route.params?.id;
   const sermon = sermons.find(s => s.id === id) || sermons[0];
   const [playing, setPlaying] = useState(false);

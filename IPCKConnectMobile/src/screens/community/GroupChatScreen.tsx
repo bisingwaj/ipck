@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, TopBar } from '../../components';
-import { allGroups } from '../../data/mock';
+import { useAllGroups } from '../../api/hooks';
 
 const MESSAGES = [
   { who: 'Pastor Esther', t: "Sisters — let's pause for a moment and lift Mama Joseph in prayer. Her husband is in hospital.", ago: '08:42', mine: false },
@@ -20,6 +20,7 @@ export default function GroupChatScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const allGroups = useAllGroups();
   const group = allGroups.find(g => g.id === route.params?.id) || allGroups[0];
   const [msg, setMsg] = useState('');
 

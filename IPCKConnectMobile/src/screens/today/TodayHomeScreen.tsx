@@ -4,10 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { BrandWordmark, Icon, ScreenContainer, TopBar, GeoArt } from '../../components';
-import { todayDevotional, sermons } from '../../data/mock';
+import { useTodayDevotional, useSermons } from '../../api/hooks';
 
 export default function TodayHomeScreen() {
   const nav = useNavigation<any>();
+  const todayDevotional = useTodayDevotional();
+  const sermons = useSermons();
   const liveSermon = sermons.find(s => s.live);
   return (
     <ScreenContainer>

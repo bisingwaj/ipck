@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, GeoArt, Pill } from '../../components';
-import { wallet as initialWallet, liveAmens } from '../../data/mock';
+import { useWallet, useLiveAmens } from '../../api/hooks';
 
 // ─────────────────────────────────────────────────────────────
 // LiveScreen
@@ -38,6 +38,8 @@ const COIN_OPTIONS = [1, 5, 10, 25];
 export default function LiveScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const initialWallet = useWallet();
+  const liveAmens = useLiveAmens();
 
   const [tab, setTab] = useState<Tab>('chat');
   const [msg, setMsg] = useState('');

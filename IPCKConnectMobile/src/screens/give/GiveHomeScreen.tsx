@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar, GeoArt } from '../../components';
-import { wallet } from '../../data/mock';
+import { useWallet } from '../../api/hooks';
 
 export default function GiveHomeScreen() {
   const nav = useNavigation<any>();
+  const wallet = useWallet();
   return (
     <ScreenContainer>
       <TopBar

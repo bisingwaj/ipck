@@ -4,9 +4,14 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer } from '../../components';
+import { registerPushToken } from '../../api/push';
 
 export default function NotifPermissionScreen() {
   const nav = useNavigation<any>();
+  const onAllow = async () => {
+    await registerPushToken();
+    nav.navigate('Welcome');
+  };
   return (
     <ScreenContainer scroll={false}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 18 }}>
@@ -29,7 +34,7 @@ export default function NotifPermissionScreen() {
       </View>
 
       <View style={{ gap: 10, paddingHorizontal: 24, paddingBottom: 36 }}>
-        <Button fullWidth onPress={() => nav.navigate('Welcome')}>Allow notifications</Button>
+        <Button fullWidth onPress={onAllow}>Allow notifications</Button>
         <Button variant="ghost" fullWidth onPress={() => nav.navigate('Welcome')}>Not now</Button>
       </View>
     </ScreenContainer>

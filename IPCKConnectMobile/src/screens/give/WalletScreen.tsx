@@ -5,11 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, TopBar } from '../../components';
-import { wallet } from '../../data/mock';
+import { useWallet } from '../../api/hooks';
 
 export default function WalletScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const wallet = useWallet();
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>

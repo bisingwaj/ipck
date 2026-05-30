@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, IconName, ScreenContainer, TopBar } from '../../components';
-import { notifications } from '../../data/mock';
+import { useNotifications } from '../../api/hooks';
 
 export default function NotificationsScreen() {
+  const notifications = useNotifications();
   const grouped = notifications.reduce<Record<string, typeof notifications>>((acc, n) => {
     (acc[n.group] = acc[n.group] || []).push(n);
     return acc;

@@ -4,12 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-import { paymentMethods } from '../../data/mock';
+import { usePaymentMethods } from '../../api/hooks';
 
 const PRESETS = [10, 25, 50, 100, 200, 500];
 
 export default function WalletTopupScreen() {
   const nav = useNavigation<any>();
+  const paymentMethods = usePaymentMethods();
   const [amount, setAmount] = useState(50);
   const [method, setMethod] = useState('mpesa');
   const m = paymentMethods.find(x => x.id === method)!;

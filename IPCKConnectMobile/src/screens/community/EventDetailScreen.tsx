@@ -5,12 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, TopBar, GeoArt } from '../../components';
-import { events } from '../../data/mock';
+import { useEvents } from '../../api/hooks';
 
 export default function EventDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const events = useEvents();
   const e = events.find(x => x.id === route.params?.id) || events[0];
   const [rsvp, setRsvp] = useState(false);
 

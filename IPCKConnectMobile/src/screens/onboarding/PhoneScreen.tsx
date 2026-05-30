@@ -1,20 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { useAuth } from '../../auth/AuthContext';
+import { USE_MOCKS } from '../../api/config';
+import { apiMessage } from '../../api/errors';
 
 export default function PhoneScreen() {
   const nav = useNavigation<any>();
+  const { requestOtp } = useAuth();
   const [phone, setPhone] = useState('');
+  const [busy, setBusy] = useState(false);
   const valid = phone.replace(/\D/g, '').length >= 8;
+
+  const onSend = async () => {
+    const full = '+243 ' + phone;
+    if (USE_MOCKS) {
+      nav.navigate('OTP', { phone: full });
+      return;
+    }
+    try {
+      setBusy(true);
+      await requestOtp(full);
+      nav.navigate('OTP', { phone: full });
+    } catch (e) {
+      Alert.alert('Erreur', apiMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <ScreenContainer
       scroll={false}
       padded={false}
-      footer={<Button fullWidth disabled={!valid} onPress={() => nav.navigate('OTP', { phone: '+243 ' + phone })}>Send code</Button>}
+      footer={<Button fullWidth disabled={!valid || busy} onPress={onSend}>{busy ? 'Sending…' : 'Send code'}</Button>}
     >
       <TopBar back />
       <View style={{ flex: 1, paddingHorizontal: 24, paddingTop: 8 }}>

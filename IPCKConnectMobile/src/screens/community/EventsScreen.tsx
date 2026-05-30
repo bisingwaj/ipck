@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar } from '../../components';
-import { events } from '../../data/mock';
+import { useEvents } from '../../api/hooks';
 
 export default function EventsScreen() {
   const nav = useNavigation<any>();
+  const events = useEvents();
   return (
     <ScreenContainer>
       <TopBar back title="Events" actions={[{ icon: 'cal' }]} />

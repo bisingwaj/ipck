@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar, Pill } from '../../components';
-import { prayerWall } from '../../data/mock';
+import { usePrayerWall } from '../../api/hooks';
 
 export default function PrayerWallScreen() {
   const nav = useNavigation<any>();
+  const prayerWall = usePrayerWall();
   const [prayed, setPrayed] = useState<string[]>(prayerWall.filter(p => p.iPrayed).map(p => p.id));
   const toggle = (id: string) => setPrayed(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 

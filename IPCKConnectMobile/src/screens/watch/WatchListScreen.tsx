@@ -4,12 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar, GeoArt, Pill } from '../../components';
-import { sermons } from '../../data/mock';
+import { useSermons } from '../../api/hooks';
 
 const FILTERS = ['All', 'Latest', 'Anchored series', 'Pastor Mukendi', 'Pastor Esther'];
 
 export default function WatchListScreen() {
   const nav = useNavigation<any>();
+  const sermons = useSermons();
   const [filter, setFilter] = useState('All');
   const live = sermons.find(s => s.live);
 

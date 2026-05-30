@@ -5,11 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar, Pill, Button } from '../../components';
-import { prayerWall } from '../../data/mock';
+import { usePrayerWall } from '../../api/hooks';
 
 export default function PrayerDetailScreen() {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const prayerWall = usePrayerWall();
   const p = prayerWall.find(x => x.id === route.params?.id) || prayerWall[0];
   const [reply, setReply] = useState('');
   const [did, setDid] = useState(p.iPrayed);

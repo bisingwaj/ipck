@@ -4,10 +4,13 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar, Pill } from '../../components';
-import { myGroups, prayerWall, events } from '../../data/mock';
+import { useMyGroups, usePrayerWall, useEvents } from '../../api/hooks';
 
 export default function CommunityHomeScreen() {
   const nav = useNavigation<any>();
+  const myGroups = useMyGroups();
+  const prayerWall = usePrayerWall();
+  const events = useEvents();
   return (
     <ScreenContainer>
       <TopBar

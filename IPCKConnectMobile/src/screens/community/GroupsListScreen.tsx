@@ -4,10 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, ScreenContainer, TopBar } from '../../components';
-import { allGroups, myGroups } from '../../data/mock';
+import { useAllGroups, useMyGroups } from '../../api/hooks';
 
 export default function GroupsListScreen() {
   const nav = useNavigation<any>();
+  const allGroups = useAllGroups();
+  const myGroups = useMyGroups();
   const [tab, setTab] = useState<'mine' | 'discover'>('mine');
   const list = tab === 'mine' ? myGroups : allGroups.filter(g => !myGroups.find(m => m.id === g.id));
 

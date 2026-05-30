@@ -4,10 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-import { paymentMethods } from '../../data/mock';
+import { usePaymentMethods } from '../../api/hooks';
 
 export default function GiveMethodScreen() {
   const nav = useNavigation<any>();
+  const paymentMethods = usePaymentMethods();
   const [picked, setPicked] = useState('mpesa');
   const m = paymentMethods.find(x => x.id === picked)!;
   return (
