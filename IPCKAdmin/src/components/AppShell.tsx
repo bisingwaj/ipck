@@ -33,6 +33,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
           >
             Dons
           </HeaderMenuItem>
+          <HeaderMenuItem
+            isActive={location.pathname === '/content'}
+            onClick={() => navigate('/content')}
+          >
+            Contenus
+          </HeaderMenuItem>
         </HeaderNavigation>
         <HeaderGlobalBar>
           <span style={{ alignSelf: 'center', paddingRight: '1rem', fontSize: '0.8rem' }}>
