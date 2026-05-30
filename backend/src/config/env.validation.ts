@@ -10,7 +10,14 @@ export const envSchema = z.object({
   CORS_ORIGINS: z.string().default('*'),
 
   DATABASE_URL: z.string().url(),
-  REDIS_URL: z.string().url(),
+  // Tolérant : si la référence Railway ${{Redis.REDIS_URL}} ne se résout pas
+  // (service Redis absent / mal nommé), on retombe sur localhost au lieu de
+  // crasher au démarrage. L'app boote alors en mode "Redis dégradé" (lazyConnect),
+  // et le master OTP — qui n'utilise pas Redis — reste utilisable pour tester.
+  REDIS_URL: z
+    .string()
+    .default('redis://localhost:6379')
+    .transform((v) => (/^rediss?:\/\/.+/.test(v) ? v : 'redis://localhost:6379')),
 
   JWT_ACCESS_SECRET: z.string().min(8),
   JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
