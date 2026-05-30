@@ -41,3 +41,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Workflows CI exclus du depot : le token GitHub (Credential Manager) n a pas le scope `workflow`.
+# Pour les versionner, retirez cette ligne + git add, avec un token ayant le scope workflow (ou via l UI GitHub).
+.github/workflows/
