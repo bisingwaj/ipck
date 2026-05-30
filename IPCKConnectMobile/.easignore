@@ -1,0 +1,14 @@
+# Exclut du paquet uploadé à EAS Build (EAS réinstalle les deps côté serveur Linux).
+# Évite d'envoyer node_modules compilés sous Windows (build cassé) + réduit l'archive.
+node_modules/
+.expo/
+dist/
+web-build/
+ios/
+android/
+*.log
+*.tsbuildinfo
+.git/
+# médias volumineux éventuels
+*.mp4
+*.mov
