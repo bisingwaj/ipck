@@ -3,8 +3,10 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer, TopBar } from '../../components';
+import { Icon, ScreenContainer, toast, TopBar } from '../../components';
 import { useAllGroups, useMyGroups } from '../../api/hooks';
+import { useJoinGroup } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
 
 export default function GroupsListScreen() {
   const nav = useNavigation<any>();
@@ -12,10 +14,20 @@ export default function GroupsListScreen() {
   const myGroups = useMyGroups();
   const [tab, setTab] = useState<'mine' | 'discover'>('mine');
   const list = tab === 'mine' ? myGroups : allGroups.filter(g => !myGroups.find(m => m.id === g.id));
+  const join = useJoinGroup();
+
+  const onJoin = async (id: string) => {
+    try {
+      await join.mutateAsync(id);
+      setTab('mine');
+    } catch (e) {
+      toast.error('Take heart', apiMessage(e));
+    }
+  };
 
   return (
     <ScreenContainer>
-      <TopBar back title="Groups" actions={[{ icon: 'search' }]} />
+      <TopBar back title="Groups" actions={[{ icon: 'search', onPress: () => toast.info('Coming soon', 'Searching groups is on its way.') }]} />
       <View style={styles.tabs}>
         <Pressable onPress={() => setTab('mine')} style={[styles.tab, tab === 'mine' && styles.tabOn]}>
           <Text style={[styles.tabTxt, tab === 'mine' && styles.tabTxtOn]}>My groups</Text>
@@ -34,7 +46,11 @@ export default function GroupsListScreen() {
             <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{g.name}</Text>
             <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{g.members} members · {g.meets}</Text>
           </View>
-          {tab === 'discover' && <View style={styles.joinBtn}><Text style={styles.joinTxt}>Join</Text></View>}
+          {tab === 'discover' && (
+            <Pressable onPress={() => onJoin(g.id)} disabled={join.isPending} style={styles.joinBtn}>
+              <Text style={styles.joinTxt}>Join</Text>
+            </Pressable>
+          )}
           {tab === 'mine' && <Icon name="chevron" size={18} color={tokens.textTertiary} />}
         </Pressable>
       ))}

@@ -1,74 +1,114 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, FlatList } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer, TopBar, GeoArt, Pill } from '../../components';
-import { useSermons } from '../../api/hooks';
+import { Icon, ScreenContainer, toast, TopBar, GeoArt, Pill } from '../../components';
+import { useContent, useLiveContent } from '../../api/hooks';
+import { categoryLabel } from '../../api/format';
+import { Content, ContentCategory } from '../../data/mock';
 
-const FILTERS = ['All', 'Latest', 'Anchored series', 'Pastor Mukendi', 'Pastor Esther'];
+// Ordre d'affichage préféré des catégories (seules les non-vides s'affichent).
+const CATEGORY_ORDER: ContentCategory[] = ['sermon', 'podcast', 'teaching', 'worship', 'testimony', 'other'];
 
 export default function WatchListScreen() {
   const nav = useNavigation<any>();
-  const sermons = useSermons();
-  const [filter, setFilter] = useState('All');
-  const live = sermons.find(s => s.live);
+  const content = useContent();
+  const live = useLiveContent();
+  const [category, setCategory] = useState<ContentCategory | 'all'>('all');
+
+  // Catégories réellement présentes (dynamique) + comptage.
+  const presentCategories = useMemo(
+    () => CATEGORY_ORDER.filter(cat => content.some(c => c.category === cat && !c.isLive)),
+    [content],
+  );
+
+  // Sections à rendre selon le filtre. Le contenu live est dans la bannière → exclu des listes.
+  const sections = useMemo(() => {
+    const vod = content.filter(c => !c.isLive);
+    const cats = category === 'all' ? presentCategories : presentCategories.filter(c => c === category);
+    return cats
+      .map(cat => ({ cat, items: vod.filter(c => c.category === cat) }))
+      .filter(s => s.items.length > 0);
+  }, [content, category, presentCategories]);
 
   return (
     <ScreenContainer>
       <TopBar
         titleLarge="Watch"
-        actions={[{ icon: 'search', onPress: () => {} }]}
+        actions={[{ icon: 'search', onPress: () => toast.info('Coming soon', 'Search is on its way.') }]}
       />
 
-      {/* Live banner */}
+      {/* Bannière live — pilotée par le contenu marqué isLive depuis le dashboard */}
       {live && (
         <Pressable onPress={() => nav.navigate('Live')} style={styles.liveBanner}>
-          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}>
+          <View style={StyleSheet.absoluteFill}>
             <GeoArt kind="live" height={160} />
           </View>
           <View style={styles.liveOverlay} />
           <View style={{ flex: 1, padding: 18, justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <Pill tone="live">● LIVE NOW</Pill>
-              <Pill tone="muted">612 watching</Pill>
+              {!!live.series && <Pill tone="muted">{live.series}</Pill>}
             </View>
             <View>
-              <Text style={styles.liveEyebrow} numberOfLines={1}>SUNDAY SERVICE</Text>
+              <Text style={styles.liveEyebrow} numberOfLines={1}>{categoryLabel(live.category).toUpperCase()}</Text>
               <Text style={styles.liveTitle} numberOfLines={2} ellipsizeMode="tail">{live.title}</Text>
-              <Text style={styles.liveSpeaker} numberOfLines={1} ellipsizeMode="tail">{live.speaker}</Text>
+              {!!live.speaker && <Text style={styles.liveSpeaker} numberOfLines={1} ellipsizeMode="tail">{live.speaker}</Text>}
             </View>
           </View>
         </Pressable>
       )}
 
-      {/* Filters */}
+      {/* Filtres dynamiques = catégories présentes */}
       <View style={styles.filters}>
-        {FILTERS.map(f => {
-          const on = filter === f;
-          return (
-            <Pressable key={f} onPress={() => setFilter(f)} style={[styles.filter, on && styles.filterOn]}>
-              <Text style={[styles.filterTxt, on && { color: '#fff' }]}>{f}</Text>
-            </Pressable>
-          );
-        })}
+        <Chip label="All" on={category === 'all'} onPress={() => setCategory('all')} />
+        {presentCategories.map(cat => (
+          <Chip key={cat} label={categoryLabel(cat)} on={category === cat} onPress={() => setCategory(cat)} />
+        ))}
       </View>
 
-      <Text style={styles.section}>RECENT</Text>
-      {sermons.map(s => (
-        <Pressable key={s.id} onPress={() => nav.navigate('SermonDetail', { id: s.id })} style={styles.row}>
-          <View style={styles.thumb}>
-            <Icon name="play" size={20} color="#fff" />
+      {sections.length === 0 ? (
+        <Text style={styles.empty}>No videos here yet.</Text>
+      ) : (
+        sections.map(section => (
+          <View key={section.cat} style={{ marginBottom: 8 }}>
+            <Text style={styles.section}>{categoryLabel(section.cat).toUpperCase()}</Text>
+            {section.items.map(item => (
+              <ContentRow key={item.id} item={item} onOpen={() => nav.navigate('ContentDetail', { id: item.id })} />
+            ))}
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowSeries} numberOfLines={1}>{s.series.toUpperCase()}</Text>
-            <Text style={styles.rowTitle} numberOfLines={2} ellipsizeMode="tail">{s.title}</Text>
-            <Text style={styles.rowMeta} numberOfLines={1} ellipsizeMode="tail">{s.speaker} · {s.duration} · {s.date}</Text>
-          </View>
-          <Icon name="bookmark" size={18} color={tokens.textTertiary} />
-        </Pressable>
-      ))}
+        ))
+      )}
     </ScreenContainer>
+  );
+}
+
+function Chip({ label, on, onPress }: { label: string; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={[styles.filter, on && styles.filterOn]}>
+      <Text style={[styles.filterTxt, on && { color: '#fff' }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function ContentRow({ item, onOpen }: { item: Content; onOpen: () => void }) {
+  return (
+    <Pressable onPress={onOpen} style={styles.row}>
+      <View style={styles.thumb}>
+        <Icon name="play" size={20} color="#fff" />
+      </View>
+      <View style={{ flex: 1 }}>
+        {!!item.series && <Text style={styles.rowSeries} numberOfLines={1}>{item.series.toUpperCase()}</Text>}
+        <Text style={styles.rowTitle} numberOfLines={2} ellipsizeMode="tail">{item.title}</Text>
+        <Text style={styles.rowMeta} numberOfLines={1} ellipsizeMode="tail">
+          {[item.speaker, item.duration].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      <Pressable hitSlop={8} onPress={() => toast.success('Saved', `"${item.title}" saved to your favorites — return and be nourished.`)}>
+        <Icon name="bookmark" size={18} color={tokens.textTertiary} />
+      </Pressable>
+    </Pressable>
   );
 }
 
@@ -83,6 +123,7 @@ const styles = StyleSheet.create({
   filterOn: { backgroundColor: tokens.primary },
   filterTxt: { fontFamily: fonts.uiBold, fontSize: 12, color: tokens.text },
   section: { fontFamily: fonts.uiBold, fontSize: 11, letterSpacing: 1.5, color: tokens.textSecondary, marginBottom: 10 },
+  empty: { fontFamily: fonts.ui, fontSize: 14, color: tokens.textSecondary, paddingVertical: 24, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: tokens.borderSoft },
   thumb: { width: 64, height: 64, borderRadius: 10, backgroundColor: tokens.editorialInk, alignItems: 'center', justifyContent: 'center' },
   rowSeries: { fontFamily: fonts.uiBold, fontSize: 10, letterSpacing: 1.2, color: tokens.primary },

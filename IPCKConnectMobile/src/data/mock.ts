@@ -10,6 +10,7 @@ export interface Devotional {
   prayer: string;
   applyTitle: string;
   applySteps: string[];
+  read?: boolean; // validé pour la journée (backend : DevotionalRead)
 }
 
 export const todayDevotional: Devotional = {
@@ -64,6 +65,35 @@ export const sermons: Sermon[] = [
   { id: 's6', title: 'Holy week reflection',               speaker: 'Pastor Mukendi', date: '13 Apr 2026', duration: '46 min', series: 'Standalone' },
 ];
 
+// ── Content vidéo dynamique (piloté par le dashboard) ──
+export type ContentCategory = 'sermon' | 'podcast' | 'teaching' | 'worship' | 'testimony' | 'other';
+
+export interface Content {
+  id: string;
+  title: string;
+  speaker?: string;
+  series?: string;
+  description?: string;
+  category: ContentCategory;
+  videoUrl: string;        // lien YouTube (live/VOD) ou HLS/MP4
+  thumbnailUrl?: string;
+  duration?: string;
+  isLive: boolean;
+  featured: boolean;
+  publishAt?: string;
+}
+
+// Vidéos IPCK auto-hébergées (téléchargées via `pnpm fetch:videos`, servies sur /media/...).
+export const contents: Content[] = [
+  { id: 'c1', title: 'Sunday Service — Live', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/sunday-service-live.mp4', isLive: true, featured: true, description: 'Join the live broadcast of our Sunday gathering at the International Protestant Church of Kinshasa.' },
+  { id: 'c2', title: 'First Service — 12 November 2023', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/first-service-2023-11-12.mp4', isLive: false, featured: false },
+  { id: 'c3', title: 'Sunday Service — 13 February', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/sunday-service-02-13.mp4', isLive: false, featured: false },
+  { id: 'c4', title: 'Easter Sunday Service — 17 April', category: 'sermon', speaker: 'IPCK', series: 'Feasts', videoUrl: '/media/videos/easter-service-04-17.mp4', isLive: false, featured: true, description: 'Celebrating the resurrection at IPCK.' },
+  { id: 'c5', title: 'First Service — 24 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/first-service-2022-07-24.mp4', isLive: false, featured: false },
+  { id: 'c6', title: 'Second Service — 31 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/second-service-2022-07-31.mp4', isLive: false, featured: false },
+  { id: 'c7', title: 'Second Service — 3 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/second-service-2022-07-03.mp4', isLive: false, featured: false },
+];
+
 export interface Group {
   id: string;
   name: string;
@@ -112,6 +142,7 @@ export interface ChurchEvent {
   id: string;
   name: string;
   when: string;
+  startsAt?: string;   // ISO — source fiable pour la date (jour/mois)
   loc: string;
   cap?: number;
   rsvp: number;
@@ -165,7 +196,7 @@ export interface AmenWallet {
 
 export interface AmenTransaction {
   id: string;
-  kind: 'topup' | 'amen' | 'redeem' | 'refund';
+  kind: 'topup' | 'amen' | 'redeem' | 'refund' | 'reward';
   coins: number;          // signed: + topup, - amen/redeem
   when: string;
   service?: string;       // e.g. "Sunday Service · 24 May"
@@ -179,6 +210,8 @@ export const wallet: AmenWallet = {
   pendingTopupCoins: 0,
   defaultFund: 'General fund',
   recent: [
+    { id: 'tx-r2', kind: 'reward', coins: +10, when: '1 min ago',  service: 'devo:today', status: 'completed' },
+    { id: 'tx-r1', kind: 'reward', coins: +5,  when: '3 min ago',  service: 'prayer:p-2', status: 'completed' },
     { id: 'tx-9', kind: 'amen',   coins: -1,  when: '2 min ago',  service: 'Sunday Service · 24 May', fund: 'General fund', status: 'completed' },
     { id: 'tx-8', kind: 'amen',   coins: -5,  when: '14 min ago', service: 'Sunday Service · 24 May', fund: 'General fund', status: 'completed' },
     { id: 'tx-7', kind: 'amen',   coins: -1,  when: '18 min ago', service: 'Sunday Service · 24 May', fund: 'General fund', status: 'completed' },

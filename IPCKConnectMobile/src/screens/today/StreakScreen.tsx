@@ -4,9 +4,11 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { useStreak } from '../../api/hooks';
 
 export default function StreakScreen() {
   const nav = useNavigation<any>();
+  const streak = useStreak();
   return (
     <ScreenContainer scroll={false}>
       <TopBar back title="Your streak" />
@@ -14,11 +16,11 @@ export default function StreakScreen() {
         <View style={styles.flameCircle}>
           <Icon name="flame" size={72} color={tokens.accent} />
         </View>
-        <Text style={styles.num}>12</Text>
+        <Text style={styles.num}>{streak.count}</Text>
         <Text style={styles.label}>days walking with Jesus</Text>
         <View style={styles.gridRow}>
           {['M','T','W','T','F','S','S'].map((d, i) => {
-            const on = i < 5;
+            const on = streak.days[i] ?? false;
             return (
               <View key={i} style={styles.day}>
                 <View style={[styles.dayDot, on && { backgroundColor: tokens.accent }]} />

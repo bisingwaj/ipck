@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, ScreenContainer, TopBar } from '../../components';
+import { useAppointmentTopics } from '../../api/hooks';
 
-const TOPICS = [
+const FALLBACK_TOPICS = [
   { id: 'counseling', t: 'Counseling',          d: 'Pastoral conversation about life, relationships, faith.' },
   { id: 'prayer',     t: 'Prayer',               d: 'Pray together about a specific need.' },
   { id: 'marriage',   t: 'Marriage / family',    d: 'Pre-marital, marriage, or family conversation.' },
@@ -15,10 +16,22 @@ const TOPICS = [
 
 export default function BookTopicScreen() {
   const nav = useNavigation<any>();
-  const [topic, setTopic] = useState('counseling');
+  const backendTopics = useAppointmentTopics();
+  const TOPICS = backendTopics.length
+    ? backendTopics.map(t => ({ id: t.id, t: t.label, d: t.description ?? '' }))
+    : FALLBACK_TOPICS;
+  const [topic, setTopic] = useState(TOPICS[0]?.id ?? 'counseling');
+
+  // Sélectionne le premier sujet réel une fois chargé.
+  useEffect(() => {
+    if (TOPICS.length && !TOPICS.find(x => x.id === topic)) setTopic(TOPICS[0].id);
+  }, [TOPICS, topic]);
+
+  const selected = TOPICS.find(x => x.id === topic);
+
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('BookSlot')}>Continue</Button>}
+      footer={<Button fullWidth onPress={() => nav.navigate('BookSlot', { topicId: topic, topicLabel: selected?.t ?? 'Appointment' })}>Continue</Button>}
     >
       <TopBar back title="Step 1 of 3" />
       <View style={styles.progress}>

@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { api, setUnauthorizedHandler } from '../api/client';
 import { getItem, setItem, deleteItem, KEYS } from '../api/storage';
 import { USE_MOCKS } from '../api/config';
+import { resetTo } from '../navigation/navigationRef';
+import { queryClient } from '../api/queryClient';
 
 export interface AuthUser {
   id: string;
@@ -47,7 +49,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    // Session perdue (refresh échoué sur 401) → on déconnecte ET on renvoie vers l'auth.
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      queryClient.clear();
+      resetTo('Onboarding');
+    });
     (async () => {
       if (USE_MOCKS) {
         setBootstrapped(true);
@@ -81,6 +88,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await deleteItem(KEYS.access);
     await deleteItem(KEYS.refresh);
     setUser(null);
+    queryClient.clear(); // évite que le prochain utilisateur voie les données mises en cache
+    resetTo('Onboarding');
   };
 
   return (

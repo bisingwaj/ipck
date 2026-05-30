@@ -1,23 +1,42 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-
-const ROWS = [
-  ['Topic',      'Counseling'],
-  ['With',       'Pastor Mukendi Tshibaka'],
-  ['When',       'Tue 27 May · 2:00 PM'],
-  ['Where',      "Pastor's office, IPCK"],
-  ['Your phone', '+243 •• ••• ••28'],
-];
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
+import { useCreateAppointment } from '../../api/mutations';
+import { useAuth } from '../../auth/AuthContext';
+import { apptWhen } from '../../api/format';
+import { apiMessage } from '../../api/errors';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function BookConfirmScreen() {
   const nav = useNavigation<any>();
+  const { topicId, topicLabel, slotStart } = useRoute<RouteProp<RootStackParamList, 'BookConfirm'>>().params;
+  const { user } = useAuth();
+  const createAppt = useCreateAppointment();
+  const [notes, setNotes] = useState('');
+
+  const ROWS: [string, string][] = [
+    ['Topic',      topicLabel],
+    ['With',       'The pastoral team'],
+    ['When',       apptWhen(slotStart)],
+    ['Where',      "Pastor's office, IPCK"],
+    ['Your phone', user?.phone ?? '—'],
+  ];
+
+  const onConfirm = async () => {
+    try {
+      await createAppt.mutateAsync({ topicId, slotStart, notes: notes.trim() || undefined });
+      nav.replace('BookSuccess', { slotStart, topicLabel });
+    } catch (e) {
+      toast.error('Booking did not go through', apiMessage(e));
+    }
+  };
+
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('BookSuccess')}>Confirm appointment</Button>}
+      footer={<Button fullWidth disabled={createAppt.isPending} onPress={onConfirm}>Confirm appointment</Button>}
     >
       <TopBar back title="Step 3 of 3" />
       <View style={styles.progress}>
@@ -29,13 +48,13 @@ export default function BookConfirmScreen() {
         {ROWS.map(([l, v]) => (
           <View key={l} style={styles.row}>
             <Text style={styles.lbl}>{l}</Text>
-            <Text style={styles.val}>{v}</Text>
+            <Text style={styles.val} numberOfLines={1} ellipsizeMode="tail">{v}</Text>
           </View>
         ))}
       </View>
 
       <Text style={styles.fieldLbl}>A SHORT NOTE (OPTIONAL)</Text>
-      <TextInput multiline placeholder="Anything Pastor should know in advance?" style={styles.textarea} placeholderTextColor={tokens.textTertiary} />
+      <TextInput value={notes} onChangeText={setNotes} multiline placeholder="Anything Pastor should know in advance?" style={styles.textarea} placeholderTextColor={tokens.textTertiary} />
 
       <View style={styles.privacy}>
         <Icon name="lock" size={14} color={tokens.textSecondary} />

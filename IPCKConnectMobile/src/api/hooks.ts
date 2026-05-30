@@ -3,11 +3,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from './client';
 import { USE_MOCKS } from './config';
-import { ago, colorFor, shortDate, fundLabel } from './format';
+import { ago, colorFor, shortDate, fundLabel, devotionalDate } from './format';
 import {
   todayDevotional as mockToday,
   pastDevotionals as mockPast,
   sermons as mockSermons,
+  contents as mockContents,
+  Content,
   myGroups as mockMyGroups,
   allGroups as mockAllGroups,
   prayerWall as mockPrayerWall,
@@ -29,17 +31,13 @@ import {
 
 const opts = { enabled: !USE_MOCKS };
 
-/** Force un format de date contenant une virgule (l'UI fait date.split(',')[1]). */
-function withComma(date: string): string {
-  return date && date.includes(',') ? date : `Today, ${date || ''}`.trim();
-}
-
 export function useTodayDevotional(): Devotional {
   const { data } = useQuery({
     queryKey: ['devotional', 'today'],
     queryFn: async () => {
       const d = (await api.get('/devotionals/today')).data;
-      return { ...d, date: withComma(d.date) } as Devotional;
+      // La date affichée vient de `publishAt` (ISO fiable), pas du champ `date` libre du backend.
+      return { ...d, date: devotionalDate(d.publishAt, d.date) } as Devotional;
     },
     ...opts,
   });
@@ -72,6 +70,37 @@ export function useSermons(): Sermon[] {
   });
   const list = USE_MOCKS ? mockSermons : data ?? mockSermons;
   return list.length ? list : mockSermons;
+}
+
+// ───────────────────────── Content vidéo (dynamique) ─────────────────────────
+
+/** Tous les contenus publiés (groupés par catégorie côté écran). */
+export function useContent(): Content[] {
+  const { data } = useQuery({
+    queryKey: ['content'],
+    queryFn: async () => (await api.get('/content', { params: { pageSize: 100 } })).data.data as Content[],
+    ...opts,
+  });
+  const list = USE_MOCKS ? mockContents : data ?? mockContents;
+  return list.length ? list : mockContents;
+}
+
+/** Contenu en direct courant (isLive), ou null. */
+export function useLiveContent(): Content | null {
+  const { data } = useQuery({
+    queryKey: ['content', 'live'],
+    queryFn: async () => ((await api.get('/content/live')).data ?? null) as Content | null,
+    ...opts,
+  });
+  if (USE_MOCKS) return mockContents.find(c => c.isLive) ?? null;
+  return data ?? null;
+}
+
+/** Détail d'un contenu (depuis la liste en cache, sinon mock). */
+export function useContentItem(id?: string): Content | null {
+  const all = useContent();
+  if (!id) return null;
+  return all.find(c => c.id === id) ?? null;
 }
 
 export function useMyGroups(): Group[] {
@@ -205,4 +234,179 @@ export function useLiveAmens() {
   });
   const list = USE_MOCKS ? mockLiveAmens : data ?? mockLiveAmens;
   return list.length ? list : mockLiveAmens;
+}
+
+export interface LiveSession {
+  id: string;
+  state: 'offline' | 'live';
+  title: string;
+  series?: string;
+  speaker?: string;
+  viewersLive: number;
+  amenCount: number;
+  amenCoins: number;
+}
+
+/** Session live « courante » (état réel) — null si rien. */
+const mockLiveSession: LiveSession = {
+  id: 'live-mock',
+  state: 'live',
+  title: 'Grace, not earned',
+  series: 'Sunday Service',
+  speaker: 'Pastor Mukendi Tshibaka',
+  viewersLive: 612,
+  amenCount: 184,
+  amenCoins: 612,
+};
+
+/** Session live courante depuis /live/current (state 'live' prioritaire, sinon la plus récente). */
+export function useLiveSession(): LiveSession | null {
+  const { data } = useQuery({
+    queryKey: ['live', 'current'],
+    queryFn: async () => ((await api.get('/live/current')).data ?? null) as LiveSession | null,
+    ...opts,
+  });
+  return USE_MOCKS ? mockLiveSession : (data ?? null);
+}
+
+/** Id de la session courante (pour poster un amen). Undefined en mode mocks. */
+export function useLiveSessionId(): string | undefined {
+  const session = useLiveSession();
+  return USE_MOCKS ? undefined : (session?.id ?? undefined);
+}
+
+// ───────────────────────── Queries de détail ─────────────────────────
+
+/** GET /users/me/streak → { count, days }. Fallback streak mock fixe. */
+export function useStreak(): { count: number; days: boolean[] } {
+  const { data } = useQuery({
+    queryKey: ['streak'],
+    queryFn: async () => (await api.get('/users/me/streak')).data,
+    ...opts,
+  });
+  const fallback = { count: 12, days: [true, true, true, true, true, false, false] };
+  return USE_MOCKS ? fallback : data ?? fallback;
+}
+
+/** GET /giving/donations/:id (reçu). */
+export function useDonation(id: string) {
+  const { data } = useQuery({
+    queryKey: ['donation', id],
+    queryFn: async () => (await api.get(`/giving/donations/${id}`)).data,
+    enabled: !USE_MOCKS && !!id,
+  });
+  return data;
+}
+
+/** GET /giving/wallet/transactions → liste à plat (.data). */
+export function useWalletTransactions() {
+  const { data } = useQuery({
+    queryKey: ['walletTransactions'],
+    queryFn: async () => {
+      const rows = (await api.get('/giving/wallet/transactions', { params: { pageSize: 50 } })).data.data;
+      return rows.map((t: any) => ({ ...t, when: ago(t.when) }));
+    },
+    ...opts,
+  });
+  return USE_MOCKS ? mockWallet.recent : data ?? mockWallet.recent;
+}
+
+/** GET /groups/:id (détail). Fallback : recherche dans la liste mock. */
+export function useGroup(id: string): Group | undefined {
+  const { data } = useQuery({
+    queryKey: ['group', id],
+    queryFn: async () => (await api.get(`/groups/${id}`)).data,
+    enabled: !USE_MOCKS && !!id,
+  });
+  const fallback = mockAllGroups.find((g) => g.id === id);
+  return USE_MOCKS ? fallback : data ?? fallback;
+}
+
+/** GET /groups/:id/messages → liste à plat (.data). */
+export function useGroupMessages(id: string) {
+  const { data } = useQuery({
+    queryKey: ['groupMessages', id],
+    queryFn: async () => (await api.get(`/groups/${id}/messages`, { params: { pageSize: 50 } })).data.data,
+    enabled: !USE_MOCKS && !!id,
+  });
+  return (USE_MOCKS ? [] : data ?? []) as {
+    id: string;
+    who: string;
+    authorId: string;
+    text: string;
+    at: string;
+    mine: boolean;
+  }[];
+}
+
+export interface PrayerEncouragement { who: string; initials: string; text: string; at: string }
+export type PrayerDetail = Prayer & { encouragements?: PrayerEncouragement[] };
+
+/** GET /prayers/:id (détail + encouragements). Fallback : recherche dans le mur mock. */
+export function usePrayer(id: string): PrayerDetail | undefined {
+  const { data } = useQuery({
+    queryKey: ['prayer', id],
+    queryFn: async () => {
+      const p = (await api.get(`/prayers/${id}`)).data;
+      return { ...p, color: colorFor(p.id), ago: ago(p.at) } as PrayerDetail;
+    },
+    enabled: !USE_MOCKS && !!id,
+  });
+  const fallback = mockPrayerWall.find((p) => p.id === id);
+  return USE_MOCKS ? fallback : data ?? fallback;
+}
+
+// ───────────────────────── Rendez-vous ─────────────────────────
+
+export interface ApptTopic { id: string; label: string; description?: string }
+export interface ApptDay { day: string; slots: { start: string; available: boolean }[] }
+export interface Appointment {
+  id: string;
+  slotStart: string;
+  status: 'tentative' | 'confirmed' | 'cancelled' | string;
+  notes?: string | null;
+  location?: string | null;
+  topic?: { label: string } | null;
+  pastor?: { firstName?: string | null; lastName?: string | null } | null;
+}
+
+/** GET /appointments/topics */
+export function useAppointmentTopics(): ApptTopic[] {
+  const { data } = useQuery({
+    queryKey: ['appt', 'topics'],
+    queryFn: async () => (await api.get('/appointments/topics')).data as ApptTopic[],
+    enabled: !USE_MOCKS,
+  });
+  return data ?? [];
+}
+
+/** GET /appointments/slots → jours + créneaux disponibles. */
+export function useAppointmentSlots(): ApptDay[] {
+  const { data } = useQuery({
+    queryKey: ['appt', 'slots'],
+    queryFn: async () => (await api.get('/appointments/slots')).data as ApptDay[],
+    enabled: !USE_MOCKS,
+  });
+  return data ?? [];
+}
+
+/** GET /appointments/mine */
+export function useMyAppointments(): Appointment[] {
+  const { data } = useQuery({
+    queryKey: ['appt', 'mine'],
+    queryFn: async () => (await api.get('/appointments/mine')).data as Appointment[],
+    enabled: !USE_MOCKS,
+  });
+  return data ?? [];
+}
+
+/** GET /events/:id (détail). Fallback : recherche dans la liste mock. */
+export function useEvent(id: string): ChurchEvent | undefined {
+  const { data } = useQuery({
+    queryKey: ['event', id],
+    queryFn: async () => (await api.get(`/events/${id}`)).data,
+    enabled: !USE_MOCKS && !!id,
+  });
+  const fallback = mockEvents.find((e) => e.id === id);
+  return USE_MOCKS ? fallback : data ?? fallback;
 }

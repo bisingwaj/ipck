@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
+import { useCreatePrayer, PrayerVisibility } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
 
 const OPTIONS = [
   { id: 'public',  label: 'Share publicly',         sub: 'With my name. Others can pray with me.',         icon: 'globe' as const },
@@ -14,11 +16,22 @@ const OPTIONS = [
 export default function SubmitPrayerScreen() {
   const nav = useNavigation<any>();
   const [text, setText] = useState('');
-  const [vis, setVis] = useState('public');
+  const [vis, setVis] = useState<PrayerVisibility>('public');
+  const createPrayer = useCreatePrayer();
+
+  const onSubmit = async () => {
+    try {
+      await createPrayer.mutateAsync({ text: text.trim(), visibility: vis });
+      if (vis === 'private') toast.success('Received in confidence', 'Your request has been entrusted privately to the pastoral team. "Cast all your anxiety on Him, for He cares for you." (1 Peter 5:7)');
+      nav.goBack();
+    } catch (e) {
+      toast.error('Take heart', apiMessage(e));
+    }
+  };
 
   return (
     <ScreenContainer
-      footer={<Button fullWidth disabled={!text.trim()} onPress={() => nav.goBack()} leftIcon="send">Submit prayer request</Button>}
+      footer={<Button fullWidth disabled={!text.trim() || createPrayer.isPending} onPress={onSubmit} leftIcon="send">Submit prayer request</Button>}
     >
       <TopBar back title="Share a prayer" actions={[{ label: 'Cancel', onPress: () => nav.goBack() }]} />
       <Text style={styles.h1}>What would you like prayer for?</Text>
@@ -38,7 +51,7 @@ export default function SubmitPrayerScreen() {
         {OPTIONS.map(o => {
           const on = vis === o.id;
           return (
-            <Pressable key={o.id} onPress={() => setVis(o.id)} style={[styles.opt, on && styles.optOn]}>
+            <Pressable key={o.id} onPress={() => setVis(o.id as PrayerVisibility)} style={[styles.opt, on && styles.optOn]}>
               <View style={[styles.optIcon, on && { backgroundColor: tokens.primary }]}>
                 <Icon name={o.icon} size={18} color={on ? '#fff' : tokens.primary} />
               </View>

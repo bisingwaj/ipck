@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
+import { useUpdateInterests } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
 
 const TOPICS = [
   'Daily teaching', 'Worship', 'Prayer', 'Marriage & family',
@@ -15,10 +17,20 @@ export default function InterestsScreen() {
   const nav = useNavigation<any>();
   const [picked, setPicked] = useState<string[]>(['Daily teaching']);
   const toggle = (t: string) => setPicked(p => p.includes(t) ? p.filter(x => x !== t) : [...p, t]);
+  const updateInterests = useUpdateInterests();
+
+  const onContinue = async () => {
+    try {
+      await updateInterests.mutateAsync(picked);
+      nav.navigate('NotifPermission');
+    } catch (e) {
+      toast.error('Take heart', apiMessage(e));
+    }
+  };
 
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('NotifPermission')}>{picked.length ? `Continue (${picked.length})` : 'Skip'}</Button>}
+      footer={<Button fullWidth disabled={updateInterests.isPending} onPress={onContinue}>{picked.length ? `Continue (${picked.length})` : 'Skip'}</Button>}
     >
       <TopBar back />
       <Text style={styles.eyebrow}>4 OF 4 · INTERESTS</Text>

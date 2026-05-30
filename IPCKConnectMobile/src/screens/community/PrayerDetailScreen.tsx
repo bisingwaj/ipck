@@ -1,24 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, TextInput, KeyboardAvoidingView, Platform } from 'react-native';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Pressable, TextInput, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer, TopBar, Pill, Button } from '../../components';
-import { usePrayerWall } from '../../api/hooks';
+import { Icon, ScreenContainer, toast, TopBar, Pill } from '../../components';
+import { usePrayer, usePrayerWall } from '../../api/hooks';
+import { usePrayForRequest, useCreateEncouragement } from '../../api/mutations';
+import { colorFor } from '../../api/format';
+import { USE_MOCKS } from '../../api/config';
+import { useAuth } from '../../auth/AuthContext';
+
+interface Encouragement { who: string; initials: string; text: string }
 
 export default function PrayerDetailScreen() {
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const prayerWall = usePrayerWall();
-  const p = prayerWall.find(x => x.id === route.params?.id) || prayerWall[0];
+  const { user } = useAuth();
+  const p = usePrayer(route.params?.id);
+  const wall = usePrayerWall();
+  const pray = usePrayForRequest();
+  const encourage = useCreateEncouragement(route.params?.id);
+
   const [reply, setReply] = useState('');
-  const [did, setDid] = useState(p.iPrayed);
+  const [prayed, setPrayed] = useState(false);
+  const [count, setCount] = useState(0);
+  const [encouragements, setEncouragements] = useState<Encouragement[]>([]);
+  const seeded = useRef(false);
+
+  // Initialise l'état prié + le compteur + les encouragements depuis la prière, une seule fois.
+  useEffect(() => {
+    if (p && !seeded.current) {
+      setPrayed(!!p.iPrayed);
+      setCount(p.amen);
+      if (p.encouragements) setEncouragements(p.encouragements.map(e => ({ who: e.who, initials: e.initials, text: e.text })));
+      seeded.current = true;
+    }
+  }, [p]);
+
+  if (!p) {
+    return (
+      <ScreenContainer>
+        <TopBar back title="Prayer request" />
+        <Text style={styles.ago}>Loading…</Text>
+      </ScreenContainer>
+    );
+  }
+
+  // Le mur de prière se valide une fois par jour : si l'utilisateur a déjà soutenu
+  // une intention (celle-ci ou une autre), tout le mur est verrouillé.
+  const wallValidated = prayed || wall.some(x => x.iPrayed);
+
+  // Soutien à sens unique : une fois le mur validé, plus d'accès au soutien.
+  const onPray = async () => {
+    if (wallValidated) return; // mur déjà validé → verrouillé
+    setPrayed(true);
+    setCount(c => c + 1);
+    try {
+      const res = await pray.mutateAsync(p.id); // { amenCount, iPrayed, blessingsAwarded }
+      if (!USE_MOCKS && res) { setPrayed(res.iPrayed); setCount(res.amenCount); }
+      if (res && res.blessingsAwarded > 0) {
+        toast.success(
+          'Amen 🙏',
+          `Thank you for lifting this need before the Lord. ${res.blessingsAwarded} Blessings have been added to your Grace Reserve. "The prayer of a righteous person is powerful." (James 5:16)`,
+        );
+      }
+    } catch {
+      setPrayed(false);
+      setCount(c => Math.max(0, c - 1));
+    }
+  };
+
+  const sendEncouragement = () => {
+    const text = reply.trim();
+    if (!text) return;
+    const who = user
+      ? `${user.firstName ?? ''} ${(user.lastName ?? '').charAt(0)}.`.trim() || 'You'
+      : 'You';
+    const initials = user
+      ? `${(user.firstName ?? '?').charAt(0)}${(user.lastName ?? '').charAt(0)}`.toUpperCase()
+      : 'YOU';
+    setEncouragements(e => [...e, { who, initials, text }]); // optimiste
+    setReply('');
+    encourage.mutate(text); // persiste (no-op en mode mocks)
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
-      <TopBar back title="Prayer request" actions={[{ icon: 'flag' }]} />
-      <View style={{ flex: 1, padding: 20 }}>
+      <TopBar back title="Prayer request" actions={[{ icon: 'flag', onPress: () => toast.success('Reported', 'Thank you — our team will review this prayerfully and with care.') }]} />
+      <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}>
           <View style={[styles.avt, { backgroundColor: p.color }]}>
             <Text style={styles.avtTxt}>{p.initials}</Text>
@@ -32,27 +102,41 @@ export default function PrayerDetailScreen() {
 
         <Text style={styles.text}>"{p.text}"</Text>
 
-        <Pressable onPress={() => setDid(d => !d)} style={[styles.bigBtn, did && { backgroundColor: tokens.success }]}>
-          <Icon name="pray" size={20} color={did ? '#fff' : tokens.primary} />
-          <Text style={[styles.bigBtnTxt, did && { color: '#fff' }]}>{did ? 'You prayed for this' : 'I\'m praying'}</Text>
+        <Pressable
+          onPress={onPray}
+          disabled={wallValidated}
+          style={[styles.bigBtn, prayed && { backgroundColor: tokens.success }, wallValidated && !prayed && styles.bigBtnLocked]}
+        >
+          <Icon name={prayed ? 'check' : wallValidated ? 'lock' : 'pray'} size={20} color={prayed ? '#fff' : wallValidated ? tokens.textTertiary : tokens.primary} strokeWidth={prayed ? 2.5 : 2} />
+          <Text style={[styles.bigBtnTxt, prayed && { color: '#fff' }, wallValidated && !prayed && { color: tokens.textTertiary }]}>
+            {prayed ? 'You prayed for this' : wallValidated ? 'Prayer wall validated today' : 'I\'m praying'}
+          </Text>
         </Pressable>
 
-        <Text style={styles.amen}><Text style={styles.amenNum}>{p.amen + (did && !p.iPrayed ? 1 : 0)}</Text> people prayed</Text>
+        <Text style={styles.amen}>
+          <Text style={styles.amenNum}>{count}</Text> {count === 1 ? 'person' : 'people'} prayed
+        </Text>
 
         <Text style={styles.section}>WORDS OF ENCOURAGEMENT</Text>
-        <View style={styles.reply}>
-          <View style={[styles.miniAvt, { backgroundColor: '#FFB020' }]}><Text style={styles.miniAvtTxt}>EM</Text></View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.replyWho} numberOfLines={1} ellipsizeMode="tail">Esther M.</Text>
-            <Text style={styles.replyTxt}>Standing with you in this. He is faithful.</Text>
-          </View>
-        </View>
-      </View>
+        {encouragements.length === 0 ? (
+          <Text style={styles.emptyTxt}>Be the first to encourage them.</Text>
+        ) : (
+          encouragements.map((e, i) => (
+            <View key={i} style={[styles.reply, i > 0 && { marginTop: 10 }]}>
+              <View style={[styles.miniAvt, { backgroundColor: colorFor(e.who) }]}><Text style={styles.miniAvtTxt}>{e.initials}</Text></View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.replyWho} numberOfLines={1} ellipsizeMode="tail">{e.who}</Text>
+                <Text style={styles.replyTxt}>{e.text}</Text>
+              </View>
+            </View>
+          ))
+        )}
+      </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[styles.composer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-          <TextInput value={reply} onChangeText={setReply} placeholder="A word of encouragement…" style={styles.input} placeholderTextColor={tokens.textTertiary} />
-          <Pressable style={styles.send}><Icon name="send" size={18} color="#fff" /></Pressable>
+          <TextInput value={reply} onChangeText={setReply} onSubmitEditing={sendEncouragement} returnKeyType="send" placeholder="A word of encouragement…" style={styles.input} placeholderTextColor={tokens.textTertiary} />
+          <Pressable style={styles.send} onPress={sendEncouragement}><Icon name="send" size={18} color="#fff" /></Pressable>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -66,10 +150,12 @@ const styles = StyleSheet.create({
   ago: { fontFamily: fonts.ui, fontSize: 12, color: tokens.textSecondary, marginTop: 2 },
   text: { fontFamily: fonts.serifItalic, fontSize: 19, lineHeight: 28, color: tokens.editorialInk, marginVertical: 14 },
   bigBtn: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 14, backgroundColor: tokens.primaryTint, marginTop: 14 },
+  bigBtnLocked: { backgroundColor: tokens.surface },
   bigBtnTxt: { fontFamily: fonts.uiBold, fontSize: 16, color: tokens.primary },
   amen: { fontFamily: fonts.ui, fontSize: 13, color: tokens.textSecondary, textAlign: 'center', marginTop: 10 },
   amenNum: { fontFamily: fonts.uiBold, color: tokens.text },
   section: { fontFamily: fonts.uiBold, fontSize: 11, letterSpacing: 1.5, color: tokens.textSecondary, marginTop: 28, marginBottom: 12 },
+  emptyTxt: { fontFamily: fonts.ui, fontSize: 14, color: tokens.textSecondary },
   reply: { flexDirection: 'row', gap: 10, padding: 12, borderRadius: 12, backgroundColor: tokens.surface },
   miniAvt: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   miniAvtTxt: { fontFamily: fonts.uiBold, fontSize: 11, color: '#fff' },

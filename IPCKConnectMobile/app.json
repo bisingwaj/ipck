@@ -29,7 +29,8 @@
     "plugins": [
       "expo-font",
       "expo-asset",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-video"
     ]
   }
 }

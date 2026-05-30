@@ -1,26 +1,39 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { View, Text, StyleSheet, ScrollView, Share } from 'react-native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, TopBar } from '../../components';
-
-const ROWS: [string, string, boolean?][] = [
-  ['Reference', 'GFT-024-381', true],
-  ['Amount', '$50.00'],
-  ['Fund', 'General fund'],
-  ['Method', 'M-Pesa · ••••28'],
-  ['Date', '24 May 2026 · 09:42 CAT'],
-  ['Giver', 'Grace Mbuyi'],
-];
+import { useDonation, useFunds } from '../../api/hooks';
+import { shortDate, fundLabel } from '../../api/format';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveReceiptScreen() {
   const nav = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { donationId } = useRoute<RouteProp<RootStackParamList, 'GiveReceipt'>>().params;
+  const donation = useDonation(donationId);
+  const funds = useFunds();
+
+  const amountStr = donation ? `$${donation.amount}.00` : '—';
+  const fundName = donation ? (funds.find(f => f.id === donation.fundId)?.name ?? fundLabel(donation.fundId)) : '—';
+  const rows: [string, string, boolean?][] = [
+    ['Reference', donation?.ref ?? '—', true],
+    ['Amount', amountStr],
+    ['Fund', fundName],
+    ['Method', donation?.method ?? '—'],
+    ['Date', donation ? shortDate(donation.createdAt) : '—'],
+    ['Status', donation?.status ?? '—'],
+  ];
+
+  const onShare = () => {
+    Share.share({ message: `IPCK gift receipt ${donation?.ref ?? ''} — ${amountStr} to ${fundName}` }).catch(() => {});
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
-      <TopBar back title="Receipt" actions={[{ icon: 'share' }, { icon: 'download' }]} />
+      <TopBar back title="Receipt" actions={[{ icon: 'share', onPress: onShare }]} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
         <View style={styles.receipt}>
           <View style={styles.receiptHead}>
@@ -35,10 +48,10 @@ export default function GiveReceiptScreen() {
 
           <View style={styles.amount}>
             <Text style={styles.amountLbl}>RECEIVED WITH THANKS</Text>
-            <Text style={styles.amountVal}>$50.00</Text>
+            <Text style={styles.amountVal}>{amountStr}</Text>
           </View>
 
-          {ROWS.map(([l, v, sep]) => (
+          {rows.map(([l, v, sep]) => (
             <View key={l} style={[styles.row, sep && { borderTopWidth: 1, borderTopColor: tokens.borderSoft, paddingTop: 14, marginTop: 14 }]}>
               <Text style={styles.rowLbl}>{l}</Text>
               <Text style={styles.rowVal}>{v}</Text>

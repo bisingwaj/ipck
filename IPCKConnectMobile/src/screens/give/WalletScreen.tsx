@@ -4,8 +4,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, TopBar } from '../../components';
+import { Button, Icon, toast, TopBar } from '../../components';
 import { useWallet } from '../../api/hooks';
+import { rewardLabel } from '../../api/format';
 
 export default function WalletScreen() {
   const nav = useNavigation<any>();
@@ -14,7 +15,7 @@ export default function WalletScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
-      <TopBar back title="Amen wallet" actions={[{ icon: 'help', onPress: () => {} }]}/>
+      <TopBar back title="Grace Reserve" actions={[{ icon: 'help', onPress: () => toast.info('Grace Reserve', 'Blessings are pre-loaded credit (1 Blessing = 1 USD) you can give in one tap during a live service. Every Blessing is a true gift that settles into the fund you choose. "Freely you have received; freely give." (Matthew 10:8)') }]}/>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {/* Balance hero */}
@@ -26,7 +27,7 @@ export default function WalletScreen() {
           <Text style={styles.heroEyebrow}>YOUR BALANCE</Text>
           <View style={styles.heroAmtRow}>
             <Text style={styles.heroAmt}>{wallet.balanceCoins}</Text>
-            <Text style={styles.heroUnit}>amen coins</Text>
+            <Text style={styles.heroUnit}>Blessings</Text>
           </View>
           <Text style={styles.heroEq} numberOfLines={1} ellipsizeMode="tail">≈ ${wallet.balanceCoins} USD · default fund: {wallet.defaultFund}</Text>
 
@@ -40,11 +41,11 @@ export default function WalletScreen() {
         <View style={styles.explainer}>
           <View style={styles.explainerIcon}><Icon name="help" size={14} color={tokens.primary}/></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.explainerTitle} numberOfLines={1} ellipsizeMode="tail">What is the amen wallet?</Text>
+            <Text style={styles.explainerTitle} numberOfLines={1} ellipsizeMode="tail">What is Grace Reserve?</Text>
             <Text style={styles.explainerBody}>
-              Amen coins are pre-loaded credit you can give in real-time during a live service — one quick tap, no phone prompt.
+              Blessings are pre-loaded credit you can give in real-time during a live service — one quick tap, no phone prompt.
               {'\n\n'}
-              <Text style={{ fontFamily: fonts.uiBold, color: tokens.text }}>Every coin is a real gift.</Text> Coins settle into the fund you choose (default: General), and you get a receipt. You can also send your balance directly to any fund anytime.
+              <Text style={{ fontFamily: fonts.uiBold, color: tokens.text }}>Every Blessing is a real gift.</Text> Blessings settle into the fund you choose (default: General), and you get a receipt. You can also send your balance directly to any fund anytime.
             </Text>
           </View>
         </View>
@@ -57,11 +58,13 @@ export default function WalletScreen() {
             const icon =
               tx.kind === 'topup'  ? 'download' :
               tx.kind === 'redeem' ? 'arrow'    :
-              tx.kind === 'refund' ? 'download' : 'pray';
+              tx.kind === 'refund' ? 'download' :
+              tx.kind === 'reward' ? 'sparkle'  : 'pray';
             const lbl =
               tx.kind === 'topup'  ? `Top-up · ${tx.method}` :
               tx.kind === 'redeem' ? `Sent to ${tx.fund}`    :
               tx.kind === 'refund' ? 'Refund' :
+              tx.kind === 'reward' ? rewardLabel(tx.service) :
               `Amen during ${tx.service}`;
             return (
               <View key={tx.id} style={[styles.row, i < wallet.recent.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.borderSoft }]}>
@@ -80,7 +83,7 @@ export default function WalletScreen() {
           })}
         </View>
 
-        <Pressable style={styles.seeAll} onPress={() => {}}>
+        <Pressable style={styles.seeAll} onPress={() => nav.navigate('WalletTransactions')}>
           <Text style={styles.seeAllTxt}>See all transactions</Text>
           <Icon name="chevron" size={14} color={tokens.primary}/>
         </Pressable>
@@ -89,7 +92,7 @@ export default function WalletScreen() {
         <View style={styles.privacy}>
           <Icon name="lock" size={14} color={tokens.textSecondary}/>
           <Text style={styles.privacyTxt}>
-            Your wallet history is private. Amen totals during a service are public; individual senders are public only if you opt in (default: name shown).
+            Your Grace Reserve history is private. Blessing totals during a service are public; individual senders are public only if you opt in (default: name shown).
           </Text>
         </View>
       </ScrollView>

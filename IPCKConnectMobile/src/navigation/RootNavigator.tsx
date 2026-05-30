@@ -32,11 +32,13 @@ import PrayedScreen from '../screens/today/PrayedScreen';
 
 // ─── Watch ───
 import SermonDetailScreen from '../screens/watch/SermonDetailScreen';
+import ContentDetailScreen from '../screens/watch/ContentDetailScreen';
 import LiveScreen from '../screens/watch/LiveScreen';
 
 // ─── Give ───
 import WalletScreen from '../screens/give/WalletScreen';
 import WalletTopupScreen from '../screens/give/WalletTopupScreen';
+import WalletTransactionsScreen from '../screens/give/WalletTransactionsScreen';
 import GiveAmountScreen from '../screens/give/GiveAmountScreen';
 import GiveFundScreen from '../screens/give/GiveFundScreen';
 import GiveMethodScreen from '../screens/give/GiveMethodScreen';
@@ -137,11 +139,13 @@ export default function RootNavigator() {
 
       {/* Watch */}
       <Stack.Screen name="SermonDetail" component={SermonDetailScreen} />
+      <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
       <Stack.Screen name="Live" component={LiveScreen} />
 
       {/* Give */}
       <Stack.Screen name="Wallet" component={WalletScreen} />
       <Stack.Screen name="WalletTopup" component={WalletTopupScreen} />
+      <Stack.Screen name="WalletTransactions" component={WalletTransactionsScreen} />
       <Stack.Screen name="GiveAmount" component={GiveAmountScreen} />
       <Stack.Screen name="GiveFund" component={GiveFundScreen} />
       <Stack.Screen name="GiveMethod" component={GiveMethodScreen} />

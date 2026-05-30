@@ -4,16 +4,19 @@ import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Icon, IconName, ScreenContainer, TopBar } from '../../components';
 import { useNotifications } from '../../api/hooks';
+import { useMarkNotificationsRead } from '../../api/mutations';
 
 export default function NotificationsScreen() {
   const notifications = useNotifications();
+  const markRead = useMarkNotificationsRead();
+  const hasUnread = notifications.some(n => n.unread);
   const grouped = notifications.reduce<Record<string, typeof notifications>>((acc, n) => {
     (acc[n.group] = acc[n.group] || []).push(n);
     return acc;
   }, {});
   return (
     <ScreenContainer padded={false}>
-      <TopBar back title="Notifications" actions={[{ label: 'Mark all read' }]} />
+      <TopBar back title="Notifications" actions={hasUnread ? [{ label: 'Mark all read', onPress: () => markRead.mutate() }] : []} />
       {Object.entries(grouped).map(([day, items]) => (
         <View key={day}>
           <Text style={styles.group}>{day.toUpperCase()}</Text>

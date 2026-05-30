@@ -3,19 +3,43 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
-import { useAllGroups } from '../../api/hooks';
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
+import { useGroup } from '../../api/hooks';
+import { useJoinGroup } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
 
 export default function GroupDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
-  const allGroups = useAllGroups();
   const id = route.params?.id;
-  const group = allGroups.find(g => g.id === id) || allGroups[0];
+  const group = useGroup(id);
+  const join = useJoinGroup();
+
+  if (!group) {
+    return (
+      <ScreenContainer>
+        <TopBar back />
+        <Text style={styles.meta}>Loading…</Text>
+      </ScreenContainer>
+    );
+  }
+
+  // isMember vaut false uniquement si le backend le dit explicitement (mock → undefined → on autorise).
+  const isMember = (group as any).isMember !== false;
+
+  const openChat = () => nav.navigate('GroupChat', { id: group.id });
+  const joinThenChat = async () => {
+    try {
+      await join.mutateAsync(group.id);
+      openChat();
+    } catch (e) {
+      toast.error('Take heart', apiMessage(e));
+    }
+  };
 
   return (
     <ScreenContainer>
-      <TopBar back actions={[{ icon: 'dots' }]} />
+      <TopBar back actions={[{ icon: 'dots', onPress: () => toast.info(group.name, `${group.members} members · led by ${group.leader}`) }]} />
       <View style={{ alignItems: 'center', paddingVertical: 18 }}>
         <View style={[styles.avt, { backgroundColor: group.color }]}>
           <Icon name="community" size={32} color="#fff" />
@@ -24,7 +48,11 @@ export default function GroupDetailScreen() {
         <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{group.members} members · led by {group.leader}</Text>
       </View>
 
-      <Button fullWidth leftIcon="send" onPress={() => nav.navigate('GroupChat', { id: group.id })}>Open chat</Button>
+      {isMember ? (
+        <Button fullWidth leftIcon="send" onPress={openChat}>Open chat</Button>
+      ) : (
+        <Button fullWidth leftIcon="community" disabled={join.isPending} onPress={joinThenChat}>Join to chat</Button>
+      )}
 
       <Text style={styles.section}>ABOUT</Text>
       <View style={styles.aboutRow}><Icon name="cal" size={16} color={tokens.textSecondary} /><Text style={styles.aboutTxt}>Meets {group.meets}</Text></View>

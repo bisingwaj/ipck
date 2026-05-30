@@ -1,26 +1,28 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer } from '../../components';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveSuccessScreen() {
   const nav = useNavigation<any>();
+  const { donationId, ref, amount, fundName } = useRoute<RouteProp<RootStackParamList, 'GiveSuccess'>>().params;
   return (
     <ScreenContainer scroll={false}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 18 }}>
         <View style={styles.circle}>
           <Icon name="check" size={56} color={tokens.success} strokeWidth={3} />
         </View>
-        <Text style={styles.h1}>Thank you, Grace.</Text>
+        <Text style={styles.h1}>Thank you.</Text>
         <Text style={styles.body}>
-          Your gift of <Text style={styles.bold}>$50</Text> to the <Text style={styles.bold}>General fund</Text> was received. The kingdom advances because of givers like you.
+          Your gift of <Text style={styles.bold}>${amount}</Text> to the <Text style={styles.bold}>{fundName}</Text> was received. The kingdom advances because of givers like you.
         </Text>
-        <Text style={styles.ref}>REF · GFT-024-381</Text>
+        <Text style={styles.ref}>REF · {ref}</Text>
       </View>
       <View style={{ gap: 10 }}>
-        <Button fullWidth onPress={() => nav.navigate('GiveReceipt')}>See receipt</Button>
+        <Button fullWidth onPress={() => nav.navigate('GiveReceipt', { donationId })}>See receipt</Button>
         <Button variant="ghost" fullWidth onPress={() => nav.popToTop()}>Back to Give</Button>
       </View>
     </ScreenContainer>

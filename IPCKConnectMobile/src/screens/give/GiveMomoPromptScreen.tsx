@@ -1,16 +1,37 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer } from '../../components';
+import { Icon, ScreenContainer, toast } from '../../components';
+import { useFunds } from '../../api/hooks';
+import { useCreateDonation } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveMomoPromptScreen() {
   const nav = useNavigation<any>();
+  const { amount, fundId, method } = useRoute<RouteProp<RootStackParamList, 'GiveMomoPrompt'>>().params;
+  const funds = useFunds();
+  const createDonation = useCreateDonation();
+  const started = useRef(false);
+
   useEffect(() => {
-    const t = setTimeout(() => nav.replace('GiveSuccess'), 3500);
+    if (started.current) return;
+    started.current = true;
+    const fundName = funds.find(f => f.id === fundId)?.name ?? fundId;
+    // Petit délai pour l'effet « prompt envoyé », puis appel réel.
+    const t = setTimeout(async () => {
+      try {
+        const d = await createDonation.mutateAsync({ amount, fundId, method });
+        nav.replace('GiveSuccess', { donationId: d.id, ref: d.ref, amount: d.amount, fundName });
+      } catch (e) {
+        toast.error('Gift not confirmed', apiMessage(e));
+        nav.goBack();
+      }
+    }, 2200);
     return () => clearTimeout(t);
-  }, [nav]);
+  }, [nav, amount, fundId, method, funds, createDonation]);
 
   return (
     <ScreenContainer scroll={false}>

@@ -3,18 +3,38 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer, TopBar, Pill } from '../../components';
+import { Icon, ScreenContainer, toast, TopBar, Pill } from '../../components';
 import { usePrayerWall } from '../../api/hooks';
+import { usePrayForRequest } from '../../api/mutations';
 
 export default function PrayerWallScreen() {
   const nav = useNavigation<any>();
   const prayerWall = usePrayerWall();
-  const [prayed, setPrayed] = useState<string[]>(prayerWall.filter(p => p.iPrayed).map(p => p.id));
-  const toggle = (id: string) => setPrayed(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const pray = usePrayForRequest();
+  const [prayedId, setPrayedId] = useState<string | null>(null);
+  // Le mur se valide une fois par jour : soutenir une intention valide tout le mur
+  // et verrouille l'accès au soutien (notification du gain de Blessings).
+  const validated = !!prayedId || prayerWall.some(p => p.iPrayed);
+
+  const onPray = (id: string) => {
+    if (validated) return; // mur déjà validé → verrouillé
+    setPrayedId(id); // optimiste : verrouille tout le mur
+    pray.mutate(id, {
+      onSuccess: (res) => {
+        if (res && res.blessingsAwarded > 0) {
+          toast.success(
+            'Amen 🙏',
+            `Thank you for standing in the gap. ${res.blessingsAwarded} Blessings have been added to your Grace Reserve. The prayer wall is sealed for today. "Carry each other's burdens." (Galatians 6:2)`,
+          );
+        }
+      },
+      onError: () => setPrayedId(null), // rollback si échec
+    });
+  };
 
   return (
     <ScreenContainer>
-      <TopBar back title="Prayer wall" actions={[{ icon: 'filter' }]} />
+      <TopBar back title="Prayer wall" actions={[{ icon: 'filter', onPress: () => toast.info('Coming soon', 'Filters are on their way.') }]} />
 
       <Pressable onPress={() => nav.navigate('SubmitPrayer')} style={styles.cta}>
         <View style={styles.ctaIcon}><Icon name="plus" size={20} color="#fff" /></View>
@@ -25,8 +45,17 @@ export default function PrayerWallScreen() {
         <Icon name="chevron" size={18} color={tokens.textTertiary} />
       </Pressable>
 
+      {validated && (
+        <View style={styles.lockedBanner}>
+          <View style={styles.lockedIcon}><Icon name="check" size={16} color={tokens.success} strokeWidth={3} /></View>
+          <Text style={styles.lockedTxt}>
+            <Text style={styles.lockedBold}>Prayer wall validated today.</Text> +5 Blessings earned — come back tomorrow.
+          </Text>
+        </View>
+      )}
+
       {prayerWall.map(p => {
-        const did = prayed.includes(p.id);
+        const mine = prayedId === p.id || p.iPrayed; // l'intention que l'utilisateur a soutenue
         return (
           <Pressable key={p.id} onPress={() => nav.navigate('PrayerDetail', { id: p.id })} style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -41,11 +70,25 @@ export default function PrayerWallScreen() {
             </View>
             <Text style={styles.text}>{p.text}</Text>
             <View style={styles.cardFoot}>
-              <Pressable onPress={() => toggle(p.id)} style={[styles.amenBtn, did && styles.amenBtnOn]}>
-                <Icon name="pray" size={14} color={did ? '#fff' : tokens.text} />
-                <Text style={[styles.amenTxt, did && { color: '#fff' }]}>{did ? 'You prayed' : 'I\'ll pray'}</Text>
-              </Pressable>
-              <Text style={styles.count}>{p.amen + (did && !p.iPrayed ? 1 : 0)} prayed</Text>
+              {validated ? (
+                mine ? (
+                  <View style={[styles.amenBtn, styles.amenBtnOn]}>
+                    <Icon name="check" size={14} color="#fff" strokeWidth={3} />
+                    <Text style={[styles.amenTxt, { color: '#fff' }]}>You prayed</Text>
+                  </View>
+                ) : (
+                  <View style={styles.amenBtnLocked}>
+                    <Icon name="lock" size={13} color={tokens.textTertiary} />
+                    <Text style={[styles.amenTxt, { color: tokens.textTertiary }]}>Validated today</Text>
+                  </View>
+                )
+              ) : (
+                <Pressable onPress={() => onPray(p.id)} style={styles.amenBtn}>
+                  <Icon name="pray" size={14} color={tokens.text} />
+                  <Text style={styles.amenTxt}>I'll pray</Text>
+                </Pressable>
+              )}
+              <Text style={styles.count}>{p.amen + (mine && !p.iPrayed ? 1 : 0)} prayed</Text>
             </View>
           </Pressable>
         );
@@ -67,7 +110,12 @@ const styles = StyleSheet.create({
   text: { fontFamily: fonts.serif, fontSize: 15, lineHeight: 22, color: tokens.text, fontStyle: 'italic' },
   cardFoot: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 14, paddingTop: 10, borderTopWidth: 1, borderTopColor: tokens.borderSoft, borderStyle: 'dashed' },
   amenBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: tokens.surface },
-  amenBtnOn: { backgroundColor: tokens.primary },
+  amenBtnOn: { backgroundColor: tokens.success },
+  amenBtnLocked: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 99, backgroundColor: tokens.surface, opacity: 0.6 },
   amenTxt: { fontFamily: fonts.uiBold, fontSize: 12, color: tokens.text },
   count: { fontFamily: fonts.uiMedium, fontSize: 12, color: tokens.textSecondary, marginLeft: 'auto' },
+  lockedBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14, backgroundColor: tokens.successTint, marginBottom: 16 },
+  lockedIcon: { width: 30, height: 30, borderRadius: 15, backgroundColor: tokens.bg, alignItems: 'center', justifyContent: 'center' },
+  lockedTxt: { flex: 1, fontFamily: fonts.ui, fontSize: 13, lineHeight: 19, color: tokens.editorialInk },
+  lockedBold: { fontFamily: fonts.uiBold },
 });

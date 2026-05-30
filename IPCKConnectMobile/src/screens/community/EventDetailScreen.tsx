@@ -1,23 +1,46 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Share } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, TopBar, GeoArt } from '../../components';
-import { useEvents } from '../../api/hooks';
+import { Button, Icon, toast, TopBar, GeoArt } from '../../components';
+import { useEvent } from '../../api/hooks';
+import { useRsvpEvent } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
 
 export default function EventDetailScreen() {
   const nav = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
-  const events = useEvents();
-  const e = events.find(x => x.id === route.params?.id) || events[0];
-  const [rsvp, setRsvp] = useState(false);
+  const id = route.params?.id;
+  const e = useEvent(id);
+  const rsvpMut = useRsvpEvent(id);
+  const [rsvp, setRsvp] = useState<boolean>((e as any)?.myRsvp === 'going');
+
+  if (!e) {
+    return (
+      <View style={{ flex: 1, backgroundColor: tokens.bg }}>
+        <TopBar back />
+        <Text style={[styles.body, { padding: 20 }]}>Loading…</Text>
+      </View>
+    );
+  }
+
+  const onRsvp = async () => {
+    const next = !rsvp;
+    setRsvp(next);
+    try {
+      await rsvpMut.mutateAsync(next ? 'going' : 'cancelled');
+    } catch (err) {
+      setRsvp(!next);
+      toast.error('Take heart', apiMessage(err));
+    }
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
-      <TopBar back actions={[{ icon: 'share' }]} />
+      <TopBar back actions={[{ icon: 'share', onPress: () => Share.share({ message: `${e.name} — ${e.when} · ${e.loc ?? ''}` }).catch(() => {}) }]} />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
         <View style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 18 }}>
           <GeoArt kind="community" height={180} />
@@ -46,7 +69,7 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) }]}>
-        <Button fullWidth onPress={() => setRsvp(r => !r)} variant={rsvp ? 'secondary' : 'primary'} leftIcon={rsvp ? 'check' : undefined}>
+        <Button fullWidth onPress={onRsvp} disabled={rsvpMut.isPending} variant={rsvp ? 'secondary' : 'primary'} leftIcon={rsvp ? 'check' : undefined}>
           {rsvp ? 'You\'re going · tap to cancel' : 'I\'ll be there'}
         </Button>
       </View>

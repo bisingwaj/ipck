@@ -1,26 +1,33 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Field, Icon, ScreenContainer, TopBar } from '../../components';
+import { useFunds, usePaymentMethods } from '../../api/hooks';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveMomoConfirmScreen() {
   const nav = useNavigation<any>();
+  const { amount, fundId, method } = useRoute<RouteProp<RootStackParamList, 'GiveMomoConfirm'>>().params;
+  const funds = useFunds();
+  const paymentMethods = usePaymentMethods();
   const [phone, setPhone] = useState('•• ••• ••28');
   const [recurring, setRecurring] = useState(false);
+  const fundName = funds.find(f => f.id === fundId)?.name ?? fundId;
+  const methodName = paymentMethods.find(m => m.id === method)?.name ?? method;
 
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('GiveMomoPrompt')}>Send prompt to my phone</Button>}
+      footer={<Button fullWidth onPress={() => nav.navigate('GiveMomoPrompt', { amount, fundId, method })}>Send prompt to my phone</Button>}
     >
-      <TopBar back title="Confirm · M-Pesa" />
+      <TopBar back title={`Confirm · ${methodName}`} />
       <Text style={styles.h1}>One last check.</Text>
 
       <View style={styles.summary}>
-        <Row label="Amount" value="$50.00" big />
-        <Row label="Fund" value="General fund" />
-        <Row label="Method" value="M-Pesa" />
+        <Row label="Amount" value={`$${amount}.00`} big />
+        <Row label="Fund" value={fundName} />
+        <Row label="Method" value={methodName} />
       </View>
 
       <Field label="M-Pesa number" value={phone} onChangeText={setPhone} />

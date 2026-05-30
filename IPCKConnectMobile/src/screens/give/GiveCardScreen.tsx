@@ -1,15 +1,33 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Field, ScreenContainer, TopBar } from '../../components';
+import { Button, Field, ScreenContainer, toast, TopBar } from '../../components';
+import { useFunds } from '../../api/hooks';
+import { useCreateDonation } from '../../api/mutations';
+import { apiMessage } from '../../api/errors';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveCardScreen() {
   const nav = useNavigation<any>();
+  const { amount, fundId, method } = useRoute<RouteProp<RootStackParamList, 'GiveCard'>>().params;
+  const funds = useFunds();
+  const createDonation = useCreateDonation();
+  const fundName = funds.find(f => f.id === fundId)?.name ?? fundId;
+
+  const onGive = async () => {
+    try {
+      const d = await createDonation.mutateAsync({ amount, fundId, method });
+      nav.replace('GiveSuccess', { donationId: d.id, ref: d.ref, amount: d.amount, fundName });
+    } catch (e) {
+      toast.error('Gift not received', apiMessage(e));
+    }
+  };
+
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('GiveSuccess')}>Give $50</Button>}
+      footer={<Button fullWidth disabled={createDonation.isPending} onPress={onGive}>{`Give $${amount}`}</Button>}
     >
       <TopBar back title="Card payment" />
       <Text style={styles.h1}>Your card details</Text>

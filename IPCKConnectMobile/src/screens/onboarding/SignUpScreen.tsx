@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
 
 export default function SignUpScreen() {
   const nav = useNavigation<any>();
@@ -27,7 +27,7 @@ export default function SignUpScreen() {
             <Icon name="chevron" size={18} color={tokens.textSecondary} />
           </Pressable>
 
-          <Pressable style={styles.method}>
+          <Pressable style={styles.method} onPress={() => toast.info('Coming soon', 'Email sign-in is on its way. For now, please continue with your phone.')}>
             <Icon name="mail" size={22} color={tokens.text} />
             <View style={{ flex: 1 }}>
               <Text style={styles.methodTitle}>Continue with email</Text>

@@ -1,36 +1,77 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Switch } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, IconName, ScreenContainer, TopBar } from '../../components';
+import { confirm, Icon, IconName, ScreenContainer, toast, TopBar } from '../../components';
+import { useAuth } from '../../auth/AuthContext';
+import { useMyAppointments, useGiftHistory } from '../../api/hooks';
 
-const SECTIONS: { title: string; rows: { icon: IconName; t: string; s: string; route?: string; destructive?: boolean; toggle?: boolean }[] }[] = [
-  { title: 'App', rows: [
-    { icon: 'bell',     t: 'Notifications', s: 'Daily teaching, services, groups', route: 'Notifications' },
-    { icon: 'wifiOff', t: 'Low-data mode', s: 'Save mobile data on slow networks', toggle: true },
-    { icon: 'download', t: 'Downloads',     s: '534 MB used' },
-  ]},
-  { title: 'Church', rows: [
-    { icon: 'cal',       t: 'My appointments', s: '1 upcoming · Pastor Mukendi', route: 'MyAppointments' },
-    { icon: 'verse',     t: 'About IPCK',      s: 'Mission, story, service times', route: 'About' },
-    { icon: 'community', t: 'Ministries',      s: '8 ministries · find your fit' },
-    { icon: 'globe',     t: 'Service times',   s: 'Sun 9:00 & 11:00', route: 'ServiceTimes' },
-    { icon: 'phone',     t: 'Contact the office', s: 'Call, WhatsApp, email, map', route: 'Contact' },
-  ]},
-  { title: 'Giving', rows: [
-    { icon: 'give',     t: 'Giving history',     s: 'Last gift · $50 on 21 Apr', route: 'GiveHistory' },
-    { icon: 'cal',      t: 'Recurring gifts',    s: '1 active · $50/mo' },
-    { icon: 'download', t: 'Year-end statement', s: '2025 available' },
-  ]},
-  { title: 'Privacy & account', rows: [
-    { icon: 'lock',  t: 'Privacy & Terms', s: 'What we collect, what we don\'t' },
-    { icon: 'close', t: 'Sign out',         s: '', destructive: true },
-  ]},
-];
+interface Row { icon: IconName; t: string; s: string; route?: string; destructive?: boolean; toggle?: boolean }
 
 export default function ProfileHomeScreen() {
   const nav = useNavigation<any>();
+  const { user, signOut } = useAuth();
+  const appointments = useMyAppointments();
+  const gifts = useGiftHistory();
+  const [lowData, setLowData] = useState(true);
+
+  const fullName = user ? `${user.firstName ?? ''} ${user.lastName ?? ''}`.trim() || 'Member' : 'Grace Mbuyi';
+  const initials = user
+    ? `${(user.firstName ?? '?').charAt(0)}${(user.lastName ?? '').charAt(0)}`.toUpperCase()
+    : 'GM';
+  const phone = user?.phone ?? '+243 •• ••• ••28';
+
+  // Sous-titres réels.
+  const upcoming = appointments.filter(a => a.status !== 'cancelled' && new Date(a.slotStart).getTime() >= Date.now());
+  const apptSub = upcoming.length
+    ? `${upcoming.length} upcoming · ${upcoming[0].topic?.label ?? 'Appointment'}`
+    : 'Book a conversation with a pastor';
+  const lastGift = gifts[0];
+  const giftSub = lastGift ? `Last gift · $${lastGift.amount} on ${lastGift.date}` : 'No gifts yet';
+
+  const SECTIONS: { title: string; rows: Row[] }[] = [
+    { title: 'App', rows: [
+      { icon: 'bell',    t: 'Notifications', s: 'Daily teaching, services, groups', route: 'Notifications' },
+      { icon: 'wifiOff', t: 'Low-data mode', s: 'Save mobile data on slow networks', toggle: true },
+      { icon: 'download', t: 'Downloads',    s: '534 MB used' },
+    ]},
+    { title: 'Church', rows: [
+      { icon: 'cal',       t: 'My appointments', s: apptSub, route: 'MyAppointments' },
+      { icon: 'verse',     t: 'About IPCK',      s: 'Mission, story, service times', route: 'About' },
+      { icon: 'community', t: 'Ministries',      s: '8 ministries · find your fit' },
+      { icon: 'globe',     t: 'Service times',   s: 'Sun 9:00 & 11:00', route: 'ServiceTimes' },
+      { icon: 'phone',     t: 'Contact the office', s: 'Call, WhatsApp, email, map', route: 'Contact' },
+    ]},
+    { title: 'Giving', rows: [
+      { icon: 'give',     t: 'Giving history',     s: giftSub, route: 'GiveHistory' },
+      { icon: 'cal',      t: 'Recurring gifts',    s: '1 active · $50/mo' },
+      { icon: 'download', t: 'Year-end statement', s: '2025 available' },
+    ]},
+    { title: 'Privacy & account', rows: [
+      { icon: 'lock',  t: 'Privacy & Terms', s: 'What we collect, what we don\'t' },
+      { icon: 'close', t: 'Sign out',         s: '', destructive: true },
+    ]},
+  ];
+
+  const onSignOut = async () => {
+    const ok = await confirm({
+      title: 'Sign out',
+      message: 'Are you sure you want to sign out? You are always welcome back home.',
+      confirmLabel: 'Sign out',
+      cancelLabel: 'Stay',
+      destructive: true,
+    });
+    if (ok) signOut();
+  };
+
+  const handleRow = (r: { t: string; route?: string; toggle?: boolean }) => {
+    if (r.toggle) return;
+    if (r.route) return nav.navigate(r.route);
+    if (r.t === 'Sign out') return onSignOut();
+    toast.info(r.t, 'Coming soon — on its way.');
+  };
+
   return (
     <ScreenContainer>
       <TopBar
@@ -40,12 +81,12 @@ export default function ProfileHomeScreen() {
 
       {/* Header */}
       <View style={styles.headerRow}>
-        <View style={styles.avt}><Text style={styles.avtTxt}>GM</Text></View>
+        <View style={styles.avt}><Text style={styles.avtTxt}>{initials}</Text></View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">Grace Mbuyi</Text>
-          <Text style={styles.phone} numberOfLines={1}>+243 •• ••• ••28</Text>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{fullName}</Text>
+          <Text style={styles.phone} numberOfLines={1}>{phone}</Text>
         </View>
-        <Pressable style={styles.editBtn}><Text style={styles.editTxt}>Edit</Text></Pressable>
+        <Pressable style={styles.editBtn} onPress={() => nav.navigate('ProfileSetup')}><Text style={styles.editTxt}>Edit</Text></Pressable>
       </View>
 
       {SECTIONS.map(sec => (
@@ -55,7 +96,7 @@ export default function ProfileHomeScreen() {
             {sec.rows.map((r, i) => (
               <Pressable
                 key={r.t}
-                onPress={() => r.route && nav.navigate(r.route)}
+                onPress={() => handleRow(r)}
                 style={[styles.row, i < sec.rows.length - 1 && { borderBottomWidth: 1, borderBottomColor: tokens.borderSoft }]}
               >
                 <View style={[styles.rowIcon, r.destructive && { backgroundColor: tokens.errorTint }]}>
@@ -65,7 +106,7 @@ export default function ProfileHomeScreen() {
                   <Text style={[styles.rowTitle, r.destructive && { color: tokens.error }]} numberOfLines={1} ellipsizeMode="tail">{r.t}</Text>
                   {r.s ? <Text style={styles.rowSub} numberOfLines={1}>{r.s}</Text> : null}
                 </View>
-                {r.toggle ? <Switch value /> : <Icon name="chevron" size={16} color={tokens.textTertiary} />}
+                {r.toggle ? <Switch value={lowData} onValueChange={setLowData} /> : <Icon name="chevron" size={16} color={tokens.textTertiary} />}
               </Pressable>
             ))}
           </View>

@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, Icon, ScreenContainer, TopBar } from '../../components';
 import { usePaymentMethods } from '../../api/hooks';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function GiveMethodScreen() {
   const nav = useNavigation<any>();
+  const { amount, fundId } = useRoute<RouteProp<RootStackParamList, 'GiveMethod'>>().params;
   const paymentMethods = usePaymentMethods();
   const [picked, setPicked] = useState('mpesa');
   const m = paymentMethods.find(x => x.id === picked)!;
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate(m.kind === 'card' ? 'GiveCard' : 'GiveMomoConfirm')}>Continue</Button>}
+      footer={<Button fullWidth onPress={() => nav.navigate(m.kind === 'card' ? 'GiveCard' : 'GiveMomoConfirm', { amount, fundId, method: picked })}>Continue</Button>}
     >
-      <TopBar back title="Give · $50 · General" />
-      <Text style={styles.eyebrow}>3 OF 3 · METHOD</Text>
+      <TopBar back title={`Give · $${amount}`} />
+      <Text style={styles.eyebrow}>METHOD</Text>
       <Text style={styles.h1}>How will you pay?</Text>
 
       <View style={{ marginTop: 28, gap: 10 }}>

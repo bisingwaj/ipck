@@ -22,7 +22,7 @@ export default function GiveHistoryScreen() {
 
       <Text style={styles.section}>RECENT GIFTS</Text>
       {giftHistory.map(g => (
-        <Pressable key={g.id} onPress={() => nav.navigate('GiveReceipt')} style={styles.row}>
+        <Pressable key={g.id} onPress={() => nav.navigate('GiveReceipt', { donationId: g.id })} style={styles.row}>
           <View style={{ flex: 1 }}>
             <Text style={styles.rowDate} numberOfLines={1}>{g.date}</Text>
             <Text style={styles.rowFund} numberOfLines={1} ellipsizeMode="tail">{g.fund} · {g.method}</Text>

@@ -1,52 +1,86 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, ScreenContainer, TopBar } from '../../components';
+import { useAppointmentSlots, ApptDay } from '../../api/hooks';
+import { RootStackParamList } from '../../navigation/types';
 
-const DAYS = [
-  { d: 'Mon 26', slots: ['10:00', '14:00'] },
-  { d: 'Tue 27', slots: ['09:00', '11:00', '14:00', '15:30'] },
-  { d: 'Wed 28', slots: ['10:00', '14:00', '16:00'] },
-  { d: 'Thu 29', slots: ['11:00'] },
-];
+/** Créneaux de secours (mode mocks / backend vide) : prochains jours ouvrés. */
+function buildFallbackDays(): ApptDay[] {
+  const out: ApptDay[] = [];
+  const base = new Date();
+  let added = 0;
+  for (let offset = 1; offset < 14 && added < 4; offset++) {
+    const d = new Date(base);
+    d.setDate(d.getDate() + offset);
+    if (d.getDay() === 0) continue;
+    const slots = [10, 14, 16].map(h => {
+      const s = new Date(d);
+      s.setHours(h, 0, 0, 0);
+      return { start: s.toISOString(), available: true };
+    });
+    out.push({ day: d.toISOString().slice(0, 10), slots });
+    added++;
+  }
+  return out;
+}
+
+const dayLabel = (iso: string) => new Date(iso).toLocaleDateString('en-US', { weekday: 'short', day: '2-digit', month: 'short' });
+const timeLabel = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 export default function BookSlotScreen() {
   const nav = useNavigation<any>();
-  const [slot, setSlot] = useState('Tue 27-14:00');
+  const { topicId, topicLabel } = useRoute<RouteProp<RootStackParamList, 'BookSlot'>>().params;
+  const backendDays = useAppointmentSlots();
+  const fallback = useMemo(() => buildFallbackDays(), []);
+  const days = backendDays.length ? backendDays : fallback;
+  const [slotStart, setSlotStart] = useState('');
+
+  // Présélectionne le premier créneau disponible.
+  useEffect(() => {
+    if (slotStart) return;
+    for (const d of days) {
+      const a = d.slots.find(s => s.available);
+      if (a) { setSlotStart(a.start); return; }
+    }
+  }, [days, slotStart]);
 
   return (
     <ScreenContainer
-      footer={<Button fullWidth onPress={() => nav.navigate('BookConfirm')}>Continue</Button>}
+      footer={<Button fullWidth disabled={!slotStart} onPress={() => nav.navigate('BookConfirm', { topicId, topicLabel, slotStart })}>Continue</Button>}
     >
       <TopBar back title="Step 2 of 3" />
       <View style={styles.progress}>
         {[1,2,3].map(i => <View key={i} style={[styles.bar, i <= 2 && styles.barOn]} />)}
       </View>
       <View style={styles.summary}>
-        <Text style={styles.summaryTxt}>Booking · Counseling</Text>
+        <Text style={styles.summaryTxt} numberOfLines={1} ellipsizeMode="tail">Booking · {topicLabel}</Text>
       </View>
       <Text style={styles.h1}>Pick a time</Text>
-      <Text style={styles.sub}>Pastor Mukendi · this week</Text>
+      <Text style={styles.sub}>With the pastoral team · next 2 weeks</Text>
 
       <View style={{ marginTop: 20, gap: 14 }}>
-        {DAYS.map(d => (
-          <View key={d.d}>
-            <Text style={styles.day}>{d.d}</Text>
-            <View style={styles.slotRow}>
-              {d.slots.map(s => {
-                const id = d.d + '-' + s;
-                const on = slot === id;
-                return (
-                  <Pressable key={s} onPress={() => setSlot(id)} style={[styles.slot, on && styles.slotOn]}>
-                    <Text style={[styles.slotTxt, on && { color: '#fff' }]}>{s}</Text>
-                  </Pressable>
-                );
-              })}
+        {days.map(d => {
+          const available = d.slots.filter(s => s.available);
+          if (available.length === 0) return null;
+          return (
+            <View key={d.day}>
+              <Text style={styles.day}>{dayLabel(d.day)}</Text>
+              <View style={styles.slotRow}>
+                {available.map(s => {
+                  const on = slotStart === s.start;
+                  return (
+                    <Pressable key={s.start} onPress={() => setSlotStart(s.start)} style={[styles.slot, on && styles.slotOn]}>
+                      <Text style={[styles.slotTxt, on && { color: '#fff' }]}>{timeLabel(s.start)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
     </ScreenContainer>
   );

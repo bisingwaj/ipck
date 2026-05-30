@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Share } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar, GeoArt, Pill } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar, GeoArt, Pill } from '../../components';
 import { useSermons } from '../../api/hooks';
 
 export default function SermonDetailScreen() {
@@ -13,10 +13,20 @@ export default function SermonDetailScreen() {
   const id = route.params?.id;
   const sermon = sermons.find(s => s.id === id) || sermons[0];
   const [playing, setPlaying] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const onShare = () => {
+    Share.share({ message: `${sermon.title} — ${sermon.speaker} · ${sermon.series}\nIPCK Connect` }).catch(() => {});
+  };
+  const onSave = () => {
+    setSaved(s => !s);
+    toast.success(saved ? 'Removed' : 'Saved', saved ? 'Removed from your favorites.' : `"${sermon.title}" saved to feed your soul again.`);
+  };
+  const onDownload = () => toast.info('Coming soon', 'Offline listening is on its way.');
 
   return (
     <ScreenContainer>
-      <TopBar back actions={[{ icon: 'share' }, { icon: 'download' }, { icon: 'bookmark' }]} />
+      <TopBar back actions={[{ icon: 'share', onPress: onShare }, { icon: 'download', onPress: onDownload }, { icon: saved ? 'check' : 'bookmark', onPress: onSave }]} />
 
       {/* Hero */}
       <View style={styles.hero}>
@@ -50,9 +60,9 @@ export default function SermonDetailScreen() {
 
       {/* Action buttons */}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 24 }}>
-        <Button variant="secondary" size="sm" leftIcon="bookmark" style={{ flex: 1 }}>Save</Button>
-        <Button variant="secondary" size="sm" leftIcon="download" style={{ flex: 1 }}>Download</Button>
-        <Button variant="secondary" size="sm" leftIcon="share" style={{ flex: 1 }}>Share</Button>
+        <Button variant="secondary" size="sm" leftIcon={saved ? 'check' : 'bookmark'} style={{ flex: 1 }} onPress={onSave}>{saved ? 'Saved' : 'Save'}</Button>
+        <Button variant="secondary" size="sm" leftIcon="download" style={{ flex: 1 }} onPress={onDownload}>Download</Button>
+        <Button variant="secondary" size="sm" leftIcon="share" style={{ flex: 1 }} onPress={onShare}>Share</Button>
       </View>
 
       {/* Notes */}

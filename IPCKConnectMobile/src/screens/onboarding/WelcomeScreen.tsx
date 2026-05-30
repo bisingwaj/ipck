@@ -4,16 +4,19 @@ import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, GeoArt, ScreenContainer } from '../../components';
+import { useAuth } from '../../auth/AuthContext';
 
 export default function WelcomeScreen() {
   const nav = useNavigation<any>();
+  const { user } = useAuth();
+  const firstName = user?.firstName?.trim();
   return (
     <ScreenContainer scroll={false} padded={false}>
       <View style={{ flex: 1 }}>
         <GeoArt kind="community" height={260} />
         <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
           <Text style={styles.eyebrow}>WELCOME HOME</Text>
-          <Text style={styles.h1}>Glad you're here, Grace.</Text>
+          <Text style={styles.h1}>{firstName ? `Glad you're here, ${firstName}.` : "Glad you're here."}</Text>
           <Text style={styles.body}>
             Your daily teaching is ready, and your church family is one tap away.
           </Text>

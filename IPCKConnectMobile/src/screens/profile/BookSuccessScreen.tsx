@@ -1,12 +1,15 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer } from '../../components';
+import { Button, Icon, ScreenContainer, toast } from '../../components';
+import { apptWhen } from '../../api/format';
+import { RootStackParamList } from '../../navigation/types';
 
 export default function BookSuccessScreen() {
   const nav = useNavigation<any>();
+  const { slotStart, topicLabel } = useRoute<RouteProp<RootStackParamList, 'BookSuccess'>>().params;
   return (
     <ScreenContainer scroll={false}>
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 24, gap: 18 }}>
@@ -15,12 +18,11 @@ export default function BookSuccessScreen() {
         </View>
         <Text style={styles.h1}>You're booked.</Text>
         <Text style={styles.body}>
-          Tuesday 27 May · 2:00 PM with Pastor Mukendi. You'll get an SMS confirmation and a reminder the day before.
+          {topicLabel} · {apptWhen(slotStart)} with the pastoral team. You'll get an SMS confirmation and a reminder the day before.
         </Text>
-        <Text style={styles.ref}>REF · APPT-2026-05-24-381</Text>
       </View>
       <View style={{ gap: 10 }}>
-        <Button fullWidth leftIcon="cal">Add to calendar</Button>
+        <Button fullWidth leftIcon="cal" onPress={() => toast.info('Coming soon', 'Adding to your calendar will be available soon.')}>Add to calendar</Button>
         <Button variant="ghost" fullWidth onPress={() => nav.navigate('MyAppointments')}>See my appointments</Button>
       </View>
     </ScreenContainer>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar } from '../../components';
 import { useAuth } from '../../auth/AuthContext';
 import { USE_MOCKS } from '../../api/config';
 import { apiMessage } from '../../api/errors';
@@ -26,7 +26,7 @@ export default function PhoneScreen() {
       await requestOtp(full);
       nav.navigate('OTP', { phone: full });
     } catch (e) {
-      Alert.alert('Erreur', apiMessage(e));
+      toast.error('Take heart', apiMessage(e));
     } finally {
       setBusy(false);
     }

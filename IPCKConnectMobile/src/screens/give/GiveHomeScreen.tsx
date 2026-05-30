@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, TopBar, GeoArt } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar, GeoArt } from '../../components';
 import { useWallet } from '../../api/hooks';
 
 export default function GiveHomeScreen() {
@@ -13,7 +13,7 @@ export default function GiveHomeScreen() {
     <ScreenContainer>
       <TopBar
         titleLarge="Give"
-        actions={[{ icon: 'help', onPress: () => {} }]}
+        actions={[{ icon: 'help', onPress: () => toast.info('Give with joy', 'Offer your tithes and offerings via Airtel Money, M-Pesa, Orange Money, Afrimoney or card. Your Grace Reserve lets you bless in one tap during a live service. "God loves a cheerful giver." (2 Corinthians 9:7)') }]}
       />
 
       {/* Amen Wallet — primary surface */}
@@ -22,10 +22,10 @@ export default function GiveHomeScreen() {
           <Icon name="pray" size={20} color={tokens.accent}/>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.walletEyebrow}>YOUR AMEN WALLET</Text>
+          <Text style={styles.walletEyebrow}>YOUR GRACE RESERVE</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
             <Text style={styles.walletAmt}>{wallet.balanceCoins}</Text>
-            <Text style={styles.walletUnit}>amen coins · ≈ ${wallet.balanceCoins}</Text>
+            <Text style={styles.walletUnit}>Blessings · ≈ ${wallet.balanceCoins}</Text>
           </View>
           <Text style={styles.walletSub}>Use during live · or send to a fund anytime</Text>
         </View>
@@ -56,7 +56,7 @@ export default function GiveHomeScreen() {
           <Text style={styles.tileTitle}>History</Text>
           <Text style={styles.tileSub}>Your last gifts</Text>
         </Pressable>
-        <Pressable style={styles.tile}>
+        <Pressable onPress={() => toast.info('Year-end statement', 'Your 2025 giving statement will be available in January.')} style={styles.tile}>
           <Icon name="download" size={20} color={tokens.primary} />
           <Text style={styles.tileTitle}>Statement</Text>
           <Text style={styles.tileSub}>Year-end · 2025</Text>

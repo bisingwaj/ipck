@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, ScreenContainer, TopBar, Pill } from '../../components';
+import { Icon, ScreenContainer, toast, TopBar, Pill } from '../../components';
 import { useMyGroups, usePrayerWall, useEvents } from '../../api/hooks';
+import { eventDateParts } from '../../api/format';
 
 export default function CommunityHomeScreen() {
   const nav = useNavigation<any>();
@@ -15,7 +16,7 @@ export default function CommunityHomeScreen() {
     <ScreenContainer>
       <TopBar
         titleLarge="Community"
-        actions={[{ icon: 'search', onPress: () => {} }]}
+        actions={[{ icon: 'search', onPress: () => toast.info('Coming soon', 'Search is on its way.') }]}
       />
 
       {/* My groups */}
@@ -55,18 +56,21 @@ export default function CommunityHomeScreen() {
         <Pressable onPress={() => nav.navigate('Events')}><Text style={styles.seeAll}>See all</Text></Pressable>
       </View>
 
-      {events.slice(0, 2).map(e => (
-        <Pressable key={e.id} onPress={() => nav.navigate('EventDetail', { id: e.id })} style={styles.eventRow}>
-          <View style={[styles.eventDate, { backgroundColor: e.color + '22' }]}>
-            <Text style={[styles.eventDay, { color: e.color }]}>{e.when.match(/\d+/)?.[0]}</Text>
-            <Text style={[styles.eventMonth, { color: e.color }]}>{e.when.split(' ')[2]?.toUpperCase()}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.eventName} numberOfLines={1} ellipsizeMode="tail">{e.name}</Text>
-            <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">{e.when.split('·')[1]?.trim()} · {e.loc}</Text>
-          </View>
-        </Pressable>
-      ))}
+      {events.slice(0, 2).map(e => {
+        const d = eventDateParts(e);
+        return (
+          <Pressable key={e.id} onPress={() => nav.navigate('EventDetail', { id: e.id })} style={styles.eventRow}>
+            <View style={[styles.eventDate, { backgroundColor: e.color + '22' }]}>
+              <Text style={[styles.eventDay, { color: e.color }]}>{d.day}</Text>
+              <Text style={[styles.eventMonth, { color: e.color }]}>{d.month}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.eventName} numberOfLines={1} ellipsizeMode="tail">{e.name}</Text>
+              <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">{d.time} · {e.loc}</Text>
+            </View>
+          </Pressable>
+        );
+      })}
     </ScreenContainer>
   );
 }

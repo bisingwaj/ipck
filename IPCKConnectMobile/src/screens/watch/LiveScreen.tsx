@@ -7,8 +7,10 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Icon, GeoArt, Pill } from '../../components';
-import { useWallet, useLiveAmens } from '../../api/hooks';
+import { Icon, GeoArt, Pill, VideoPlayer } from '../../components';
+import { useWallet, useLiveAmens, useLiveSession, useLiveContent } from '../../api/hooks';
+import { useSendLiveAmen } from '../../api/mutations';
+import { USE_MOCKS } from '../../api/config';
 
 // ─────────────────────────────────────────────────────────────
 // LiveScreen
@@ -40,26 +42,34 @@ export default function LiveScreen() {
   const insets = useSafeAreaInsets();
   const initialWallet = useWallet();
   const liveAmens = useLiveAmens();
+  const session = useLiveSession();
+  const liveContent = useLiveContent();            // lien vidéo live (YouTube/HLS) piloté par le dashboard
+  const liveUrl = liveContent?.videoUrl;
+  const streamTitle = liveContent?.title ?? session?.title ?? 'Live service';
+  const streamSpeaker = liveContent?.speaker ?? session?.speaker;
+  const sendAmenMut = useSendLiveAmen(USE_MOCKS ? undefined : session?.id);
 
   const [tab, setTab] = useState<Tab>('chat');
   const [msg, setMsg] = useState('');
+  const [chat, setChat] = useState<ChatMessage[]>(CHAT);
   const [balance, setBalance] = useState(initialWallet.balanceCoins);
   const [reactions, setReactions] = useState<AmenReaction[]>([]);
-  const [stats, setStats] = useState({
-    amenCount: 184,   // total amens sent this service
-    amenCoins: 612,   // total coins given this service
-    viewers: 612,
-  });
+  // Totaux du service : source de vérité = backend (session). 0 jusqu'au chargement.
+  const [stats, setStats] = useState({ amenCount: 0, amenCoins: 0 });
   const reactionId = useRef(0);
 
-  // Simulate incoming amens from other viewers
+  // Synchronise le compteur sur les vraies valeurs de la session.
+  useEffect(() => {
+    if (session) setStats({ amenCount: session.amenCount, amenCoins: session.amenCoins });
+  }, [session?.amenCount, session?.amenCoins]);
+
+  // Réactions flottantes d'ambiance (rejoue les amens récents réels) — n'affecte PAS le compteur.
   useEffect(() => {
     let cancelled = false;
     function loop() {
       if (cancelled) return;
       const pick = liveAmens[Math.floor(Math.random() * liveAmens.length)];
-      pushReaction(pick.coins, pick.who);
-      setStats(s => ({ ...s, amenCount: s.amenCount + 1, amenCoins: s.amenCoins + pick.coins }));
+      if (pick) pushReaction(pick.coins, pick.who);
       const delay = 1400 + Math.random() * 2400;
       setTimeout(loop, delay);
     }
@@ -76,14 +86,36 @@ export default function LiveScreen() {
     }, 3000 + coins * 60);
   }
 
-  function sendAmen(coins: number) {
+  async function sendAmen(coins: number) {
+    // Pré-check optimiste : pas assez de solde → on redirige vers la recharge.
     if (balance < coins) {
       nav.navigate('WalletTopup');
       return;
     }
     setBalance(b => b - coins);
     pushReaction(coins, 'You');
-    setStats(s => ({ ...s, amenCount: s.amenCount + 1, amenCoins: s.amenCoins + coins }));
+    setStats(s => ({ amenCount: s.amenCount + 1, amenCoins: s.amenCoins + coins })); // optimiste
+    try {
+      const res = await sendAmenMut.mutateAsync(coins);
+      // Le backend est la source de vérité : solde + totaux du service.
+      if (!USE_MOCKS) {
+        setBalance(res.balanceCoins);
+        setStats({ amenCount: res.amenCount, amenCoins: res.amenCoins });
+      }
+    } catch (e: any) {
+      setBalance(b => b + coins); // rollback solde
+      setStats(s => ({ amenCount: Math.max(0, s.amenCount - 1), amenCoins: Math.max(0, s.amenCoins - coins) })); // rollback compteur
+      if (e?.response?.data?.code === 'INSUFFICIENT_BALANCE') {
+        nav.navigate('WalletTopup');
+      }
+    }
+  }
+
+  function sendChat() {
+    const text = msg.trim();
+    if (!text) return;
+    setChat(c => [{ who: 'You', t: text, ago: 'now' }, ...c]);
+    setMsg('');
   }
 
   const lowBalance = balance < 5;
@@ -92,26 +124,36 @@ export default function LiveScreen() {
     <View style={{ flex: 1, backgroundColor: tokens.editorialInk }}>
       {/* STREAM AREA + floating amens overlay */}
       <View style={[styles.stream, { paddingTop: insets.top }]}>
-        <GeoArt kind="live" height={260}/>
-        <View style={styles.streamOverlay}/>
+        {liveUrl ? (
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            <VideoPlayer url={liveUrl} height={280} autoplay />
+          </View>
+        ) : (
+          <>
+            <GeoArt kind="live" height={260}/>
+            <View style={styles.streamOverlay}/>
+          </>
+        )}
         <Pressable onPress={() => nav.goBack()} style={[styles.closeBtn, { top: insets.top + 8 }]}>
           <Icon name="close" size={22} color="#fff"/>
         </Pressable>
-        <View style={[styles.streamTop, { top: insets.top + 8 }]}>
-          <Pill tone="live">● LIVE</Pill>
+        <View pointerEvents="none" style={[styles.streamTop, { top: insets.top + 8 }]}>
+          <Pill tone="live">{session?.state === 'live' || liveContent ? '● LIVE' : 'REPLAY'}</Pill>
           <View style={styles.viewerCount}>
             <Icon name="eye" size={12} color="#fff"/>
-            <Text style={styles.viewerCountTxt}>{stats.viewers}</Text>
+            <Text style={styles.viewerCountTxt}>{session?.viewersLive ?? 0}</Text>
           </View>
         </View>
 
-        <View style={styles.streamCenter}>
-          <Text style={styles.streamTitle}>Grace, not earned</Text>
-          <Text style={styles.streamSpeaker}>Pastor Mukendi Tshibaka</Text>
-        </View>
+        {!liveUrl && (
+          <View style={styles.streamCenter}>
+            <Text style={styles.streamTitle} numberOfLines={2} ellipsizeMode="tail">{streamTitle}</Text>
+            {!!streamSpeaker && <Text style={styles.streamSpeaker} numberOfLines={1} ellipsizeMode="tail">{streamSpeaker}</Text>}
+          </View>
+        )}
 
-        {/* Amen meter at bottom of stream */}
-        <View style={[styles.amenMeter, { bottom: 12 }]}>
+        {/* Amen meter at bottom of stream (masqué quand le lecteur réel occupe l'espace) */}
+        {!liveUrl && <View style={[styles.amenMeter, { bottom: 12 }]}>
           <View style={styles.amenMeterIcon}>
             <Icon name="pray" size={14} color={tokens.accent}/>
           </View>
@@ -121,10 +163,10 @@ export default function LiveScreen() {
               <Text style={{ fontFamily: fonts.uiBold }}>{stats.amenCount}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.55)' }}>  ·  </Text>
               <Text style={{ fontFamily: fonts.uiBold }}>{stats.amenCoins}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.55)' }}> coins given</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.55)' }}> Blessings given</Text>
             </Text>
           </View>
-        </View>
+        </View>}
 
         {/* Floating amens — absolutely positioned, no pointer events */}
         <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -151,7 +193,7 @@ export default function LiveScreen() {
       </View>
 
       <View style={{ flex: 1 }}>
-        {tab === 'chat' && <ChatPane/>}
+        {tab === 'chat' && <ChatPane messages={chat}/>}
         {tab === 'verse' && <VersePane/>}
         {tab === 'pray' && <PrayPane/>}
       </View>
@@ -165,7 +207,7 @@ export default function LiveScreen() {
           </View>
           <Text style={styles.walletBal}>
             <Text style={{ fontFamily: fonts.uiBold, color: '#fff' }}>{balance}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.55)' }}> amen coins</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.55)' }}> Blessings</Text>
           </Text>
           {lowBalance && (
             <View style={styles.lowPill}>
@@ -206,11 +248,13 @@ export default function LiveScreen() {
           <TextInput
             value={msg}
             onChangeText={setMsg}
+            onSubmitEditing={sendChat}
+            returnKeyType="send"
             placeholder="Say something kind…"
             placeholderTextColor="rgba(255,255,255,0.4)"
             style={styles.composerInput}
           />
-          <Pressable style={styles.send}><Icon name="send" size={18} color="#fff"/></Pressable>
+          <Pressable style={styles.send} onPress={sendChat}><Icon name="send" size={18} color="#fff"/></Pressable>
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -267,7 +311,9 @@ function AmenGlyph({ coins, who, startX }: { coins: number; who: string; startX:
 // Tab panes
 // ─────────────────────────────────────────────────────────────
 
-const CHAT = [
+interface ChatMessage { who: string; t: string; ago: string }
+
+const CHAT: ChatMessage[] = [
   { who: 'Joseph K.', t: 'Powerful word this morning, pastor.', ago: '2m' },
   { who: 'Nadine B.', t: 'Can someone send the verse reference?', ago: '3m' },
   { who: 'Pierre T.', t: 'Ephesians 2:8-9', ago: '3m' },
@@ -275,10 +321,10 @@ const CHAT = [
   { who: 'Claude L.', t: 'Joining from Lubumbashi. Blessings.', ago: '8m' },
 ];
 
-function ChatPane() {
+function ChatPane({ messages }: { messages: ChatMessage[] }) {
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} showsVerticalScrollIndicator={false}>
-      {CHAT.map((m, i) => (
+      {messages.map((m, i) => (
         <View key={i} style={styles.chatRow}>
           <View style={styles.chatAvt}><Text style={styles.chatAvtTxt}>{m.who[0]}</Text></View>
           <View style={{ flex: 1 }}>

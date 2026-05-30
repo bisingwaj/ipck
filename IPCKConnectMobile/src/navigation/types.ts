@@ -19,23 +19,25 @@ export type RootStackParamList = {
   Devotional: { devotionalId?: string } | undefined;
   PastDevotionals: undefined;
   Streak: undefined;
-  Prayed: undefined;
+  Prayed: { streakCount?: number; blessings?: number } | undefined;
 
   // Watch
   SermonDetail: { id: string };
+  ContentDetail: { id: string };
   Live: undefined;
 
-  // Give
+  // Give — le montant/fonds/méthode est threadé tout au long du flow
   Wallet: undefined;
   WalletTopup: undefined;
+  WalletTransactions: undefined;
   GiveAmount: undefined;
-  GiveFund: undefined;
-  GiveMethod: undefined;
-  GiveMomoConfirm: undefined;
-  GiveMomoPrompt: undefined;
-  GiveCard: undefined;
-  GiveSuccess: undefined;
-  GiveReceipt: undefined;
+  GiveFund: { amount: number };
+  GiveMethod: { amount: number; fundId: string };
+  GiveMomoConfirm: { amount: number; fundId: string; method: string };
+  GiveMomoPrompt: { amount: number; fundId: string; method: string };
+  GiveCard: { amount: number; fundId: string; method: string };
+  GiveSuccess: { donationId: string; ref: string; amount: number; fundName: string };
+  GiveReceipt: { donationId: string };
   GiveHistory: undefined;
 
   // Community
@@ -53,9 +55,9 @@ export type RootStackParamList = {
   ServiceTimes: undefined;
   Contact: undefined;
   BookTopic: undefined;
-  BookSlot: undefined;
-  BookConfirm: undefined;
-  BookSuccess: undefined;
+  BookSlot: { topicId: string; topicLabel: string };
+  BookConfirm: { topicId: string; topicLabel: string; slotStart: string };
+  BookSuccess: { slotStart: string; topicLabel: string };
   MyAppointments: undefined;
   Notifications: undefined;
   Settings: undefined;

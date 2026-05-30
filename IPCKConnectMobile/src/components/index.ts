@@ -10,3 +10,6 @@ export * from './BrandMark';
 export * from './GeoArt';
 export * from './TabBar';
 export * from './ScreenContainer';
+export * from './Feedback';
+export * from './feedbackController';
+export * from './VideoPlayer';

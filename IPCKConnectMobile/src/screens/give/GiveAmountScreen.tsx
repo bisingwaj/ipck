@@ -1,19 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
 import { Button, ScreenContainer, TopBar } from '../../components';
+import { useWallet } from '../../api/hooks';
 
 const PRESETS = [10, 25, 50, 100, 200, 500];
 
 export default function GiveAmountScreen() {
   const nav = useNavigation<any>();
+  const wallet = useWallet();
   const [amount, setAmount] = useState('50');
+  const [touched, setTouched] = useState(false);
+
+  // Par défaut, propose un montant payable depuis le wallet (≤ solde),
+  // pour que « Send from wallet » soit utilisable d'emblée. L'utilisateur
+  // peut taper plus pour payer par Mobile Money / carte.
+  useEffect(() => {
+    if (!touched && wallet.balanceCoins > 0) {
+      setAmount(String(Math.min(50, wallet.balanceCoins)));
+    }
+  }, [wallet.balanceCoins, touched]);
+
+  const set = (v: string) => { setTouched(true); setAmount(v); };
 
   return (
     <ScreenContainer
-      footer={<Button fullWidth disabled={!Number(amount)} onPress={() => nav.navigate('GiveFund')}>Continue</Button>}
+      footer={<Button fullWidth disabled={!Number(amount)} onPress={() => nav.navigate('GiveFund', { amount: Number(amount) })}>Continue</Button>}
     >
       <TopBar back title="Give" />
       <Text style={styles.eyebrow}>1 OF 3 · AMOUNT</Text>
@@ -23,19 +37,19 @@ export default function GiveAmountScreen() {
         <Text style={styles.currency}>$</Text>
         <TextInput
           value={amount}
-          onChangeText={t => setAmount(t.replace(/\D/g, ''))}
+          onChangeText={t => set(t.replace(/\D/g, ''))}
           keyboardType="number-pad"
           style={styles.amountInput}
         />
       </View>
 
-      <Text style={styles.usdEq}>Approx. {(Number(amount) * 2700).toLocaleString()} CDF</Text>
+      <Text style={styles.usdEq}>Approx. {(Number(amount) * 2700).toLocaleString()} CDF · Grace Reserve: {wallet.balanceCoins} Blessings</Text>
 
       <View style={styles.presets}>
         {PRESETS.map(p => {
           const on = String(p) === amount;
           return (
-            <Pressable key={p} onPress={() => setAmount(String(p))} style={[styles.preset, on && styles.presetOn]}>
+            <Pressable key={p} onPress={() => set(String(p))} style={[styles.preset, on && styles.presetOn]}>
               <Text style={[styles.presetTxt, on && { color: '#fff' }]}>{'$' + p}</Text>
             </Pressable>
           );

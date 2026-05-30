@@ -11,6 +11,8 @@ import { View, Text } from 'react-native';
 import { tokens } from './src/theme/tokens';
 import { queryClient } from './src/api/queryClient';
 import { AuthProvider } from './src/auth/AuthContext';
+import { navigationRef } from './src/navigation/navigationRef';
+import { FeedbackProvider } from './src/components';
 
 export default function App() {
   const fontsLoaded = useLoadFonts();
@@ -25,10 +27,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <SafeAreaProvider>
-          <NavigationContainer>
-            <RootNavigator />
-            <StatusBar style="dark" />
-          </NavigationContainer>
+          <FeedbackProvider>
+            <NavigationContainer ref={navigationRef}>
+              <RootNavigator />
+              <StatusBar style="dark" />
+            </NavigationContainer>
+          </FeedbackProvider>
         </SafeAreaProvider>
       </AuthProvider>
     </QueryClientProvider>
