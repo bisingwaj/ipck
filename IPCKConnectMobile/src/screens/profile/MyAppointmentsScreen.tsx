@@ -13,9 +13,9 @@ export default function MyAppointmentsScreen() {
 
       <Text style={styles.section}>UPCOMING</Text>
       <View style={styles.card}>
-        <Text style={styles.when}>TUE 27 MAY · 2:00 PM</Text>
-        <Text style={styles.title}>Counseling</Text>
-        <Text style={styles.meta}>with Pastor Mukendi · Pastor's office</Text>
+        <Text style={styles.when} numberOfLines={1}>TUE 27 MAY · 2:00 PM</Text>
+        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">Counseling</Text>
+        <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">with Pastor Mukendi · Pastor's office</Text>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
           <Button variant="secondary" size="sm" style={{ flex: 1 }}>Reschedule</Button>
           <Button variant="danger" size="sm" style={{ flex: 1 }}>Cancel</Button>
@@ -24,9 +24,9 @@ export default function MyAppointmentsScreen() {
 
       <Text style={[styles.section, { marginTop: 24 }]}>PAST</Text>
       <View style={[styles.card, { backgroundColor: tokens.surface }]}>
-        <Text style={[styles.when, { fontSize: 10 }]}>MON 3 FEB · 10:00 AM</Text>
-        <Text style={[styles.title, { fontSize: 16 }]}>Prayer</Text>
-        <Text style={styles.meta}>with Pastor Esther</Text>
+        <Text style={[styles.when, { fontSize: 10 }]} numberOfLines={1}>MON 3 FEB · 10:00 AM</Text>
+        <Text style={[styles.title, { fontSize: 16 }]} numberOfLines={1} ellipsizeMode="tail">Prayer</Text>
+        <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">with Pastor Esther</Text>
       </View>
     </ScreenContainer>
   );

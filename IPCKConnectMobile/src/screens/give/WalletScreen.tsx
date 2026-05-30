@@ -28,7 +28,7 @@ export default function WalletScreen() {
             <Text style={styles.heroAmt}>{wallet.balanceCoins}</Text>
             <Text style={styles.heroUnit}>amen coins</Text>
           </View>
-          <Text style={styles.heroEq}>≈ ${wallet.balanceCoins} USD · default fund: {wallet.defaultFund}</Text>
+          <Text style={styles.heroEq} numberOfLines={1} ellipsizeMode="tail">≈ ${wallet.balanceCoins} USD · default fund: {wallet.defaultFund}</Text>
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 22, width: '100%' }}>
             <Button style={{ flex: 1 }} leftIcon="plus" onPress={() => nav.navigate('WalletTopup')}>Top up</Button>
@@ -40,7 +40,7 @@ export default function WalletScreen() {
         <View style={styles.explainer}>
           <View style={styles.explainerIcon}><Icon name="help" size={14} color={tokens.primary}/></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.explainerTitle}>What is the amen wallet?</Text>
+            <Text style={styles.explainerTitle} numberOfLines={1} ellipsizeMode="tail">What is the amen wallet?</Text>
             <Text style={styles.explainerBody}>
               Amen coins are pre-loaded credit you can give in real-time during a live service — one quick tap, no phone prompt.
               {'\n\n'}

@@ -31,8 +31,8 @@ export default function TodayHomeScreen() {
         <Pressable onPress={() => nav.navigate('Live')} style={styles.live}>
           <View style={styles.liveDot} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.liveLbl}>LIVE NOW · SUNDAY SERVICE</Text>
-            <Text style={styles.liveTitle}>{liveSermon.title}</Text>
+            <Text style={styles.liveLbl} numberOfLines={1}>LIVE NOW · SUNDAY SERVICE</Text>
+            <Text style={styles.liveTitle} numberOfLines={2} ellipsizeMode="tail">{liveSermon.title}</Text>
           </View>
           <Icon name="chevron" size={20} color="#fff" />
         </Pressable>
@@ -43,9 +43,9 @@ export default function TodayHomeScreen() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
           <GeoArt kind="verse" height={120} />
         </View>
-        <View style={{ marginTop: 90, padding: 22 }}>
+        <View style={{ marginTop: 108, padding: 22 }}>
           <Text style={styles.eyebrow}>TODAY'S TEACHING</Text>
-          <Text style={styles.devTitle}>{todayDevotional.title}</Text>
+          <Text style={styles.devTitle} numberOfLines={3} ellipsizeMode="tail">{todayDevotional.title}</Text>
           <Text style={styles.devVerse}>{todayDevotional.verseText}</Text>
           <Text style={styles.devRef}>— {todayDevotional.verseRef}</Text>
           <View style={styles.readCta}>
@@ -62,9 +62,9 @@ export default function TodayHomeScreen() {
           <Icon name="play" size={22} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.cardEyebrow}>LATEST SERMON</Text>
-          <Text style={styles.cardTitle}>{sermons[1].title}</Text>
-          <Text style={styles.cardSub}>{sermons[1].speaker} · {sermons[1].duration}</Text>
+          <Text style={styles.cardEyebrow} numberOfLines={1}>LATEST SERMON</Text>
+          <Text style={styles.cardTitle} numberOfLines={2} ellipsizeMode="tail">{sermons[1].title}</Text>
+          <Text style={styles.cardSub} numberOfLines={1} ellipsizeMode="tail">{sermons[1].speaker} · {sermons[1].duration}</Text>
         </View>
       </Pressable>
 

@@ -14,7 +14,7 @@ export default function CommunityHomeScreen() {
   return (
     <ScreenContainer>
       <TopBar
-        left={<Text style={styles.pageTitle}>Community</Text>}
+        titleLarge="Community"
         actions={[{ icon: 'search', onPress: () => {} }]}
       />
 
@@ -31,8 +31,8 @@ export default function CommunityHomeScreen() {
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-              <Text style={styles.groupName}>{g.name}</Text>
-              {g.unread > 0 && <View style={styles.unreadDot}><Text style={styles.unreadTxt}>{g.unread}</Text></View>}
+              <Text style={styles.groupName} numberOfLines={1} ellipsizeMode="tail">{g.name}</Text>
+              {g.unread > 0 && <View style={[styles.unreadDot, { flexShrink: 0 }]}><Text style={styles.unreadTxt}>{g.unread}</Text></View>}
             </View>
             <Text style={styles.groupLast} numberOfLines={1}>{g.lastMessage}</Text>
           </View>
@@ -43,8 +43,8 @@ export default function CommunityHomeScreen() {
       <Pressable onPress={() => nav.navigate('PrayerWall')} style={styles.prayerCard}>
         <View style={styles.prayerIcon}><Icon name="pray" size={24} color={tokens.accent} /></View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.prayerTitle}>Prayer wall</Text>
-          <Text style={styles.prayerSub}>{prayerWall.length} requests · pray with your church family</Text>
+          <Text style={styles.prayerTitle} numberOfLines={1} ellipsizeMode="tail">Prayer wall</Text>
+          <Text style={styles.prayerSub} numberOfLines={2} ellipsizeMode="tail">{prayerWall.length} requests · pray with your church family</Text>
         </View>
         <Icon name="chevron" size={18} color={tokens.textTertiary} />
       </Pressable>
@@ -62,8 +62,8 @@ export default function CommunityHomeScreen() {
             <Text style={[styles.eventMonth, { color: e.color }]}>{e.when.split(' ')[2]?.toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.eventName}>{e.name}</Text>
-            <Text style={styles.eventMeta}>{e.when.split('·')[1]?.trim()} · {e.loc}</Text>
+            <Text style={styles.eventName} numberOfLines={1} ellipsizeMode="tail">{e.name}</Text>
+            <Text style={styles.eventMeta} numberOfLines={1} ellipsizeMode="tail">{e.when.split('·')[1]?.trim()} · {e.loc}</Text>
           </View>
         </Pressable>
       ))}
@@ -72,13 +72,12 @@ export default function CommunityHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { fontFamily: fonts.serifBold, fontSize: 26, color: tokens.editorialInk, letterSpacing: -0.4 },
   sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, marginBottom: 10 },
   section: { fontFamily: fonts.uiBold, fontSize: 11, letterSpacing: 1.5, color: tokens.textSecondary },
   seeAll: { fontFamily: fonts.uiBold, fontSize: 12, color: tokens.primary },
   groupRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   groupAvt: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  groupName: { fontFamily: fonts.uiBold, fontSize: 15, color: tokens.text },
+  groupName: { fontFamily: fonts.uiBold, fontSize: 15, color: tokens.text, flexShrink: 1 },
   groupLast: { fontFamily: fonts.ui, fontSize: 12, color: tokens.textSecondary, marginTop: 2 },
   unreadDot: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 99, backgroundColor: tokens.primary, minWidth: 18, alignItems: 'center' },
   unreadTxt: { fontFamily: fonts.uiBold, fontSize: 10, color: '#fff' },

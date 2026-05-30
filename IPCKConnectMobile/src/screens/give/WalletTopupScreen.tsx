@@ -66,8 +66,8 @@ export default function WalletTopupScreen() {
                 <Text style={styles.methodLogoTxt}>{p.logo}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.methodName}>{p.name}</Text>
-                <Text style={styles.methodSub}>{p.kind === 'card' ? 'Visa, Mastercard · instant' : p.instant ? 'Instant prompt' : 'May take a few hours'}</Text>
+                <Text style={styles.methodName} numberOfLines={1} ellipsizeMode="tail">{p.name}</Text>
+                <Text style={styles.methodSub} numberOfLines={1} ellipsizeMode="tail">{p.kind === 'card' ? 'Visa, Mastercard · instant' : p.instant ? 'Instant prompt' : 'May take a few hours'}</Text>
               </View>
               {on && <Icon name="check" size={20} color={tokens.primary} strokeWidth={2.5}/>}
             </Pressable>

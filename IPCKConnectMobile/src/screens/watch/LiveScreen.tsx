@@ -283,8 +283,8 @@ function ChatPane() {
           <View style={styles.chatAvt}><Text style={styles.chatAvtTxt}>{m.who[0]}</Text></View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', gap: 6, alignItems: 'baseline' }}>
-              <Text style={styles.chatWho}>{m.who}</Text>
-              <Text style={styles.chatAgo}>{m.ago}</Text>
+              <Text style={styles.chatWho} numberOfLines={1} ellipsizeMode="tail">{m.who}</Text>
+              <Text style={styles.chatAgo} numberOfLines={1}>{m.ago}</Text>
             </View>
             <Text style={styles.chatTxt}>{m.t}</Text>
           </View>
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
   chatRow: { flexDirection: 'row', gap: 10 },
   chatAvt: { width: 28, height: 28, borderRadius: 14, backgroundColor: tokens.primary, alignItems: 'center', justifyContent: 'center' },
   chatAvtTxt: { fontFamily: fonts.uiBold, fontSize: 12, color: '#fff' },
-  chatWho: { fontFamily: fonts.uiBold, fontSize: 12, color: '#fff' },
+  chatWho: { fontFamily: fonts.uiBold, fontSize: 12, color: '#fff', flexShrink: 1 },
   chatAgo: { fontFamily: fonts.mono, fontSize: 10, color: 'rgba(255,255,255,0.5)' },
   chatTxt: { fontFamily: fonts.ui, fontSize: 13, color: 'rgba(255,255,255,0.9)', marginTop: 1 },
 

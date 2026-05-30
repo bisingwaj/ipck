@@ -34,7 +34,7 @@ export default function ProfileHomeScreen() {
   return (
     <ScreenContainer>
       <TopBar
-        left={<Text style={styles.pageTitle}>Profile</Text>}
+        titleLarge="Profile"
         actions={[{ icon: 'bell', onPress: () => nav.navigate('Notifications') }]}
       />
 
@@ -42,8 +42,8 @@ export default function ProfileHomeScreen() {
       <View style={styles.headerRow}>
         <View style={styles.avt}><Text style={styles.avtTxt}>GM</Text></View>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.name}>Grace Mbuyi</Text>
-          <Text style={styles.phone}>+243 •• ••• ••28</Text>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">Grace Mbuyi</Text>
+          <Text style={styles.phone} numberOfLines={1}>+243 •• ••• ••28</Text>
         </View>
         <Pressable style={styles.editBtn}><Text style={styles.editTxt}>Edit</Text></Pressable>
       </View>
@@ -62,7 +62,7 @@ export default function ProfileHomeScreen() {
                   <Icon name={r.icon} size={18} color={r.destructive ? tokens.error : tokens.primary} />
                 </View>
                 <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={[styles.rowTitle, r.destructive && { color: tokens.error }]}>{r.t}</Text>
+                  <Text style={[styles.rowTitle, r.destructive && { color: tokens.error }]} numberOfLines={1} ellipsizeMode="tail">{r.t}</Text>
                   {r.s ? <Text style={styles.rowSub} numberOfLines={1}>{r.s}</Text> : null}
                 </View>
                 {r.toggle ? <Switch value /> : <Icon name="chevron" size={16} color={tokens.textTertiary} />}
@@ -78,7 +78,6 @@ export default function ProfileHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { fontFamily: fonts.serifBold, fontSize: 26, color: tokens.editorialInk, letterSpacing: -0.4 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 12 },
   avt: { width: 72, height: 72, borderRadius: 22, backgroundColor: tokens.primary, alignItems: 'center', justifyContent: 'center' },
   avtTxt: { fontFamily: fonts.uiBold, fontSize: 26, color: '#fff' },

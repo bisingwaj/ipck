@@ -20,8 +20,8 @@ export default function ServiceTimesScreen() {
             <Text style={styles.amPm}>{s.t.split(' ')[1]}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{s.n}</Text>
-            <Text style={styles.desc}>{s.d}</Text>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{s.n}</Text>
+            <Text style={styles.desc} numberOfLines={2} ellipsizeMode="tail">{s.d}</Text>
           </View>
         </View>
       ))}

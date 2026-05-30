@@ -31,8 +31,8 @@ export default function GroupsListScreen() {
             <Icon name="community" size={20} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{g.name}</Text>
-            <Text style={styles.meta}>{g.members} members · {g.meets}</Text>
+            <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">{g.name}</Text>
+            <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{g.members} members · {g.meets}</Text>
           </View>
           {tab === 'discover' && <View style={styles.joinBtn}><Text style={styles.joinTxt}>Join</Text></View>}
           {tab === 'mine' && <Icon name="chevron" size={18} color={tokens.textTertiary} />}

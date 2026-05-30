@@ -17,7 +17,7 @@ export default function WatchListScreen() {
   return (
     <ScreenContainer>
       <TopBar
-        left={<Text style={styles.pageTitle}>Watch</Text>}
+        titleLarge="Watch"
         actions={[{ icon: 'search', onPress: () => {} }]}
       />
 
@@ -34,9 +34,9 @@ export default function WatchListScreen() {
               <Pill tone="muted">612 watching</Pill>
             </View>
             <View>
-              <Text style={styles.liveEyebrow}>SUNDAY SERVICE</Text>
-              <Text style={styles.liveTitle}>{live.title}</Text>
-              <Text style={styles.liveSpeaker}>{live.speaker}</Text>
+              <Text style={styles.liveEyebrow} numberOfLines={1}>SUNDAY SERVICE</Text>
+              <Text style={styles.liveTitle} numberOfLines={2} ellipsizeMode="tail">{live.title}</Text>
+              <Text style={styles.liveSpeaker} numberOfLines={1} ellipsizeMode="tail">{live.speaker}</Text>
             </View>
           </View>
         </Pressable>
@@ -61,9 +61,9 @@ export default function WatchListScreen() {
             <Icon name="play" size={20} color="#fff" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowSeries}>{s.series.toUpperCase()}</Text>
-            <Text style={styles.rowTitle}>{s.title}</Text>
-            <Text style={styles.rowMeta}>{s.speaker} · {s.duration} · {s.date}</Text>
+            <Text style={styles.rowSeries} numberOfLines={1}>{s.series.toUpperCase()}</Text>
+            <Text style={styles.rowTitle} numberOfLines={2} ellipsizeMode="tail">{s.title}</Text>
+            <Text style={styles.rowMeta} numberOfLines={1} ellipsizeMode="tail">{s.speaker} · {s.duration} · {s.date}</Text>
           </View>
           <Icon name="bookmark" size={18} color={tokens.textTertiary} />
         </Pressable>
@@ -73,7 +73,6 @@ export default function WatchListScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { fontFamily: fonts.serifBold, fontSize: 26, color: tokens.editorialInk, letterSpacing: -0.4 },
   liveBanner: { height: 160, borderRadius: 14, overflow: 'hidden', marginBottom: 18, flexDirection: 'row' },
   liveOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(20,24,31,0.5)' } as any,
   liveEyebrow: { fontFamily: fonts.uiBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.7)' },

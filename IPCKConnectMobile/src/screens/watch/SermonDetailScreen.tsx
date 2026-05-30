@@ -58,7 +58,7 @@ export default function SermonDetailScreen() {
       {/* Notes */}
       <Text style={styles.section}>SERMON NOTES</Text>
       <View style={styles.notes}>
-        <Text style={styles.notesH}>Three things grace teaches us</Text>
+        <Text style={styles.notesH} numberOfLines={2} ellipsizeMode="tail">Three things grace teaches us</Text>
         <View style={styles.bullet}><Text style={styles.bulletNum}>1.</Text><Text style={styles.bulletTxt}>We were not saved by what we did.</Text></View>
         <View style={styles.bullet}><Text style={styles.bulletNum}>2.</Text><Text style={styles.bulletTxt}>We cannot be saved by what we do.</Text></View>
         <View style={styles.bullet}><Text style={styles.bulletNum}>3.</Text><Text style={styles.bulletTxt}>We get to live differently because we are saved.</Text></View>

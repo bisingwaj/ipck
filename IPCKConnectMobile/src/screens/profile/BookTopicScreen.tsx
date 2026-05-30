@@ -35,8 +35,8 @@ export default function BookTopicScreen() {
                 {on && <View style={styles.radioDot} />}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.rowTitle, on && { color: tokens.primary }]}>{t.t}</Text>
-                <Text style={styles.rowSub}>{t.d}</Text>
+                <Text style={[styles.rowTitle, on && { color: tokens.primary }]} numberOfLines={1} ellipsizeMode="tail">{t.t}</Text>
+                <Text style={styles.rowSub} numberOfLines={2} ellipsizeMode="tail">{t.d}</Text>
               </View>
             </Pressable>
           );

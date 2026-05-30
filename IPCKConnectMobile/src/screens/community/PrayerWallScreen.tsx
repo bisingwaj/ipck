@@ -19,8 +19,8 @@ export default function PrayerWallScreen() {
       <Pressable onPress={() => nav.navigate('SubmitPrayer')} style={styles.cta}>
         <View style={styles.ctaIcon}><Icon name="plus" size={20} color="#fff" /></View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.ctaTitle}>Share a prayer request</Text>
-          <Text style={styles.ctaSub}>Publicly, anonymously, or privately to the pastor</Text>
+          <Text style={styles.ctaTitle} numberOfLines={1} ellipsizeMode="tail">Share a prayer request</Text>
+          <Text style={styles.ctaSub} numberOfLines={2} ellipsizeMode="tail">Publicly, anonymously, or privately to the pastor</Text>
         </View>
         <Icon name="chevron" size={18} color={tokens.textTertiary} />
       </Pressable>
@@ -34,8 +34,8 @@ export default function PrayerWallScreen() {
                 <Text style={styles.avtTxt}>{p.initials}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.who}>{p.who}</Text>
-                <Text style={styles.ago}>{p.ago} ago</Text>
+                <Text style={styles.who} numberOfLines={1} ellipsizeMode="tail">{p.who}</Text>
+                <Text style={styles.ago} numberOfLines={1}>{p.ago} ago</Text>
               </View>
               {p.visibility === 'anon' && <Pill tone="muted">ANONYMOUS</Pill>}
             </View>

@@ -12,7 +12,7 @@ export default function GiveHomeScreen() {
   return (
     <ScreenContainer>
       <TopBar
-        left={<Text style={styles.pageTitle}>Give</Text>}
+        titleLarge="Give"
         actions={[{ icon: 'help', onPress: () => {} }]}
       />
 
@@ -66,9 +66,9 @@ export default function GiveHomeScreen() {
       {/* Recurring gift status */}
       <View style={styles.recurring}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.recurringLbl}>YOUR RECURRING GIFT</Text>
-          <Text style={styles.recurringTitle}>$50 monthly · General fund</Text>
-          <Text style={styles.recurringSub}>Next reminder: 21 Jun · M-Pesa</Text>
+          <Text style={styles.recurringLbl} numberOfLines={1}>YOUR RECURRING GIFT</Text>
+          <Text style={styles.recurringTitle} numberOfLines={1} ellipsizeMode="tail">$50 monthly · General fund</Text>
+          <Text style={styles.recurringSub} numberOfLines={1} ellipsizeMode="tail">Next reminder: 21 Jun · M-Pesa</Text>
         </View>
         <Icon name="chevron" size={18} color={tokens.textTertiary} />
       </View>
@@ -86,7 +86,6 @@ export default function GiveHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  pageTitle: { fontFamily: fonts.serifBold, fontSize: 26, color: tokens.editorialInk, letterSpacing: -0.4 },
 
   // Amen Wallet
   wallet: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 18, backgroundColor: tokens.editorialInk, marginTop: 12, marginBottom: 6 },

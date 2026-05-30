@@ -24,8 +24,8 @@ export default function GiveHistoryScreen() {
       {giftHistory.map(g => (
         <Pressable key={g.id} onPress={() => nav.navigate('GiveReceipt')} style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowDate}>{g.date}</Text>
-            <Text style={styles.rowFund}>{g.fund} · {g.method}</Text>
+            <Text style={styles.rowDate} numberOfLines={1}>{g.date}</Text>
+            <Text style={styles.rowFund} numberOfLines={1} ellipsizeMode="tail">{g.fund} · {g.method}</Text>
           </View>
           <Text style={styles.rowAmt}>${g.amount}</Text>
           <Icon name="chevron" size={16} color={tokens.textTertiary} />

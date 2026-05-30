@@ -24,8 +24,8 @@ export default function PrayerDetailScreen() {
             <Text style={styles.avtTxt}>{p.initials}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.who}>{p.who}</Text>
-            <Text style={styles.ago}>{p.ago} ago</Text>
+            <Text style={styles.who} numberOfLines={1} ellipsizeMode="tail">{p.who}</Text>
+            <Text style={styles.ago} numberOfLines={1}>{p.ago} ago</Text>
           </View>
           {p.visibility === 'anon' && <Pill tone="muted">ANONYMOUS</Pill>}
         </View>
@@ -43,7 +43,7 @@ export default function PrayerDetailScreen() {
         <View style={styles.reply}>
           <View style={[styles.miniAvt, { backgroundColor: '#FFB020' }]}><Text style={styles.miniAvtTxt}>EM</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.replyWho}>Esther M.</Text>
+            <Text style={styles.replyWho} numberOfLines={1} ellipsizeMode="tail">Esther M.</Text>
             <Text style={styles.replyTxt}>Standing with you in this. He is faithful.</Text>
           </View>
         </View>

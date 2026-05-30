@@ -20,8 +20,8 @@ export default function GroupDetailScreen() {
         <View style={[styles.avt, { backgroundColor: group.color }]}>
           <Icon name="community" size={32} color="#fff" />
         </View>
-        <Text style={styles.name}>{group.name}</Text>
-        <Text style={styles.meta}>{group.members} members · led by {group.leader}</Text>
+        <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">{group.name}</Text>
+        <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{group.members} members · led by {group.leader}</Text>
       </View>
 
       <Button fullWidth leftIcon="send" onPress={() => nav.navigate('GroupChat', { id: group.id })}>Open chat</Button>
@@ -53,7 +53,7 @@ export default function GroupDetailScreen() {
 
 const styles = StyleSheet.create({
   avt: { width: 80, height: 80, borderRadius: 22, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  name: { fontFamily: fonts.serifBold, fontSize: 24, color: tokens.editorialInk, letterSpacing: -0.3 },
+  name: { fontFamily: fonts.serifBold, fontSize: 24, color: tokens.editorialInk, letterSpacing: -0.3, textAlign: 'center' },
   meta: { fontFamily: fonts.ui, fontSize: 13, color: tokens.textSecondary, marginTop: 4 },
   section: { fontFamily: fonts.uiBold, fontSize: 11, letterSpacing: 1.5, color: tokens.textSecondary, marginTop: 26, marginBottom: 10 },
   aboutRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },

@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import './src/theme/textScaling'; // global Dynamic Type cap — must run before any Text renders
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';

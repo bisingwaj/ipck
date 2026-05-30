@@ -1,4 +1,6 @@
 export * from './Icon';
+export * from './AppText';
+export * from './TitleRow';
 export * from './Button';
 export * from './TopBar';
 export * from './Field';

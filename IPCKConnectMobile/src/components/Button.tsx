@@ -56,7 +56,7 @@ export function Button({
       ]}
     >
       {leftIcon && <Icon name={leftIcon} size={sizing.ic} color={palette.fg} />}
-      <Text style={{ fontFamily: fonts.uiBold, fontSize: sizing.fz, color: palette.fg }}>
+      <Text numberOfLines={1} ellipsizeMode="tail" style={{ fontFamily: fonts.uiBold, fontSize: sizing.fz, color: palette.fg, flexShrink: 1 }}>
         {children}
       </Text>
       {rightIcon && <Icon name={rightIcon} size={sizing.ic} color={palette.fg} />}

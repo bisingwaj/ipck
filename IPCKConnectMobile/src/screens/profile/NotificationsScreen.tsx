@@ -24,8 +24,8 @@ export default function NotificationsScreen() {
               </View>
               <View style={{ flex: 1, minWidth: 0 }}>
                 <View style={{ flexDirection: 'row', gap: 6, alignItems: 'baseline' }}>
-                  <Text style={[styles.title, n.unread && styles.titleUnread]}>{n.title}</Text>
-                  <Text style={styles.when}>{n.when}</Text>
+                  <Text style={[styles.title, n.unread && styles.titleUnread]} numberOfLines={1} ellipsizeMode="tail">{n.title}</Text>
+                  <Text style={styles.when} numberOfLines={1}>{n.when}</Text>
                 </View>
                 <Text style={styles.sub} numberOfLines={1}>{n.subtitle}</Text>
               </View>

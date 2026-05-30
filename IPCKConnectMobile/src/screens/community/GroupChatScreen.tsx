@@ -27,15 +27,14 @@ export default function GroupChatScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: tokens.bg }}>
       <TopBar
-        back
-        left={<Pressable onPress={() => nav.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        left={<Pressable onPress={() => nav.goBack()} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
           <Icon name="chevronL" size={22} />
           <View style={[styles.miniAvt, { backgroundColor: group.color }]}>
             <Icon name="community" size={14} color="#fff" />
           </View>
-          <View>
-            <Text style={styles.headTitle}>{group.name}</Text>
-            <Text style={styles.headSub}>{group.members} members</Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.headTitle} numberOfLines={1} ellipsizeMode="tail">{group.name}</Text>
+            <Text style={styles.headSub} numberOfLines={1}>{group.members} members</Text>
           </View>
         </Pressable>}
         actions={[{ icon: 'dots' }]}

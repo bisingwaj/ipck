@@ -28,8 +28,8 @@ export default function GiveFundScreen() {
                 <View style={[styles.dotInner, { backgroundColor: f.accent }]} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{f.name}</Text>
-                <Text style={styles.rowSub}>{f.description}</Text>
+                <Text style={styles.rowTitle} numberOfLines={1} ellipsizeMode="tail">{f.name}</Text>
+                <Text style={styles.rowSub} numberOfLines={2} ellipsizeMode="tail">{f.description}</Text>
               </View>
               {on && <Icon name="check" size={20} color={tokens.primary} strokeWidth={2.5} />}
             </Pressable>

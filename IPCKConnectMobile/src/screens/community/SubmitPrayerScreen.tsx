@@ -43,8 +43,8 @@ export default function SubmitPrayerScreen() {
                 <Icon name={o.icon} size={18} color={on ? '#fff' : tokens.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.optTitle, on && { color: tokens.primary }]}>{o.label}</Text>
-                <Text style={styles.optSub}>{o.sub}</Text>
+                <Text style={[styles.optTitle, on && { color: tokens.primary }]} numberOfLines={1} ellipsizeMode="tail">{o.label}</Text>
+                <Text style={styles.optSub} numberOfLines={2} ellipsizeMode="tail">{o.sub}</Text>
               </View>
               {on && <Icon name="check" size={20} color={tokens.primary} strokeWidth={2.5} />}
             </Pressable>

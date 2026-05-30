@@ -19,9 +19,9 @@ export default function PastDevotionalsScreen() {
               {d.read && <Icon name="check" size={11} color="#fff" strokeWidth={2.5} />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.date}>{d.date}</Text>
-              <Text style={styles.title}>{d.title}</Text>
-              <Text style={styles.ref}>{d.verseRef}</Text>
+              <Text style={styles.date} numberOfLines={1}>{d.date}</Text>
+              <Text style={styles.title} numberOfLines={2} ellipsizeMode="tail">{d.title}</Text>
+              <Text style={styles.ref} numberOfLines={1} ellipsizeMode="tail">{d.verseRef}</Text>
             </View>
             <Icon name="chevron" size={18} color={tokens.textTertiary} />
           </Pressable>

@@ -16,7 +16,7 @@ export function Pill({ children, tone = 'muted' }: { children: React.ReactNode; 
   }[tone];
   return (
     <View style={[styles.pill, { backgroundColor: palette.bg }]}>
-      <Text style={[styles.txt, { color: palette.fg }]}>{children}</Text>
+      <Text style={[styles.txt, { color: palette.fg }]} numberOfLines={1} ellipsizeMode="tail">{children}</Text>
     </View>
   );
 }

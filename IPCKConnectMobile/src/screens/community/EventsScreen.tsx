@@ -19,9 +19,9 @@ export default function EventsScreen() {
             <Text style={[styles.month, { color: e.color }]}>{e.when.split(' ')[2]?.toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.name}>{e.name}</Text>
-            <Text style={styles.meta}>{e.when.split('·')[1]?.trim()}</Text>
-            <Text style={styles.meta}>{e.loc} · {e.rsvp}{e.cap ? ` / ${e.cap}` : ''} RSVP</Text>
+            <Text style={styles.name} numberOfLines={2} ellipsizeMode="tail">{e.name}</Text>
+            <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{e.when.split('·')[1]?.trim()}</Text>
+            <Text style={styles.meta} numberOfLines={1} ellipsizeMode="tail">{e.loc} · {e.rsvp}{e.cap ? ` / ${e.cap}` : ''} RSVP</Text>
           </View>
           <Icon name="chevron" size={18} color={tokens.textTertiary} />
         </Pressable>
