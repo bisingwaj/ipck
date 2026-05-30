@@ -10,7 +10,9 @@ import { AppModule } from './app.module';
 import { Env } from './config/env.validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
+  // bufferLogs désactivé : on veut voir les logs de démarrage en temps réel
+  // (avec bufferLogs, un blocage pendant l'init masquait tout dans les logs Railway).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { rawBody: true });
 
   // Sert les vidéos téléchargées (MP4/HLS) en local : GET /media/videos/<fichier>.mp4
   // (range requests gérés par express → seek). Hors préfixe /api/v1.
