@@ -35,8 +35,10 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
       useFactory: (config: ConfigService<Env, true>) => ({
         pinoHttp: {
           level: config.get('LOG_LEVEL', { infer: true }),
+          // pino-pretty seulement en terminal local : son worker-thread peut planter
+          // dans un conteneur (Railway). Sinon → logs JSON standard (sûrs).
           transport:
-            config.get('NODE_ENV', { infer: true }) === 'production'
+            config.get('NODE_ENV', { infer: true }) === 'production' || !process.stdout.isTTY
               ? undefined
               : { target: 'pino-pretty', options: { singleLine: true } },
           redact: ['req.headers.authorization', 'req.headers.cookie'],
