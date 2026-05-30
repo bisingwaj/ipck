@@ -64,6 +64,7 @@ enum AmenTxnKind {
   amen
   redeem
   refund
+  reward
 }
 
 enum AmenTxnStatus {
@@ -106,6 +107,7 @@ model User {
   messages         GroupMessage[]
   prayers          Prayer[]
   prayerAmens      PrayerAmen[]
+  prayerEncouragements PrayerEncouragement[]
   rsvps            EventRsvp[]
   donations        Donation[]
   wallet           AmenWallet?
@@ -216,6 +218,8 @@ model LiveSession {
   viewersLive Int       @default(0)
   viewersPeak Int       @default(0)
   inPerson    Int       @default(0)
+  amenCount   Int       @default(0)
+  amenCoins   Int       @default(0)
   quality     String?
   sceneActive String?
   scenes      String[]  @default([])
@@ -225,6 +229,42 @@ model LiveSession {
   sermon Sermon? @relation(fields: [sermonId], references: [id], onDelete: SetNull)
 
   @@map("live_sessions")
+}
+
+// ──────────────────────────── Content / Video ────────────────────────────
+
+enum ContentCategory {
+  sermon
+  podcast
+  teaching
+  worship
+  testimony
+  other
+}
+
+// Contenu vidéo générique piloté depuis le dashboard : on colle un petit lien
+// (YouTube live/VOD ou HLS/MP4), on choisit la catégorie et on active le type
+// (live ou non). L'app le rend dynamiquement, groupé par catégorie.
+model Content {
+  id           String          @id @default(cuid())
+  title        String
+  speaker      String?
+  series       String?
+  description  String?
+  category     ContentCategory @default(sermon)
+  videoUrl     String // petit lien : YouTube (live ou VOD) ou HLS/MP4
+  thumbnailUrl String?
+  duration     String?
+  isLive       Boolean         @default(false) // type : live (true) ou vidéo (false)
+  featured     Boolean         @default(false) // mise en avant ("à la une")
+  status       ContentStatus   @default(published)
+  publishAt    DateTime        @default(now())
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([category])
+  @@index([publishAt])
+  @@map("contents")
 }
 
 // ──────────────────────────── Groups / Chat ────────────────────────────
@@ -290,6 +330,7 @@ model Prayer {
 
   author User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
   amens  PrayerAmen[]
+  encouragements PrayerEncouragement[]
 
   @@index([status, visibility])
   @@map("prayers")
@@ -306,6 +347,20 @@ model PrayerAmen {
 
   @@unique([prayerId, userId])
   @@map("prayer_amens")
+}
+
+model PrayerEncouragement {
+  id        String   @id @default(cuid())
+  prayerId  String
+  authorId  String
+  text      String
+  createdAt DateTime @default(now())
+
+  prayer Prayer @relation(fields: [prayerId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([prayerId])
+  @@map("prayer_encouragements")
 }
 
 // ──────────────────────────────── Events ───────────────────────────────

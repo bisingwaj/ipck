@@ -15,6 +15,7 @@ import { UsersModule } from './users/users.module';
 import { DevotionalsModule } from './devotionals/devotionals.module';
 import { GivingModule } from './giving/giving.module';
 import { SermonsModule } from './sermons/sermons.module';
+import { ContentModule } from './content/content.module';
 import { GroupsModule } from './groups/groups.module';
 import { PrayersModule } from './prayers/prayers.module';
 import { EventsModule } from './events/events.module';
@@ -54,6 +55,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     DevotionalsModule,
     GivingModule,
     SermonsModule,
+    ContentModule,
     GroupsModule,
     PrayersModule,
     EventsModule,

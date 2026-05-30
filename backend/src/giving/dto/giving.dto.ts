@@ -46,6 +46,18 @@ export class SetDefaultFundDto {
   fundId!: string;
 }
 
+export class SendToFundDto {
+  @ApiProperty({ example: 25, description: 'Nombre de coins à envoyer (1 coin = 1 USD)' })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  coins!: number;
+
+  @ApiProperty({ example: 'general' })
+  @IsString()
+  fundId!: string;
+}
+
 export class WebhookDto {
   @ApiProperty()
   @IsString()

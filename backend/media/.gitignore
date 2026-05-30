@@ -1,0 +1,6 @@
+# Vidéos auto-hébergées téléchargées par scripts/fetch-videos.mjs — non versionnées (volumineuses).
+videos/
+*.mp4
+*.m3u8
+*.ts
+!.gitignore

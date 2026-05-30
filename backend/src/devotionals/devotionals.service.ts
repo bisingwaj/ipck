@@ -4,12 +4,18 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { paginate, Paginated } from '../common/dto/paginated';
 import { CreateDevotionalDto, UpdateDevotionalDto } from './dto/devotionals.dto';
+import { WalletService } from '../giving/wallet.service';
 
 type DevotionalWithRead = Devotional & { read?: boolean };
 
+const VERSE_REWARD = 10; // Blessings gagnés en lisant le verset du jour
+
 @Injectable()
 export class DevotionalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly wallet: WalletService,
+  ) {}
 
   /** Dévotion publiée la plus récente. */
   async today(userId: string): Promise<DevotionalWithRead> {
@@ -57,7 +63,10 @@ export class DevotionalsService {
   }
 
   /** Marque lu + met à jour le streak quotidien. */
-  async markRead(userId: string, id: string): Promise<{ streakCount: number }> {
+  async markRead(
+    userId: string,
+    id: string,
+  ): Promise<{ streakCount: number; blessingsAwarded: number; balanceCoins: number }> {
     const devo = await this.prisma.devotional.findUnique({ where: { id } });
     if (!devo) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Dévotion introuvable' });
 
@@ -89,7 +98,10 @@ export class DevotionalsService {
       where: { id: userId },
       data: { streakCount: streak, lastReadDay: today },
     });
-    return { streakCount: streak };
+
+    // Récompense d'engagement : +10 Blessings, une seule fois par dévotion.
+    const reward = await this.wallet.reward(userId, VERSE_REWARD, 'Daily verse', `devo:${id}`);
+    return { streakCount: streak, blessingsAwarded: reward.awarded, balanceCoins: reward.balanceCoins };
   }
 
   async create(dto: CreateDevotionalDto): Promise<Devotional> {

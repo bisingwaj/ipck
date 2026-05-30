@@ -24,7 +24,14 @@ export class OtpService {
     private readonly redis: RedisService,
     private readonly config: ConfigService<Env, true>,
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
-  ) {}
+  ) {
+    const master = this.config.get('DEV_MASTER_OTP', { infer: true });
+    if (master && this.config.get('NODE_ENV', { infer: true }) !== 'production') {
+      this.logger.warn(
+        `⚠️ OTP maître ACTIF (DEV_MASTER_OTP="${master}") — login/inscription possibles avec ce code. À retirer avant la production.`,
+      );
+    }
+  }
 
   private codeKey(phone: string): string {
     return `otp:code:${phone}`;
@@ -62,6 +69,14 @@ export class OtpService {
 
   /** Vérifie l'OTP. Détruit le code en cas de succès. Limite les tentatives. */
   async verifyOtp(phone: string, code: string): Promise<void> {
+    // OTP « passe-partout » (tests) : accepté tel quel, sans Redis, pour login + inscription.
+    // Désactivé si DEV_MASTER_OTP est vide, et toujours ignoré en production.
+    const master = this.config.get('DEV_MASTER_OTP', { infer: true });
+    if (master && code === master && this.config.get('NODE_ENV', { infer: true }) !== 'production') {
+      this.logger.warn(`OTP maître utilisé pour ${phone} (DEV_MASTER_OTP)`);
+      return;
+    }
+
     const stored = await this.redis.get(this.codeKey(phone));
     if (!stored) {
       throw new BadRequestException({ code: 'OTP_EXPIRED', message: 'Code expiré ou inexistant' });

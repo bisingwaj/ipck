@@ -1,14 +1,20 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
 import helmet from 'helmet';
+import { join } from 'path';
 import { AppModule } from './app.module';
 import { Env } from './config/env.validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true, rawBody: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true, rawBody: true });
+
+  // Sert les vidéos téléchargées (MP4/HLS) en local : GET /media/videos/<fichier>.mp4
+  // (range requests gérés par express → seek). Hors préfixe /api/v1.
+  app.useStaticAssets(join(process.cwd(), 'media'), { prefix: '/media' });
   // Logs structurés (pino) comme logger d'application
   app.useLogger(app.get(PinoLogger));
   const config = app.get(ConfigService<Env, true>);

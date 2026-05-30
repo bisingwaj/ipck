@@ -4,7 +4,7 @@ import { Request } from 'express';
 import { DonationStatus } from '@prisma/client';
 import { GivingService } from './giving.service';
 import { WalletService } from './wallet.service';
-import { CreateDonationDto, TopupWalletDto, SetDefaultFundDto, WebhookDto } from './dto/giving.dto';
+import { CreateDonationDto, TopupWalletDto, SetDefaultFundDto, SendToFundDto, WebhookDto } from './dto/giving.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
@@ -75,6 +75,12 @@ export class GivingController {
   @ApiOperation({ summary: 'Recharge le wallet' })
   topup(@CurrentUser('id') userId: string, @Body() dto: TopupWalletDto) {
     return this.wallet.topup(userId, dto);
+  }
+
+  @Post('wallet/send')
+  @ApiOperation({ summary: 'Envoie des coins du wallet vers un fonds (débite le solde)' })
+  sendToFund(@CurrentUser('id') userId: string, @Body() dto: SendToFundDto) {
+    return this.wallet.sendToFund(userId, dto);
   }
 
   @Patch('wallet/default-fund')

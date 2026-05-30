@@ -12,6 +12,8 @@ import {
   AppointmentStatus,
   LiveState,
 } from '@prisma/client';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 const prisma = new PrismaClient();
 
@@ -35,6 +37,7 @@ async function reset() {
     prisma.devotional.deleteMany(),
     prisma.liveSession.deleteMany(),
     prisma.sermon.deleteMany(),
+    prisma.content.deleteMany(),
     prisma.appointment.deleteMany(),
     prisma.notification.deleteMany(),
     prisma.pushToken.deleteMany(),
@@ -180,6 +183,44 @@ async function main() {
     },
   });
 
+  // ── Content (vidéos dynamiques pilotées depuis le dashboard) ──
+  // Source unique = scripts/videos.manifest.json (partagé avec fetch-videos.mjs).
+  // Les vidéos IPCK sont auto-hébergées : videoUrl = /media/videos/<key>.mp4
+  // (téléchargées via `pnpm fetch:videos`, servies par main.ts). Plus de YouTube.
+  console.log('🌱 Content…');
+  type ContentSeed = {
+    key: string;
+    title: string;
+    category: 'sermon' | 'podcast' | 'teaching' | 'worship' | 'testimony';
+    speaker?: string;
+    series?: string;
+    duration?: string;
+    description?: string;
+    isLive?: boolean;
+    featured?: boolean;
+    d: number;
+  };
+  const contentSeed: ContentSeed[] = JSON.parse(
+    readFileSync(join(__dirname, '..', 'scripts', 'videos.manifest.json'), 'utf-8'),
+  );
+  for (const c of contentSeed) {
+    await prisma.content.create({
+      data: {
+        title: c.title,
+        category: c.category,
+        videoUrl: `/media/videos/${c.key}.mp4`,
+        speaker: c.speaker,
+        series: c.series,
+        duration: c.duration,
+        description: c.description,
+        isLive: c.isLive ?? false,
+        featured: c.featured ?? false,
+        status: ContentStatus.published,
+        publishAt: daysAgo(c.d),
+      },
+    });
+  }
+
   // ── Sermons + live ──
   console.log('🌱 Sermons + live…');
   const liveSermon = await prisma.sermon.create({
@@ -207,6 +248,8 @@ async function main() {
       viewersLive: 612,
       viewersPeak: 684,
       inPerson: 312,
+      amenCount: 184,
+      amenCoins: 612,
       quality: '1080p',
       sceneActive: 'Sermon',
       scenes: ['Worship', 'Sermon', 'Verse', 'Communion', 'Announcements'],

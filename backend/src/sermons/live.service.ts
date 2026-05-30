@@ -46,6 +46,12 @@ export class LiveService {
       service: session.title,
     });
 
+    // Totaux du service (persistés) : +1 amen, +N coins.
+    const updated = await this.prisma.liveSession.update({
+      where: { id: sessionId },
+      data: { amenCount: { increment: 1 }, amenCoins: { increment: dto.coins } },
+    });
+
     const user = await this.prisma.user.findUniqueOrThrow({ where: { id: userId } });
     const who = user.firstName
       ? `${user.firstName} ${(user.lastName ?? '').charAt(0)}.`.trim()
@@ -55,7 +61,12 @@ export class LiveService {
     this.recentAmens = this.recentAmens.slice(0, 30);
     this.gateway.broadcastAmen({ ...amen, sessionId });
 
-    return { balanceCoins: result.balanceCoins, transaction: result.transaction };
+    return {
+      balanceCoins: result.balanceCoins,
+      transaction: result.transaction,
+      amenCount: updated.amenCount,
+      amenCoins: updated.amenCoins,
+    };
   }
 
   getRecentAmens(): LiveAmen[] {

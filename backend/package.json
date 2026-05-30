@@ -38,6 +38,7 @@
     "prisma:reset": "prisma migrate reset --force",
     "prisma:studio": "prisma studio",
     "seed": "ts-node prisma/seed.ts",
+    "fetch:videos": "node scripts/fetch-videos.mjs",
     "openapi:dump": "ts-node scripts/dump-openapi.ts"
   },
   "dependencies": {

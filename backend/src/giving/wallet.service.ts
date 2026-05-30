@@ -1,10 +1,11 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { AmenTransaction, AmenTxnKind, AmenTxnStatus } from '@prisma/client';
+import { AmenTransaction, AmenTxnKind, AmenTxnStatus, DonationStatus } from '@prisma/client';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { paginate, Paginated } from '../common/dto/paginated';
 import { PAYMENT_PROVIDER, PaymentProvider } from './payment/payment.provider';
-import { TopupWalletDto, SetDefaultFundDto } from './dto/giving.dto';
+import { TopupWalletDto, SetDefaultFundDto, SendToFundDto } from './dto/giving.dto';
 
 @Injectable()
 export class WalletService {
@@ -95,6 +96,49 @@ export class WalletService {
     ]);
   }
 
+  /** Envoie des coins du wallet vers un fonds (redeem) : débite le solde + crée un don reçu. */
+  async sendToFund(userId: string, dto: SendToFundDto) {
+    const fund = await this.prisma.fund.findUnique({ where: { id: dto.fundId } });
+    if (!fund) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Fonds introuvable' });
+
+    const wallet = await this.ensureWallet(userId);
+    if (wallet.balanceCoins < dto.coins) {
+      throw new BadRequestException({ code: 'INSUFFICIENT_BALANCE', message: 'Solde insuffisant' });
+    }
+
+    const ref = `GFT-${randomInt(0, 1000).toString().padStart(3, '0')}-${randomInt(0, 1000)
+      .toString()
+      .padStart(3, '0')}`;
+
+    const [donation] = await this.prisma.$transaction([
+      this.prisma.donation.create({
+        data: {
+          ref,
+          userId,
+          amount: dto.coins,
+          fundId: dto.fundId,
+          method: 'wallet',
+          anonymous: false,
+          status: DonationStatus.received,
+        },
+      }),
+      this.prisma.amenWallet.update({
+        where: { id: wallet.id },
+        data: { balanceCoins: { decrement: dto.coins } },
+      }),
+      this.prisma.amenTransaction.create({
+        data: {
+          walletId: wallet.id,
+          kind: AmenTxnKind.redeem,
+          coins: -dto.coins,
+          fundId: dto.fundId,
+          status: AmenTxnStatus.completed,
+        },
+      }),
+    ]);
+    return donation;
+  }
+
   async setDefaultFund(userId: string, dto: SetDefaultFundDto) {
     const fund = await this.prisma.fund.findUnique({ where: { id: dto.fundId } });
     if (!fund) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Fonds introuvable' });
@@ -136,6 +180,41 @@ export class WalletService {
       }),
     ]);
     return { balanceCoins: wallet.balanceCoins - coins, transaction: this.presentTxn(txn) };
+  }
+
+  /**
+   * Crédite des Blessings « gagnés » (engagement spirituel) dans la Grace Reserve.
+   * Idempotent via dedupeKey (ex. `devo:<id>`, `prayer:<id>`) → 1 récompense max par source.
+   */
+  async reward(
+    userId: string,
+    coins: number,
+    label: string,
+    dedupeKey?: string,
+  ): Promise<{ balanceCoins: number; awarded: number }> {
+    const wallet = await this.ensureWallet(userId);
+    if (dedupeKey) {
+      const existing = await this.prisma.amenTransaction.findFirst({
+        where: { walletId: wallet.id, kind: AmenTxnKind.reward, service: dedupeKey },
+      });
+      if (existing) return { balanceCoins: wallet.balanceCoins, awarded: 0 };
+    }
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.amenWallet.update({
+        where: { id: wallet.id },
+        data: { balanceCoins: { increment: coins } },
+      }),
+      this.prisma.amenTransaction.create({
+        data: {
+          walletId: wallet.id,
+          kind: AmenTxnKind.reward,
+          coins,
+          service: dedupeKey ?? label,
+          status: AmenTxnStatus.completed,
+        },
+      }),
+    ]);
+    return { balanceCoins: updated.balanceCoins, awarded: coins };
   }
 
   private async ensureWallet(userId: string) {

@@ -11,7 +11,12 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PrayersService } from './prayers.service';
-import { CreatePrayerDto, UpdatePrayerStatusDto, RespondPrayerDto } from './dto/prayers.dto';
+import {
+  CreatePrayerDto,
+  UpdatePrayerStatusDto,
+  RespondPrayerDto,
+  CreateEncouragementDto,
+} from './dto/prayers.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
@@ -53,6 +58,16 @@ export class PrayersController {
   @ApiOperation({ summary: 'Toggle « prayed »' })
   amen(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.prayers.toggleAmen(userId, id);
+  }
+
+  @Post(':id/encouragements')
+  @ApiOperation({ summary: 'Ajoute un mot d\'encouragement' })
+  encourage(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Body() dto: CreateEncouragementDto,
+  ) {
+    return this.prayers.addEncouragement(userId, id, dto);
   }
 
   @Patch(':id/status')

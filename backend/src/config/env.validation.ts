@@ -19,6 +19,9 @@ export const envSchema = z.object({
 
   OTP_TTL: z.coerce.number().int().positive().default(300),
   OTP_LENGTH: z.coerce.number().int().min(4).max(8).default(6),
+  // OTP « passe-partout » pour les tests (login + création de compte).
+  // Laisser vide/non défini pour désactiver. Ignoré en production (sécurité).
+  DEV_MASTER_OTP: z.string().optional(),
   SMS_PROVIDER: z.enum(['console', 'twilio']).default('console'),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),

@@ -25,3 +25,10 @@ export class RespondPrayerDto {
   @MaxLength(1000)
   message!: string;
 }
+
+export class CreateEncouragementDto {
+  @ApiProperty()
+  @IsString()
+  @MaxLength(500)
+  text!: string;
+}

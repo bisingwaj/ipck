@@ -1,0 +1,9 @@
+[
+  { "key": "sunday-service-live", "youtubeId": "rAvCkZfV0lA", "title": "Sunday Service — Live", "category": "sermon", "isLive": true, "featured": true, "speaker": "IPCK", "series": "Sunday Service", "description": "Join the live broadcast of our Sunday gathering at the International Protestant Church of Kinshasa.", "d": 0 },
+  { "key": "first-service-2023-11-12", "youtubeId": "2g6bJmbxefI", "title": "First Service — 12 November 2023", "category": "sermon", "isLive": false, "featured": false, "speaker": "IPCK", "series": "Sunday Service", "d": 3 },
+  { "key": "sunday-service-02-13", "youtubeId": "yL8DFaCySuE", "title": "Sunday Service — 13 February", "category": "sermon", "isLive": false, "featured": false, "speaker": "IPCK", "series": "Sunday Service", "d": 9 },
+  { "key": "easter-service-04-17", "youtubeId": "fWsXvlXUvmg", "title": "Easter Sunday Service — 17 April", "category": "sermon", "isLive": false, "featured": true, "speaker": "IPCK", "series": "Feasts", "description": "Celebrating the resurrection at IPCK.", "d": 14 },
+  { "key": "first-service-2022-07-24", "youtubeId": "DyyJagdAw1c", "title": "First Service — 24 July 2022", "category": "sermon", "isLive": false, "featured": false, "speaker": "IPCK", "series": "Sunday Service", "d": 20 },
+  { "key": "second-service-2022-07-31", "youtubeId": "Xr9whPI7Hsc", "title": "Second Service — 31 July 2022", "category": "sermon", "isLive": false, "featured": false, "speaker": "IPCK", "series": "Sunday Service", "d": 27 },
+  { "key": "second-service-2022-07-03", "youtubeId": "esNTXZZ3w3M", "title": "Second Service — 3 July 2022", "category": "sermon", "isLive": false, "featured": false, "speaker": "IPCK", "series": "Sunday Service", "d": 31 }
+]

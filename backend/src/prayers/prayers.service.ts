@@ -4,15 +4,24 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
 import { paginate, Paginated } from '../common/dto/paginated';
 import { ActivityService } from '../activity/activity.service';
-import { CreatePrayerDto, UpdatePrayerStatusDto, RespondPrayerDto } from './dto/prayers.dto';
+import { WalletService } from '../giving/wallet.service';
+import {
+  CreatePrayerDto,
+  UpdatePrayerStatusDto,
+  RespondPrayerDto,
+  CreateEncouragementDto,
+} from './dto/prayers.dto';
 
 type PrayerRow = Prayer & { author: User; _count: { amens: number }; amens: { userId: string }[] };
+
+const PRAYER_REWARD = 5; // Blessings gagnés en soutenant une intention de prière
 
 @Injectable()
 export class PrayersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activity: ActivityService,
+    private readonly wallet: WalletService,
   ) {}
 
   /** Mur public : prières publiques/anonymes approuvées. */
@@ -45,10 +54,38 @@ export class PrayersService {
   async findOne(userId: string, id: string) {
     const row = await this.prisma.prayer.findUnique({
       where: { id },
-      include: { author: true, _count: { select: { amens: true } }, amens: { where: { userId } } },
+      include: {
+        author: true,
+        _count: { select: { amens: true } },
+        amens: { where: { userId } },
+        encouragements: { orderBy: { createdAt: 'asc' }, include: { author: true } },
+      },
     });
     if (!row) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Prière introuvable' });
-    return this.present(row as PrayerRow, userId);
+    return {
+      ...this.present(row as PrayerRow, userId),
+      encouragements: row.encouragements.map((e) => this.presentEncouragement(e)),
+    };
+  }
+
+  /** Ajoute un mot d'encouragement (membre) à une prière. */
+  async addEncouragement(userId: string, prayerId: string, dto: CreateEncouragementDto) {
+    const prayer = await this.prisma.prayer.findUnique({ where: { id: prayerId } });
+    if (!prayer) throw new NotFoundException({ code: 'NOT_FOUND', message: 'Prière introuvable' });
+    const row = await this.prisma.prayerEncouragement.create({
+      data: { prayerId, authorId: userId, text: dto.text },
+      include: { author: true },
+    });
+    return this.presentEncouragement(row);
+  }
+
+  private presentEncouragement(e: { text: string; createdAt: Date; author: User }) {
+    return {
+      who: `${e.author.firstName ?? ''} ${(e.author.lastName ?? '').charAt(0)}.`.trim() || 'Member',
+      initials: this.initials(e.author),
+      text: e.text,
+      at: e.createdAt.toISOString(),
+    };
   }
 
   /** Création : public/anon → approuvé (mur) ; private → file de care (pending). */
@@ -71,13 +108,19 @@ export class PrayersService {
     const existing = await this.prisma.prayerAmen.findUnique({
       where: { prayerId_userId: { prayerId: id, userId } },
     });
+    let blessingsAwarded = 0;
+    let balanceCoins: number | undefined;
     if (existing) {
       await this.prisma.prayerAmen.delete({ where: { id: existing.id } });
     } else {
       await this.prisma.prayerAmen.create({ data: { prayerId: id, userId } });
+      // Récompense d'engagement : +5 Blessings, une seule fois par intention soutenue.
+      const reward = await this.wallet.reward(userId, PRAYER_REWARD, 'Prayer support', `prayer:${id}`);
+      blessingsAwarded = reward.awarded;
+      balanceCoins = reward.balanceCoins;
     }
     const amenCount = await this.prisma.prayerAmen.count({ where: { prayerId: id } });
-    return { amenCount, iPrayed: !existing };
+    return { amenCount, iPrayed: !existing, blessingsAwarded, balanceCoins };
   }
 
   // ── Dashboard care (pastor+) ──
