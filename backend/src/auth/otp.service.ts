@@ -26,10 +26,24 @@ export class OtpService {
     @Inject(SMS_PROVIDER) private readonly sms: SmsProvider,
   ) {
     const master = this.config.get('DEV_MASTER_OTP', { infer: true });
-    if (master && this.config.get('NODE_ENV', { infer: true }) !== 'production') {
+    if (master) {
       this.logger.warn(
-        `⚠️ OTP maître ACTIF (DEV_MASTER_OTP="${master}") — login/inscription possibles avec ce code. À retirer avant la production.`,
+        `⚠️ OTP maître ACTIF (DEV_MASTER_OTP="${master}") — login/inscription possibles avec ce code. À RETIRER pour une vraie production (unset DEV_MASTER_OTP).`,
       );
+    }
+  }
+
+  /**
+   * Exécute une opération Redis « best-effort » : si Redis est injoignable
+   * (mode dégradé Railway), on n'interrompt JAMAIS le flux d'auth — on log et
+   * on retombe sur `fallback`. Le rate-limit/anti-spam devient simplement inactif.
+   */
+  private async safeRedis<T>(op: () => Promise<T>, fallback: T): Promise<T> {
+    try {
+      return await op();
+    } catch (e) {
+      this.logger.warn(`Redis indisponible (auth en mode dégradé): ${(e as Error).message}`);
+      return fallback;
     }
   }
 
@@ -45,9 +59,10 @@ export class OtpService {
 
   /** Génère et envoie un OTP, avec rate-limit par numéro. Retourne le TTL. */
   async requestOtp(phone: string): Promise<{ expiresIn: number }> {
-    const count = await this.redis.incr(this.rateKey(phone));
+    // Rate-limit best-effort : si Redis tombe, on n'empêche pas l'envoi (count=0).
+    const count = await this.safeRedis(() => this.redis.incr(this.rateKey(phone)), 0);
     if (count === 1) {
-      await this.redis.expire(this.rateKey(phone), REQUEST_WINDOW);
+      await this.safeRedis(() => this.redis.expire(this.rateKey(phone), REQUEST_WINDOW), undefined);
     }
     if (count > MAX_REQUESTS_PER_WINDOW) {
       throw new HttpException(
@@ -60,8 +75,8 @@ export class OtpService {
     const ttl = this.config.get('OTP_TTL', { infer: true });
     const code = this.generateCode(length);
 
-    await this.redis.set(this.codeKey(phone), code, ttl);
-    await this.redis.del(this.attemptsKey(phone));
+    await this.safeRedis(() => this.redis.set(this.codeKey(phone), code, ttl), undefined);
+    await this.safeRedis(() => this.redis.del(this.attemptsKey(phone)), undefined);
     await this.sms.sendOtp(phone, code);
 
     return { expiresIn: ttl };
@@ -69,24 +84,25 @@ export class OtpService {
 
   /** Vérifie l'OTP. Détruit le code en cas de succès. Limite les tentatives. */
   async verifyOtp(phone: string, code: string): Promise<void> {
-    // OTP « passe-partout » (tests) : accepté tel quel, sans Redis, pour login + inscription.
-    // Désactivé si DEV_MASTER_OTP est vide, et toujours ignoré en production.
+    // OTP « passe-partout » (tests/démo) : accepté tel quel, sans Redis, pour login + inscription.
+    // Actif dès que DEV_MASTER_OTP est défini (variable contrôlée par l'opérateur).
+    // À RETIRER pour une vraie production en supprimant la variable d'env.
     const master = this.config.get('DEV_MASTER_OTP', { infer: true });
-    if (master && code === master && this.config.get('NODE_ENV', { infer: true }) !== 'production') {
+    if (master && code === master) {
       this.logger.warn(`OTP maître utilisé pour ${phone} (DEV_MASTER_OTP)`);
       return;
     }
 
-    const stored = await this.redis.get(this.codeKey(phone));
+    const stored = await this.safeRedis(() => this.redis.get(this.codeKey(phone)), null);
     if (!stored) {
       throw new BadRequestException({ code: 'OTP_EXPIRED', message: 'Code expiré ou inexistant' });
     }
 
-    const attempts = await this.redis.incr(this.attemptsKey(phone));
+    const attempts = await this.safeRedis(() => this.redis.incr(this.attemptsKey(phone)), 1);
     const ttl = this.config.get('OTP_TTL', { infer: true });
-    if (attempts === 1) await this.redis.expire(this.attemptsKey(phone), ttl);
+    if (attempts === 1) await this.safeRedis(() => this.redis.expire(this.attemptsKey(phone), ttl), undefined);
     if (attempts > MAX_VERIFY_ATTEMPTS) {
-      await this.redis.del(this.codeKey(phone));
+      await this.safeRedis(() => this.redis.del(this.codeKey(phone)), undefined);
       throw new HttpException(
         { code: 'RATE_LIMITED', message: 'Trop de tentatives, demandez un nouveau code' },
         HttpStatus.TOO_MANY_REQUESTS,
@@ -97,8 +113,8 @@ export class OtpService {
       throw new BadRequestException({ code: 'INVALID_OTP', message: 'Code incorrect' });
     }
 
-    await this.redis.del(this.codeKey(phone));
-    await this.redis.del(this.attemptsKey(phone));
+    await this.safeRedis(() => this.redis.del(this.codeKey(phone)), undefined);
+    await this.safeRedis(() => this.redis.del(this.attemptsKey(phone)), undefined);
   }
 
   private generateCode(length: number): string {
