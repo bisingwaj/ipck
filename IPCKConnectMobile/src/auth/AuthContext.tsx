@@ -39,17 +39,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [bootstrapped, setBootstrapped] = useState(false);
 
-  const loadMe = async () => {
+  const loadMe = async (): Promise<boolean> => {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
+      return true;
     } catch {
-      setUser(null);
+      // On n'efface PAS l'utilisateur ici : une vraie expiration est gérée par
+      // setUnauthorizedHandler (ci-dessous). Une erreur transitoire ne doit pas
+      // déconnecter — le client conserve les tokens et la requête pourra réessayer.
+      return false;
     }
   };
 
   useEffect(() => {
-    // Session perdue (refresh échoué sur 401) → on déconnecte ET on renvoie vers l'auth.
+    // Session réellement perdue (refresh rejeté par le serveur) → déconnexion + retour à l'auth.
     setUnauthorizedHandler(() => {
       setUser(null);
       queryClient.clear();
@@ -60,8 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBootstrapped(true);
         return;
       }
-      const token = await getItem(KEYS.access);
-      if (token) await loadMe();
+      // Tant qu'un refresh token est présent, la session est considérée valide :
+      // on charge le profil avec quelques essais (tolère un cold start backend).
+      // Si la session a vraiment expiré, le client efface les tokens → on s'arrête.
+      if (await getItem(KEYS.refresh)) {
+        for (let i = 0; i < 3; i++) {
+          if (await loadMe()) break;
+          if (!(await getItem(KEYS.refresh))) break; // tokens effacés = vraie déconnexion
+          await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+        }
+      }
       setBootstrapped(true);
     })();
   }, []);
@@ -101,7 +113,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         requestOtp,
         verifyOtp,
         signOut,
-        refreshMe: loadMe,
+        refreshMe: async () => {
+          await loadMe();
+        },
       }}
     >
       {children}

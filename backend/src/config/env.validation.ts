@@ -20,7 +20,7 @@ export const envSchema = z.object({
     .transform((v) => (/^rediss?:\/\/.+/.test(v) ? v : 'redis://localhost:6379')),
 
   JWT_ACCESS_SECRET: z.string().min(8),
-  JWT_ACCESS_TTL: z.coerce.number().int().positive().default(900),
+  JWT_ACCESS_TTL: z.coerce.number().int().positive().default(3600),
   JWT_REFRESH_SECRET: z.string().min(8),
   JWT_REFRESH_TTL: z.coerce.number().int().positive().default(2_592_000),
 

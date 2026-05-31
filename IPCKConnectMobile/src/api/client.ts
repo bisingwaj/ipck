@@ -16,38 +16,89 @@ api.interceptors.request.use(async (config) => {
   return config;
 });
 
-let refreshing: Promise<string | null> | null = null;
+// Routes qui ne doivent JAMAIS déclencher un refresh : le refresh lui-même et les
+// routes pré-auth (otp/login/logout). ⚠️ /auth/me est PROTÉGÉE et DOIT pouvoir se
+// rafraîchir — l'exclure provoquait une déconnexion dès l'expiration de l'access token.
+function isPreAuthRoute(url?: string): boolean {
+  if (!url) return false;
+  return (
+    url.includes('/auth/refresh') ||
+    url.includes('/auth/otp') ||
+    url.includes('/auth/logout')
+  );
+}
 
-async function refreshTokens(): Promise<string | null> {
-  const refreshToken = await getItem(KEYS.refresh);
-  if (!refreshToken) return null;
-  try {
-    const { data } = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-    await setItem(KEYS.access, data.accessToken);
-    await setItem(KEYS.refresh, data.refreshToken);
-    return data.accessToken as string;
-  } catch {
-    await deleteItem(KEYS.access);
-    await deleteItem(KEYS.refresh);
-    return null;
+/** Vraie fin de session (refresh token absent/révoqué/expiré) → déconnexion. */
+class SessionExpiredError extends Error {}
+
+let refreshing: Promise<string> | null = null;
+
+/**
+ * Rafraîchit les tokens, avec déduplication stricte (une seule requête de refresh
+ * en vol — `.finally` remet le verrou à zéro exactement une fois, évitant la
+ * double-utilisation d'un refresh token à usage unique qui déconnecterait).
+ *
+ * - Lève `SessionExpiredError` UNIQUEMENT si le serveur rejette le refresh token
+ *   (401/403) → la session est réellement terminée.
+ * - Sur erreur réseau / 5xx / timeout : relève l'erreur SANS supprimer les tokens
+ *   (cold start Railway, coupure passagère…) → la session est préservée.
+ */
+function refreshTokens(): Promise<string> {
+  if (!refreshing) {
+    refreshing = (async () => {
+      const refreshToken = await getItem(KEYS.refresh);
+      if (!refreshToken) throw new SessionExpiredError('no refresh token');
+      try {
+        const { data } = await axios.post(
+          `${API_URL}/auth/refresh`,
+          { refreshToken },
+          { timeout: 15000 },
+        );
+        await setItem(KEYS.access, data.accessToken);
+        await setItem(KEYS.refresh, data.refreshToken);
+        return data.accessToken as string;
+      } catch (e) {
+        const status = (e as AxiosError).response?.status;
+        if (status === 401 || status === 403) {
+          // Refresh token invalide/révoqué → vraie fin de session.
+          await deleteItem(KEYS.access);
+          await deleteItem(KEYS.refresh);
+          throw new SessionExpiredError('refresh rejected');
+        }
+        // Erreur transitoire (réseau/5xx/timeout) : on NE déconnecte PAS.
+        throw e;
+      }
+    })().finally(() => {
+      refreshing = null;
+    });
   }
+  return refreshing;
 }
 
 api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
-    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    const isAuthRoute = original?.url?.includes('/auth/');
-    if (error.response?.status === 401 && original && !original._retry && !isAuthRoute) {
+    const original = error.config as
+      | (InternalAxiosRequestConfig & { _retry?: boolean })
+      | undefined;
+
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !original._retry &&
+      !isPreAuthRoute(original.url)
+    ) {
       original._retry = true;
-      refreshing = refreshing ?? refreshTokens();
-      const newToken = await refreshing;
-      refreshing = null;
-      if (newToken) {
+      try {
+        const newToken = await refreshTokens();
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
+      } catch (e) {
+        // Seule une vraie expiration de session renvoie vers l'authentification.
+        // Une erreur transitoire laisse la session intacte (la requête échoue, c'est tout).
+        if (e instanceof SessionExpiredError) onUnauthorized?.();
+        return Promise.reject(error);
       }
-      onUnauthorized?.();
     }
     return Promise.reject(error);
   },
