@@ -1,0 +1,193 @@
+import { ReactNode } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Dashboard,
+  Favorite,
+  Money,
+  Video,
+  UserMultiple,
+  Group,
+  Book,
+  SendAlt,
+  Activity,
+  ChevronRight,
+} from '@carbon/icons-react';
+
+/* ───────────────────────────────────────────────────────────────
+   Navigation partagée — pilote la side nav (AppShell) et les tabs
+   (PageHead). Les libellés/routes restent ceux de l'app existante.
+   ─────────────────────────────────────────────────────────────── */
+export interface NavItem {
+  id: string;
+  path: string;
+  label: string;
+  icon: typeof Dashboard;
+  category: string | null;
+}
+
+export const NAV: NavItem[] = [
+  { id: 'overview', path: '/', label: "Vue d'ensemble", icon: Dashboard, category: null },
+  { id: 'care', path: '/care', label: 'Soin pastoral', icon: Favorite, category: 'Communauté' },
+  { id: 'people', path: '/people', label: 'Membres', icon: UserMultiple, category: 'Communauté' },
+  { id: 'community', path: '/community', label: 'Communauté', icon: Group, category: 'Communauté' },
+  { id: 'giving', path: '/giving', label: 'Dons', icon: Money, category: 'Finance' },
+  { id: 'content', path: '/content', label: 'Contenus', icon: Video, category: 'Contenu' },
+  { id: 'devotions', path: '/devotions', label: 'Dévotions', icon: Book, category: 'Contenu' },
+  { id: 'communications', path: '/communications', label: 'Communications', icon: SendAlt, category: 'Diffusion' },
+  { id: 'activity', path: '/activity', label: 'Activité', icon: Activity, category: 'Supervision' },
+];
+
+/* ── Tag / pill ── */
+export type Tone =
+  | 'gray' | 'blue' | 'red' | 'green' | 'yellow' | 'purple' | 'magenta' | 'teal';
+
+export function Tag({ tone = 'gray', children }: { tone?: Tone; children: ReactNode }) {
+  return <span className={`cds-tag cds-tag--${tone}`}>{children}</span>;
+}
+
+export function LiveTag({ children = 'LIVE' }: { children?: ReactNode }) {
+  return <span className="cds-tag cds-tag--live">{children}</span>;
+}
+
+/* ── KPI tile (tuile plate Carbon avec delta optionnel) ── */
+export function Tile({
+  label,
+  value,
+  delta,
+  deltaType = 'pct',
+  good,
+  caption,
+  live,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  delta?: number;
+  deltaType?: 'pct' | 'abs';
+  good?: boolean;
+  caption?: ReactNode;
+  live?: boolean;
+}) {
+  const cls =
+    delta == null ? 'flat' : delta > 0 ? (good ? 'up' : 'down') : good ? 'down' : 'up';
+  const sign = delta != null && delta > 0 ? '+' : '';
+  return (
+    <div className="cds-tile">
+      <div className="cds-tile__label">
+        <span>{label}</span>
+        {live && <LiveTag />}
+      </div>
+      <div className="cds-tile__value">
+        <span>{value}</span>
+        {delta != null && (
+          <span className={`cds-tile__delta ${cls}`}>
+            {delta > 0 ? <ArrowUpMini /> : <ArrowDownMini />}
+            {sign}
+            {delta}
+            {deltaType === 'pct' ? '%' : ''}
+          </span>
+        )}
+      </div>
+      {caption != null && <div className="cds-tile__caption">{caption}</div>}
+    </div>
+  );
+}
+
+function ArrowUpMini() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M8 3l5 5-1 1-3.3-3.3V13H7.3V5.7L4 9 3 8z" />
+    </svg>
+  );
+}
+function ArrowDownMini() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden>
+      <path d="M8 13L3 8l1-1 3.3 3.3V3h1.4v7.3L12 7l1 1z" />
+    </svg>
+  );
+}
+
+/* ── Panel (carte plate avec en-tête optionnel) ── */
+export function Panel({
+  title,
+  sub,
+  actions,
+  children,
+  style,
+}: {
+  title?: ReactNode;
+  sub?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div className="cds-panel" style={style}>
+      {(title || actions) && (
+        <div className="cds-panel__head">
+          <div>
+            {title && <h3>{title}</h3>}
+            {sub && <div className="cds-tile__caption sub">{sub}</div>}
+          </div>
+          {actions}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/* ── PageHead — fil d'Ariane + titre + sous-titre + actions + tabs ── */
+export function PageHead({
+  title,
+  subtitle,
+  actions,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+}) {
+  const location = useLocation();
+  const navigate = useNavigate();
+  return (
+    <div className="cds-page-head">
+      <div className="cds-breadcrumb">
+        <a href="#">IPCK House</a>
+        <span className="sep">/</span>
+        <a href="#">Admin</a>
+        <span className="sep">/</span>
+        <span>{title}</span>
+      </div>
+      <div className="cds-page-title-row">
+        <div>
+          <h1 className="cds-page-title">{title}</h1>
+          {subtitle && <p className="cds-page-subtitle">{subtitle}</p>}
+        </div>
+        {actions && <div className="cds-page-actions">{actions}</div>}
+      </div>
+      <div className="cds-tabs" role="tablist">
+        {NAV.map((t) => {
+          const active = location.pathname === t.path;
+          return (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={active}
+              className={'cds-tab' + (active ? ' is-active' : '')}
+              onClick={() => navigate(t.path)}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ── Empty + chevron helpers réutilisés par les pages ── */
+export function Empty({ children }: { children: ReactNode }) {
+  return <div className="cds-empty">{children}</div>;
+}
+
+export { ChevronRight };

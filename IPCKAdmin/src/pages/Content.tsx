@@ -3,13 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Loading,
   InlineNotification,
-  StructuredListWrapper,
-  StructuredListHead,
-  StructuredListRow,
-  StructuredListCell,
-  StructuredListBody,
-  Button,
-  Tag,
   Toggle,
   Modal,
   TextInput,
@@ -19,6 +12,18 @@ import {
 } from '@carbon/react';
 import { Add, Edit, TrashCan } from '@carbon/icons-react';
 import { api } from '../api/client';
+import { PageHead, Panel, Tag, Empty } from '../components/ui';
+
+interface LiveSession {
+  id: string;
+  state: string;
+  title: string;
+  series?: string | null;
+  speaker?: string | null;
+  viewersLive: number;
+  viewersPeak: number;
+  amenCount: number;
+}
 
 interface Content {
   id: string;
@@ -63,6 +68,11 @@ export default function ContentPage() {
   const list = useQuery({
     queryKey: ['admin-content'],
     queryFn: async () => (await api.get('/content/admin', { params: { pageSize: 100 } })).data.data as Content[],
+  });
+
+  const live = useQuery({
+    queryKey: ['live-current'],
+    queryFn: async () => (await api.get('/live/current')).data as LiveSession | null,
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-content'] });
@@ -112,69 +122,136 @@ export default function ContentPage() {
   const canSave = form.title.trim() && form.videoUrl.trim();
 
   return (
-    <div className="ipck-page">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2>Contenus vidéo</h2>
-        <Button renderIcon={Add} onClick={openCreate}>Nouveau contenu</Button>
-      </div>
-      <p style={{ color: '#6f6f6f', margin: '0.5rem 0 1.5rem' }}>
-        Collez un lien vidéo direct (MP4 / flux HLS .m3u8) ou un chemin auto-hébergé <code>/media/videos/&lt;fichier&gt;.mp4</code>,
-        choisissez la catégorie et activez le direct. L'app s'actualise automatiquement.
-      </p>
+    <>
+      <PageHead
+        title="Contenus"
+        subtitle="Vidéos, sermons & directs · l'app se met à jour automatiquement"
+        actions={
+          <button className="cds-btn cds-btn--md" onClick={openCreate}>
+            Nouveau contenu
+            <Add size={16} />
+          </button>
+        }
+      />
+      <div className="cds-tab-panel">
+        <div className="cds-stack">
+          {save.isError && (
+            <InlineNotification kind="error" title="Échec de l'enregistrement" lowContrast />
+          )}
 
-      {save.isError && <InlineNotification kind="error" title="Échec de l'enregistrement" lowContrast />}
-
-      {list.isLoading ? (
-        <Loading withOverlay={false} />
-      ) : list.error ? (
-        <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
-      ) : (
-        <StructuredListWrapper>
-          <StructuredListHead>
-            <StructuredListRow head>
-              <StructuredListCell head>Titre</StructuredListCell>
-              <StructuredListCell head>Catégorie</StructuredListCell>
-              <StructuredListCell head>Statut</StructuredListCell>
-              <StructuredListCell head>En direct</StructuredListCell>
-              <StructuredListCell head>Actions</StructuredListCell>
-            </StructuredListRow>
-          </StructuredListHead>
-          <StructuredListBody>
-            {list.data?.map((c) => (
-              <StructuredListRow key={c.id}>
-                <StructuredListCell>
-                  <strong>{c.title}</strong>
-                  {c.featured && <Tag type="purple" size="sm" style={{ marginLeft: 8 }}>À la une</Tag>}
-                  <div style={{ fontSize: '0.75rem', color: '#6f6f6f' }}>{[c.speaker, c.series].filter(Boolean).join(' · ')}</div>
-                </StructuredListCell>
-                <StructuredListCell><Tag type="cool-gray">{c.category}</Tag></StructuredListCell>
-                <StructuredListCell>
-                  <Tag type={c.status === 'published' ? 'green' : 'gray'}>{c.status}</Tag>
-                </StructuredListCell>
-                <StructuredListCell>
-                  <Toggle
-                    id={`live-${c.id}`}
-                    size="sm"
-                    hideLabel
-                    labelText="En direct"
-                    labelA="Non"
-                    labelB="Live"
-                    toggled={c.isLive}
-                    onToggle={(checked: boolean) => toggleLive.mutate({ id: c.id, isLive: checked })}
-                  />
-                </StructuredListCell>
-                <StructuredListCell>
-                  <Button size="sm" kind="ghost" hasIconOnly iconDescription="Éditer" renderIcon={Edit} onClick={() => openEdit(c)} />
-                  <Button size="sm" kind="danger--ghost" hasIconOnly iconDescription="Supprimer" renderIcon={TrashCan} onClick={() => remove.mutate(c.id)} />
-                </StructuredListCell>
-              </StructuredListRow>
-            ))}
-            {list.data?.length === 0 && (
-              <StructuredListRow><StructuredListCell>Aucun contenu. Ajoutez-en un.</StructuredListCell></StructuredListRow>
+          {/* Direct en cours */}
+          <Panel title="Direct" sub="Session de culte en temps réel">
+            {live.isLoading ? (
+              <Loading withOverlay={false} />
+            ) : live.data ? (
+              <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                <div>
+                  <div className="cds-tile__label">
+                    <span>{live.data.title}</span>
+                    {live.data.state === 'live' && <Tag tone="red">EN DIRECT</Tag>}
+                  </div>
+                  <div className="cds-tile__caption" style={{ marginTop: 2 }}>
+                    {[live.data.speaker, live.data.series].filter(Boolean).join(' · ') || '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="cds-tile__caption">Spectateurs</div>
+                  <strong>{live.data.viewersLive.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <div className="cds-tile__caption">Pic</div>
+                  <strong>{live.data.viewersPeak.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <div className="cds-tile__caption">Amens</div>
+                  <strong>{live.data.amenCount.toLocaleString()}</strong>
+                </div>
+              </div>
+            ) : (
+              <Empty>Aucune session live. Activez « En direct » sur un contenu ci-dessous.</Empty>
             )}
-          </StructuredListBody>
-        </StructuredListWrapper>
-      )}
+          </Panel>
+
+          <Panel
+            title="Bibliothèque"
+            sub="Collez un lien MP4 / flux HLS (.m3u8) ou un chemin auto-hébergé, choisissez la catégorie et activez le direct."
+          >
+            {list.isLoading ? (
+              <Loading withOverlay={false} />
+            ) : list.error ? (
+              <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
+            ) : list.data && list.data.length > 0 ? (
+              <table className="cds-data-table cds-data-table--compact">
+                <thead>
+                  <tr>
+                    <th>Titre</th>
+                    <th>Catégorie</th>
+                    <th>Statut</th>
+                    <th>En direct</th>
+                    <th className="num">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.data.map((c) => (
+                    <tr key={c.id}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <strong>{c.title}</strong>
+                          {c.featured && <Tag tone="purple">À la une</Tag>}
+                        </div>
+                        {(c.speaker || c.series) && (
+                          <div className="cds-tile__caption" style={{ marginTop: 2 }}>
+                            {[c.speaker, c.series].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        <Tag tone="gray">{c.category}</Tag>
+                      </td>
+                      <td>
+                        <Tag tone={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Tag>
+                      </td>
+                      <td>
+                        <Toggle
+                          id={`live-${c.id}`}
+                          size="sm"
+                          hideLabel
+                          labelText="En direct"
+                          labelA="Non"
+                          labelB="Live"
+                          toggled={c.isLive}
+                          onToggle={(checked: boolean) => toggleLive.mutate({ id: c.id, isLive: checked })}
+                        />
+                      </td>
+                      <td className="num">
+                        <div style={{ display: 'inline-flex', gap: 4 }}>
+                          <button
+                            className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                            title="Éditer"
+                            onClick={() => openEdit(c)}
+                          >
+                            <Edit size={16} />
+                          </button>
+                          <button
+                            className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                            title="Supprimer"
+                            style={{ color: 'var(--red-60)' }}
+                            onClick={() => remove.mutate(c.id)}
+                          >
+                            <TrashCan size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <Empty>Aucun contenu. Ajoutez-en un.</Empty>
+            )}
+          </Panel>
+        </div>
+      </div>
 
       <Modal
         open={open}
@@ -214,6 +291,6 @@ export default function ContentPage() {
           </div>
         </div>
       </Modal>
-    </div>
+    </>
   );
 }

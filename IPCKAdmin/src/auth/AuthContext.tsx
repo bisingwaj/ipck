@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { api } from '../api/client';
+import { api, ACCESS_KEY, REFRESH_KEY, setTokens, clearTokens } from '../api/client';
 
 interface StaffUser {
   id: string;
@@ -22,11 +22,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<StaffUser | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem('ipck_admin_token')) {
+    if (localStorage.getItem(ACCESS_KEY)) {
+      // L'interceptor de client.ts rafraîchit automatiquement en cas de 401 ;
+      // on ne purge que si le refresh a lui aussi échoué (token déjà effacé).
       api
         .get('/auth/me')
         .then((r) => setUser(r.data))
-        .catch(() => localStorage.removeItem('ipck_admin_token'));
+        .catch(() => {
+          if (!localStorage.getItem(ACCESS_KEY)) setUser(null);
+        });
     }
   }, []);
 
@@ -39,12 +43,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.user.role !== 'pastor' && data.user.role !== 'admin') {
       throw new Error('Accès réservé au staff (pasteur/admin).');
     }
-    localStorage.setItem('ipck_admin_token', data.accessToken);
+    setTokens(data.accessToken, data.refreshToken);
     setUser(data.user);
   };
 
   const signOut = () => {
-    localStorage.removeItem('ipck_admin_token');
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    // Révocation best-effort côté backend (ne bloque pas la déconnexion locale).
+    if (refreshToken) api.post('/auth/logout', { refreshToken }).catch(() => {});
+    clearTokens();
     setUser(null);
   };
 

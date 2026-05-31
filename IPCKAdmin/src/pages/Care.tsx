@@ -1,16 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Loading,
-  InlineNotification,
-  StructuredListWrapper,
-  StructuredListHead,
-  StructuredListRow,
-  StructuredListCell,
-  StructuredListBody,
-  Button,
-  Tag,
-} from '@carbon/react';
+import { Loading, InlineNotification } from '@carbon/react';
+import { Locked, Email, Checkmark, Close } from '@carbon/icons-react';
 import { api } from '../api/client';
+import { PageHead, Panel, Tag, Empty } from '../components/ui';
 
 interface PrayerRow {
   id: string;
@@ -50,81 +42,162 @@ export default function Care() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['prayer-queue'] }),
   });
 
+  const setApptStatus = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'confirmed' | 'cancelled' }) =>
+      api.patch(`/appointments/${id}`, { status }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['appointments'] }),
+  });
+
+  const visTone = (v: string) =>
+    v === 'private' ? 'blue' : v === 'public' ? 'green' : 'gray';
+
   return (
-    <div className="ipck-page">
-      <h2>Soin pastoral</h2>
+    <>
+      <PageHead
+        title="Soin pastoral"
+        subtitle="File de prières confidentielle & rendez-vous du jour"
+      />
+      <div className="cds-tab-panel">
+        <div className="cds-stack">
+          {/* Bannière de confidentialité */}
+          <div className="cds-notification cds-notification--warn">
+            <span className="cds-notification__icon">
+              <Locked size={20} />
+            </span>
+            <div style={{ flex: 1 }}>
+              <div className="cds-notification__title">
+                La confidentialité pastorale est active
+              </div>
+              <div className="cds-notification__body">
+                Les demandes de prière privées sont protégées et exclues des analyses, exports
+                et fonctions IA. Chaque accès est journalisé.
+              </div>
+            </div>
+          </div>
 
-      <h3 style={{ marginTop: '1.5rem' }}>File de prières</h3>
-      {queue.isLoading ? (
-        <Loading withOverlay={false} />
-      ) : queue.error ? (
-        <InlineNotification kind="error" title="Erreur" lowContrast />
-      ) : (
-        <StructuredListWrapper>
-          <StructuredListHead>
-            <StructuredListRow head>
-              <StructuredListCell head>Demandeur</StructuredListCell>
-              <StructuredListCell head>Visibilité</StructuredListCell>
-              <StructuredListCell head>Demande</StructuredListCell>
-              <StructuredListCell head>Actions</StructuredListCell>
-            </StructuredListRow>
-          </StructuredListHead>
-          <StructuredListBody>
-            {queue.data?.map((p) => (
-              <StructuredListRow key={p.id}>
-                <StructuredListCell>{p.who}</StructuredListCell>
-                <StructuredListCell>
-                  <Tag type="cool-gray">{p.visibility}</Tag>
-                </StructuredListCell>
-                <StructuredListCell>{p.text}</StructuredListCell>
-                <StructuredListCell>
-                  <Button size="sm" kind="tertiary" onClick={() => approve.mutate(p.id)}>
-                    Approuver
-                  </Button>{' '}
-                  <Button size="sm" kind="ghost" onClick={() => respond.mutate(p.id)}>
-                    Répondre
-                  </Button>
-                </StructuredListCell>
-              </StructuredListRow>
-            ))}
-            {queue.data?.length === 0 && (
-              <StructuredListRow>
-                <StructuredListCell>File vide 🎉</StructuredListCell>
-              </StructuredListRow>
-            )}
-          </StructuredListBody>
-        </StructuredListWrapper>
-      )}
+          {/* Master / detail */}
+          <div className="cds-split" style={{ gridTemplateColumns: '1.4fr 1fr' }}>
+            {/* File de prières */}
+            <Panel
+              title="File de prières"
+              sub={queue.data ? `${queue.data.length} en attente` : undefined}
+            >
+              {queue.isLoading ? (
+                <Loading withOverlay={false} />
+              ) : queue.error ? (
+                <InlineNotification kind="error" title="Erreur" lowContrast />
+              ) : queue.data && queue.data.length > 0 ? (
+                <table className="cds-data-table">
+                  <thead>
+                    <tr>
+                      <th>Demandeur</th>
+                      <th>Visibilité</th>
+                      <th>Demande</th>
+                      <th className="num">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {queue.data.map((p) => (
+                      <tr key={p.id}>
+                        <td>{p.who}</td>
+                        <td>
+                          <Tag tone={visTone(p.visibility)}>{p.visibility}</Tag>
+                        </td>
+                        <td className="truncate" style={{ maxWidth: 280, color: 'var(--text-02)' }}>
+                          {p.text}
+                        </td>
+                        <td className="num">
+                          <div style={{ display: 'inline-flex', gap: 4 }}>
+                            <button
+                              className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                              title="Approuver"
+                              onClick={() => approve.mutate(p.id)}
+                            >
+                              <Checkmark size={16} />
+                            </button>
+                            <button
+                              className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                              title="Répondre"
+                              onClick={() => respond.mutate(p.id)}
+                            >
+                              <Email size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <Empty>File vide 🎉</Empty>
+              )}
+            </Panel>
 
-      <h3 style={{ marginTop: '2rem' }}>Rendez-vous</h3>
-      {appts.isLoading ? (
-        <Loading withOverlay={false} />
-      ) : (
-        <StructuredListWrapper>
-          <StructuredListHead>
-            <StructuredListRow head>
-              <StructuredListCell head>Quand</StructuredListCell>
-              <StructuredListCell head>Membre</StructuredListCell>
-              <StructuredListCell head>Sujet</StructuredListCell>
-              <StructuredListCell head>Statut</StructuredListCell>
-            </StructuredListRow>
-          </StructuredListHead>
-          <StructuredListBody>
-            {appts.data?.map((a) => (
-              <StructuredListRow key={a.id}>
-                <StructuredListCell>{new Date(a.slotStart).toLocaleString()}</StructuredListCell>
-                <StructuredListCell>
-                  {`${a.user.firstName ?? ''} ${a.user.lastName ?? ''}`.trim() || 'Membre'}
-                </StructuredListCell>
-                <StructuredListCell>{a.topic.label}</StructuredListCell>
-                <StructuredListCell>
-                  <Tag type={a.status === 'confirmed' ? 'green' : 'gray'}>{a.status}</Tag>
-                </StructuredListCell>
-              </StructuredListRow>
-            ))}
-          </StructuredListBody>
-        </StructuredListWrapper>
-      )}
-    </div>
+            {/* Rendez-vous */}
+            <Panel
+              title="Rendez-vous"
+              sub={appts.data ? `${appts.data.length} planifiés` : undefined}
+            >
+              {appts.isLoading ? (
+                <Loading withOverlay={false} />
+              ) : appts.data && appts.data.length > 0 ? (
+                <table className="cds-data-table cds-data-table--compact">
+                  <thead>
+                    <tr>
+                      <th>Quand</th>
+                      <th>Membre</th>
+                      <th>Sujet</th>
+                      <th>Statut</th>
+                      <th className="num">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {appts.data.map((a) => (
+                      <tr key={a.id}>
+                        <td className="text-mono">{new Date(a.slotStart).toLocaleString()}</td>
+                        <td>
+                          {`${a.user.firstName ?? ''} ${a.user.lastName ?? ''}`.trim() || 'Membre'}
+                        </td>
+                        <td className="text-02">{a.topic.label}</td>
+                        <td>
+                          <Tag tone={a.status === 'confirmed' ? 'green' : 'yellow'}>
+                            {a.status}
+                          </Tag>
+                        </td>
+                        <td className="num">
+                          <div style={{ display: 'inline-flex', gap: 4 }}>
+                            {a.status !== 'confirmed' && (
+                              <button
+                                className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                                title="Confirmer"
+                                disabled={setApptStatus.isPending}
+                                onClick={() => setApptStatus.mutate({ id: a.id, status: 'confirmed' })}
+                              >
+                                <Checkmark size={16} />
+                              </button>
+                            )}
+                            <button
+                              className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                              title="Annuler"
+                              style={{ color: 'var(--red-60)' }}
+                              disabled={setApptStatus.isPending}
+                              onClick={() => setApptStatus.mutate({ id: a.id, status: 'cancelled' })}
+                            >
+                              <Close size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <Empty>Aucun rendez-vous</Empty>
+              )}
+            </Panel>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

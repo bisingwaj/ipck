@@ -1,4 +1,4 @@
-# BACKEND_PLAN.md — Construction du backend & mise en production IPCK
+#  — Construction du backend & mise en production IPCK
 
 > **Objet** : guide d'exécution **phase par phase** pour doter la plateforme IPCK d'un backend de production
 > et déployer l'app mobile (Android + iOS) et le dashboard jusqu'à une **démo fonctionnelle et présentable**.
@@ -19,7 +19,7 @@
 | Brique | Choix | Pourquoi |
 | --- | --- | --- |
 | **Framework API** | **NestJS** (TypeScript) | Cohérent avec le front TS, architecture modulaire, DI, validation (`class-validator`), génération OpenAPI ; activement maintenu. |
-| **Base de données** | **PostgreSQL 16** + **Prisma** | Relationnel adapté aux dons / comptabilité / wallet ; migrations typées ; Prisma maintenu activement. |
+| **Base de données** | **PostgreSQL 16** + **Prisma** | Relationnel adapté aux dons / comptabilité / wallet ; migrations typées ; Prisma maintenu activement. | 
 | **Cache / files** | **Redis 7** + **BullMQ** | Cache, rate-limiting, files asynchrones (SMS, push, webhooks paiement). |
 | **Auth** | Téléphone + **OTP** → **JWT** access/refresh | Reprend le flux déjà présent dans l'UI ; token stocké côté mobile via `expo-secure-store`. |
 | **SMS / OTP** | Agrégateur derrière une interface abstraite | Twilio Verify ou fournisseur local RDC, interchangeable. |
