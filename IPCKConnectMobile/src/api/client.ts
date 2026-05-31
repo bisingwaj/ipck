@@ -104,7 +104,17 @@ api.interceptors.response.use(
     ) {
       original._retry = true;
       try {
-        const newToken = await refreshTokens();
+        // Si un autre refresh a DÉJÀ renouvelé le token entre-temps (rafale de
+        // requêtes au lancement / 1ère connexion), on réessaie avec le token
+        // courant SANS relancer de refresh — évite toute double-rotation d'un
+        // refresh token à usage unique (qui pourrait déconnecter à tort).
+        const usedToken =
+          typeof original.headers?.Authorization === 'string'
+            ? original.headers.Authorization.replace('Bearer ', '')
+            : null;
+        const current = await getItem(KEYS.access);
+        const newToken =
+          current && current !== usedToken ? current : await refreshTokens();
         original.headers.Authorization = `Bearer ${newToken}`;
         return api(original);
       } catch (e) {
