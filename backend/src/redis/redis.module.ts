@@ -15,10 +15,15 @@ import { REDIS_CLIENT, RedisService } from './redis.service';
         // lazyConnect + offline queue : la connexion ne bloque JAMAIS le démarrage
         // (important en conteneur/Railway où Redis peut tarder à être joignable).
         const client = new Redis(config.get('REDIS_URL', { infer: true }), {
-          maxRetriesPerRequest: null,
+          maxRetriesPerRequest: 2,
           lazyConnect: true,
-          enableOfflineQueue: true,
-          retryStrategy: (times) => Math.min(times * 200, 5000),
+          // false : si Redis est injoignable, les commandes échouent VITE au lieu
+          // d'attendre indéfiniment → /health ne se bloque jamais.
+          enableOfflineQueue: false,
+          // family: 0 = dual-stack IPv4/IPv6. Le réseau interne Railway
+          // (*.railway.internal) est en IPv6 ; sans ça, ioredis (IPv4) ne connecte pas.
+          family: 0,
+          retryStrategy: (times) => (times > 10 ? null : Math.min(times * 300, 3000)),
         });
         // Un listener 'error' évite tout crash sur erreur de connexion.
         client.on('error', (e) => logger.warn(`Redis indisponible: ${e.message}`));

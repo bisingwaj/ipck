@@ -13,11 +13,22 @@ export class HealthController {
     private readonly redis: RedisService,
   ) {}
 
+  /** Borne une promesse dans le temps : /health doit TOUJOURS répondre vite (healthcheck). */
+  private withTimeout(p: Promise<boolean>, ms = 2000): Promise<boolean> {
+    return Promise.race([
+      p,
+      new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+    ]);
+  }
+
   @Get()
   @ApiOkResponse({ description: 'Service et dépendances opérationnels' })
   @ApiServiceUnavailableResponse({ description: 'Une dépendance est indisponible' })
   async check() {
-    const [db, redis] = await Promise.allSettled([this.prisma.ping(), this.redis.ping()]);
+    const [db, redis] = await Promise.allSettled([
+      this.withTimeout(this.prisma.ping()),
+      this.withTimeout(this.redis.ping()),
+    ]);
 
     const dbUp = db.status === 'fulfilled' && db.value;
     const redisUp = redis.status === 'fulfilled' && redis.value;
