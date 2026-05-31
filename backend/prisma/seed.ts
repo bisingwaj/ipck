@@ -185,8 +185,11 @@ async function main() {
 
   // ── Content (vidéos dynamiques pilotées depuis le dashboard) ──
   // Source unique = scripts/videos.manifest.json (partagé avec fetch-videos.mjs).
-  // Les vidéos IPCK sont auto-hébergées : videoUrl = /media/videos/<key>.mp4
-  // (téléchargées via `pnpm fetch:videos`, servies par main.ts). Plus de YouTube.
+  // Les vidéos IPCK sont hébergées sur Supabase Storage (bucket public `videos`),
+  // jouables directement par expo-video. Surchargeable via VIDEO_BASE_URL.
+  const VIDEO_BASE =
+    process.env.VIDEO_BASE_URL ??
+    'https://tuakfwngyiexdciauwqi.supabase.co/storage/v1/object/public/videos';
   console.log('🌱 Content…');
   type ContentSeed = {
     key: string;
@@ -208,7 +211,7 @@ async function main() {
       data: {
         title: c.title,
         category: c.category,
-        videoUrl: `/media/videos/${c.key}.mp4`,
+        videoUrl: `${VIDEO_BASE}/${c.key}.mp4`,
         speaker: c.speaker,
         series: c.series,
         duration: c.duration,

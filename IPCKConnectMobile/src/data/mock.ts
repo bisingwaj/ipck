@@ -83,15 +83,13 @@ export interface Content {
   publishAt?: string;
 }
 
-// Vidéos IPCK auto-hébergées (téléchargées via `pnpm fetch:videos`, servies sur /media/...).
+// Vidéos IPCK hébergées sur Supabase Storage (bucket public `videos`), jouables par expo-video.
+const VIDEO_BASE = 'https://tuakfwngyiexdciauwqi.supabase.co/storage/v1/object/public/videos';
 export const contents: Content[] = [
-  { id: 'c1', title: 'Sunday Service — Live', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/sunday-service-live.mp4', isLive: true, featured: true, description: 'Join the live broadcast of our Sunday gathering at the International Protestant Church of Kinshasa.' },
-  { id: 'c2', title: 'First Service — 12 November 2023', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/first-service-2023-11-12.mp4', isLive: false, featured: false },
-  { id: 'c3', title: 'Sunday Service — 13 February', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/sunday-service-02-13.mp4', isLive: false, featured: false },
-  { id: 'c4', title: 'Easter Sunday Service — 17 April', category: 'sermon', speaker: 'IPCK', series: 'Feasts', videoUrl: '/media/videos/easter-service-04-17.mp4', isLive: false, featured: true, description: 'Celebrating the resurrection at IPCK.' },
-  { id: 'c5', title: 'First Service — 24 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/first-service-2022-07-24.mp4', isLive: false, featured: false },
-  { id: 'c6', title: 'Second Service — 31 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/second-service-2022-07-31.mp4', isLive: false, featured: false },
-  { id: 'c7', title: 'Second Service — 3 July 2022', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: '/media/videos/second-service-2022-07-03.mp4', isLive: false, featured: false },
+  { id: 'c1', title: 'Sunday Service — Live', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: `${VIDEO_BASE}/sunday-service-live.mp4`, isLive: true, featured: true, description: 'Join the live broadcast of our Sunday gathering at the International Protestant Church of Kinshasa.' },
+  { id: 'c2', title: 'First Service — 12 November 2023', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: `${VIDEO_BASE}/first-service-2023-11-12.mp4`, isLive: false, featured: false },
+  { id: 'c3', title: 'Sunday Service — 13 February', category: 'sermon', speaker: 'IPCK', series: 'Sunday Service', videoUrl: `${VIDEO_BASE}/sunday-service-02-13.mp4`, isLive: false, featured: false },
+  { id: 'c4', title: 'Easter Sunday Service — 17 April', category: 'sermon', speaker: 'IPCK', series: 'Feasts', videoUrl: `${VIDEO_BASE}/easter-service-04-17.mp4`, isLive: false, featured: true, description: 'Celebrating the resurrection at IPCK.' },
 ];
 
 export interface Group {
