@@ -1,6 +1,6 @@
 // Hooks de données par domaine. Chaque hook renvoie la MÊME forme que src/data/mock.ts,
 // avec les fixtures mock en fallback (jamais vide) → branchement non destructif des écrans.
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from './client';
 import { USE_MOCKS } from './config';
 import { ago, colorFor, shortDate, fundLabel, devotionalDate } from './format';
@@ -29,7 +29,19 @@ import {
   Notification as Notif,
 } from '../data/mock';
 
-const opts = { enabled: !USE_MOCKS };
+// placeholderData: keepPreviousData → en ré-entrée d'écran, on garde les données
+// déjà chargées pendant le refetch (pas de flash vers un état vide/placeholder).
+const opts = { enabled: !USE_MOCKS, placeholderData: keepPreviousData };
+
+// Données financières/personnelles : en prod on N'AFFICHE JAMAIS de fixtures mock
+// (sinon l'utilisateur voit un faux solde « 47 » puis le vrai → effet « corrompu »).
+// On part d'un état neutre à zéro, qui se remplit avec les vraies données.
+const EMPTY_WALLET: AmenWallet = {
+  balanceCoins: 0,
+  pendingTopupCoins: 0,
+  defaultFund: '—',
+  recent: [],
+};
 
 export function useTodayDevotional(): Devotional {
   const { data } = useQuery({
@@ -188,7 +200,7 @@ export function useGiftHistory(): typeof mockGiftHistory {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockGiftHistory : data ?? mockGiftHistory;
+  return USE_MOCKS ? mockGiftHistory : data ?? [];
 }
 
 export function useWallet(): AmenWallet {
@@ -205,7 +217,7 @@ export function useWallet(): AmenWallet {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockWallet : data ?? mockWallet;
+  return USE_MOCKS ? mockWallet : data ?? EMPTY_WALLET;
 }
 
 export function useNotifications(): Notif[] {
@@ -284,8 +296,10 @@ export function useStreak(): { count: number; days: boolean[] } {
     queryFn: async () => (await api.get('/users/me/streak')).data,
     ...opts,
   });
-  const fallback = { count: 12, days: [true, true, true, true, true, false, false] };
-  return USE_MOCKS ? fallback : data ?? fallback;
+  const mockStreak = { count: 12, days: [true, true, true, true, true, false, false] };
+  // En prod : état neutre (pas un faux streak de 12 jours) jusqu'aux vraies données.
+  const empty = { count: 0, days: [false, false, false, false, false, false, false] };
+  return USE_MOCKS ? mockStreak : data ?? empty;
 }
 
 /** GET /giving/donations/:id (reçu). */
@@ -308,7 +322,7 @@ export function useWalletTransactions() {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockWallet.recent : data ?? mockWallet.recent;
+  return USE_MOCKS ? mockWallet.recent : data ?? [];
 }
 
 /** GET /groups/:id (détail). Fallback : recherche dans la liste mock. */

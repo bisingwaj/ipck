@@ -1,3 +1,4 @@
+export * from './ErrorBoundary';
 export * from './Icon';
 export * from './AppText';
 export * from './TitleRow';

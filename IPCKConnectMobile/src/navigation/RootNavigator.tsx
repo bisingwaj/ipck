@@ -5,6 +5,13 @@ import { RootStackParamList, MainTabParamList } from './types';
 import { tokens } from '../theme/tokens';
 import { fonts } from '../theme/typography';
 import { Icon } from '../components/Icon';
+import { ErrorBoundary } from '../components/ErrorBoundary';
+
+// Enveloppe chaque écran : une exception au rendu d'un écran affiche un état
+// « Réessayer » au lieu de planter/recharger toute l'application.
+const screenLayout = ({ children }: { children: React.ReactNode }) => (
+  <ErrorBoundary>{children}</ErrorBoundary>
+);
 
 // ─── Onboarding screens ───
 import SplashScreen from '../screens/onboarding/SplashScreen';
@@ -77,6 +84,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 function MainTabs() {
   return (
     <Tab.Navigator
+      screenLayout={screenLayout}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: tokens.primary,
@@ -112,6 +120,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator
       initialRouteName="Splash"
+      screenLayout={screenLayout}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: tokens.bg },
