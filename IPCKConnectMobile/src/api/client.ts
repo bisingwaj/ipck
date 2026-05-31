@@ -11,10 +11,17 @@ export function setUnauthorizedHandler(fn: () => void) {
 }
 
 api.interceptors.request.use(async (config) => {
-  const token = await getItem(KEYS.access);
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const token = await getItem(KEYS.access);
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+  } catch {
+    // Lecture du stockage sécurisé impossible : on laisse passer sans header plutôt
+    // que de faire échouer la requête (le 401 éventuel sera géré par le refresh).
+  }
   return config;
 });
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Routes qui ne doivent JAMAIS déclencher un refresh : le refresh lui-même et les
 // routes pré-auth (otp/login/logout). ⚠️ /auth/me est PROTÉGÉE et DOIT pouvoir se
@@ -48,26 +55,33 @@ function refreshTokens(): Promise<string> {
     refreshing = (async () => {
       const refreshToken = await getItem(KEYS.refresh);
       if (!refreshToken) throw new SessionExpiredError('no refresh token');
-      try {
-        const { data } = await axios.post(
-          `${API_URL}/auth/refresh`,
-          { refreshToken },
-          { timeout: 15000 },
-        );
-        await setItem(KEYS.access, data.accessToken);
-        await setItem(KEYS.refresh, data.refreshToken);
-        return data.accessToken as string;
-      } catch (e) {
-        const status = (e as AxiosError).response?.status;
-        if (status === 401 || status === 403) {
-          // Refresh token invalide/révoqué → vraie fin de session.
-          await deleteItem(KEYS.access);
-          await deleteItem(KEYS.refresh);
-          throw new SessionExpiredError('refresh rejected');
+      // Jusqu'à 3 tentatives : un à-coup réseau (fréquent en mobilité, ex. à la
+      // confirmation d'un don) ne doit JAMAIS déconnecter. Seul un 401/403 du
+      // serveur (refresh token réellement invalide) met fin à la session.
+      let lastErr: unknown;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const { data } = await axios.post(
+            `${API_URL}/auth/refresh`,
+            { refreshToken },
+            { timeout: 15000 },
+          );
+          await setItem(KEYS.access, data.accessToken);
+          await setItem(KEYS.refresh, data.refreshToken);
+          return data.accessToken as string;
+        } catch (e) {
+          const status = (e as AxiosError).response?.status;
+          if (status === 401 || status === 403) {
+            await deleteItem(KEYS.access);
+            await deleteItem(KEYS.refresh);
+            throw new SessionExpiredError('refresh rejected');
+          }
+          // Erreur transitoire (réseau/5xx/timeout) : on réessaie sans déconnecter.
+          lastErr = e;
+          if (attempt < 2) await sleep(700 * (attempt + 1));
         }
-        // Erreur transitoire (réseau/5xx/timeout) : on NE déconnecte PAS.
-        throw e;
       }
+      throw lastErr;
     })().finally(() => {
       refreshing = null;
     });
