@@ -2,6 +2,7 @@
 // avec les fixtures mock en fallback (jamais vide) → branchement non destructif des écrans.
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { api } from './client';
+import { queryClient } from './queryClient';
 import { USE_MOCKS } from './config';
 import { ago, colorFor, shortDate, fundLabel, devotionalDate } from './format';
 import {
@@ -43,16 +44,47 @@ const EMPTY_WALLET: AmenWallet = {
   recent: [],
 };
 
+// queryFns du « cœur » extraites pour être réutilisées par le préchargement
+// (prefetchCoreData) ET par les hooks → une seule source de vérité, pas de dérive.
+const qfWallet = async (): Promise<AmenWallet> => {
+  const w = (await api.get('/giving/wallet')).data;
+  return {
+    balanceCoins: w.balanceCoins,
+    pendingTopupCoins: w.pendingTopupCoins,
+    defaultFund: w.defaultFund,
+    recent: (w.recent ?? []).map((t: any) => ({ ...t, when: ago(t.when) })),
+  } as AmenWallet;
+};
+const qfFunds = async () => (await api.get('/giving/funds')).data;
+const qfPaymentMethods = async () => (await api.get('/giving/payment-methods')).data;
+const qfContent = async () =>
+  (await api.get('/content', { params: { pageSize: 100 } })).data.data as Content[];
+const qfTodayDevotional = async (): Promise<Devotional> => {
+  const d = (await api.get('/devotionals/today')).data;
+  return { ...d, date: devotionalDate(d.publishAt, d.date) } as Devotional;
+};
+const qfStreak = async () => (await api.get('/users/me/streak')).data;
+
+/**
+ * Précharge les données les plus visibles dès la connexion (et au démarrage si
+ * déjà connecté). Le cache est ainsi « chaud » : à l'entrée d'un onglet, les
+ * vraies données s'affichent immédiatement, sans swap mock→réel ni refetch
+ * (cause des « écrans corrompus puis refresh »). Non bloquant, tolérant aux échecs.
+ */
+export async function prefetchCoreData(): Promise<void> {
+  if (USE_MOCKS) return;
+  await Promise.allSettled([
+    queryClient.prefetchQuery({ queryKey: ['wallet'], queryFn: qfWallet }),
+    queryClient.prefetchQuery({ queryKey: ['funds'], queryFn: qfFunds }),
+    queryClient.prefetchQuery({ queryKey: ['payment-methods'], queryFn: qfPaymentMethods }),
+    queryClient.prefetchQuery({ queryKey: ['content'], queryFn: qfContent }),
+    queryClient.prefetchQuery({ queryKey: ['devotional', 'today'], queryFn: qfTodayDevotional }),
+    queryClient.prefetchQuery({ queryKey: ['streak'], queryFn: qfStreak }),
+  ]);
+}
+
 export function useTodayDevotional(): Devotional {
-  const { data } = useQuery({
-    queryKey: ['devotional', 'today'],
-    queryFn: async () => {
-      const d = (await api.get('/devotionals/today')).data;
-      // La date affichée vient de `publishAt` (ISO fiable), pas du champ `date` libre du backend.
-      return { ...d, date: devotionalDate(d.publishAt, d.date) } as Devotional;
-    },
-    ...opts,
-  });
+  const { data } = useQuery({ queryKey: ['devotional', 'today'], queryFn: qfTodayDevotional, ...opts });
   return USE_MOCKS ? mockToday : data ?? mockToday;
 }
 
@@ -88,11 +120,7 @@ export function useSermons(): Sermon[] {
 
 /** Tous les contenus publiés (groupés par catégorie côté écran). */
 export function useContent(): Content[] {
-  const { data } = useQuery({
-    queryKey: ['content'],
-    queryFn: async () => (await api.get('/content', { params: { pageSize: 100 } })).data.data as Content[],
-    ...opts,
-  });
+  const { data } = useQuery({ queryKey: ['content'], queryFn: qfContent, ...opts });
   const list = USE_MOCKS ? mockContents : data ?? mockContents;
   return list.length ? list : mockContents;
 }
@@ -166,21 +194,13 @@ export function useEvents(): ChurchEvent[] {
 }
 
 export function useFunds(): typeof mockFunds {
-  const { data } = useQuery({
-    queryKey: ['funds'],
-    queryFn: async () => (await api.get('/giving/funds')).data,
-    ...opts,
-  });
+  const { data } = useQuery({ queryKey: ['funds'], queryFn: qfFunds, ...opts });
   const list = USE_MOCKS ? mockFunds : data ?? mockFunds;
   return list.length ? list : mockFunds;
 }
 
 export function usePaymentMethods(): typeof mockPaymentMethods {
-  const { data } = useQuery({
-    queryKey: ['payment-methods'],
-    queryFn: async () => (await api.get('/giving/payment-methods')).data,
-    ...opts,
-  });
+  const { data } = useQuery({ queryKey: ['payment-methods'], queryFn: qfPaymentMethods, ...opts });
   const list = USE_MOCKS ? mockPaymentMethods : data ?? mockPaymentMethods;
   return list.length ? list : mockPaymentMethods;
 }
@@ -203,21 +223,12 @@ export function useGiftHistory(): typeof mockGiftHistory {
   return USE_MOCKS ? mockGiftHistory : data ?? [];
 }
 
-export function useWallet(): AmenWallet {
-  const { data } = useQuery({
-    queryKey: ['wallet'],
-    queryFn: async () => {
-      const w = (await api.get('/giving/wallet')).data;
-      return {
-        balanceCoins: w.balanceCoins,
-        pendingTopupCoins: w.pendingTopupCoins,
-        defaultFund: w.defaultFund,
-        recent: (w.recent ?? []).map((t: any) => ({ ...t, when: ago(t.when) })),
-      } as AmenWallet;
-    },
-    ...opts,
-  });
-  return USE_MOCKS ? mockWallet : data ?? EMPTY_WALLET;
+export function useWallet(): AmenWallet & { isLoading: boolean } {
+  const { data, isLoading } = useQuery({ queryKey: ['wallet'], queryFn: qfWallet, ...opts });
+  const wallet = USE_MOCKS ? mockWallet : data ?? EMPTY_WALLET;
+  // isLoading=true uniquement au tout premier chargement (aucune donnée en cache).
+  // Permet à l'écran d'afficher un skeleton au lieu d'un solde « 0 » trompeur.
+  return { ...wallet, isLoading: !USE_MOCKS && isLoading && !data };
 }
 
 export function useNotifications(): Notif[] {
@@ -293,7 +304,7 @@ export function useLiveSessionId(): string | undefined {
 export function useStreak(): { count: number; days: boolean[] } {
   const { data } = useQuery({
     queryKey: ['streak'],
-    queryFn: async () => (await api.get('/users/me/streak')).data,
+    queryFn: qfStreak,
     ...opts,
   });
   const mockStreak = { count: 12, days: [true, true, true, true, true, false, false] };

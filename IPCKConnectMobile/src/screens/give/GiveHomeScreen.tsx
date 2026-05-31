@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, ScreenContainer, toast, TopBar, GeoArt } from '../../components';
+import { Button, Icon, ScreenContainer, toast, TopBar, GeoArt, Skeleton } from '../../components';
 import { useWallet } from '../../api/hooks';
 
 export default function GiveHomeScreen() {
@@ -24,8 +24,14 @@ export default function GiveHomeScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.walletEyebrow}>YOUR GRACE RESERVE</Text>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 }}>
-            <Text style={styles.walletAmt}>{wallet.balanceCoins}</Text>
-            <Text style={styles.walletUnit}>Blessings · ≈ ${wallet.balanceCoins}</Text>
+            {wallet.isLoading ? (
+              <Skeleton width={120} height={30} radius={8} light style={{ marginTop: 4 }} />
+            ) : (
+              <>
+                <Text style={styles.walletAmt}>{wallet.balanceCoins}</Text>
+                <Text style={styles.walletUnit}>Blessings · ≈ ${wallet.balanceCoins}</Text>
+              </>
+            )}
           </View>
           <Text style={styles.walletSub}>Use during live · or send to a fund anytime</Text>
         </View>

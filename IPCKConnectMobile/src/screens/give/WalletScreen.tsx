@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
-import { Button, Icon, toast, TopBar } from '../../components';
+import { Button, Icon, toast, TopBar, Skeleton } from '../../components';
 import { useWallet } from '../../api/hooks';
 import { rewardLabel } from '../../api/format';
 
@@ -25,11 +25,20 @@ export default function WalletScreen() {
             <Icon name="pray" size={26} color={tokens.accent}/>
           </View>
           <Text style={styles.heroEyebrow}>YOUR BALANCE</Text>
-          <View style={styles.heroAmtRow}>
-            <Text style={styles.heroAmt}>{wallet.balanceCoins}</Text>
-            <Text style={styles.heroUnit}>Blessings</Text>
-          </View>
-          <Text style={styles.heroEq} numberOfLines={1} ellipsizeMode="tail">≈ ${wallet.balanceCoins} USD · default fund: {wallet.defaultFund}</Text>
+          {wallet.isLoading ? (
+            <View style={{ marginTop: 6, gap: 8 }}>
+              <Skeleton width={140} height={40} radius={10} light />
+              <Skeleton width={200} height={14} radius={7} light />
+            </View>
+          ) : (
+            <>
+              <View style={styles.heroAmtRow}>
+                <Text style={styles.heroAmt}>{wallet.balanceCoins}</Text>
+                <Text style={styles.heroUnit}>Blessings</Text>
+              </View>
+              <Text style={styles.heroEq} numberOfLines={1} ellipsizeMode="tail">≈ ${wallet.balanceCoins} USD · default fund: {wallet.defaultFund}</Text>
+            </>
+          )}
 
           <View style={{ flexDirection: 'row', gap: 10, marginTop: 22, width: '100%' }}>
             <Button style={{ flex: 1 }} leftIcon="plus" onPress={() => nav.navigate('WalletTopup')}>Top up</Button>

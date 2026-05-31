@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { api, setUnauthorizedHandler } from '../api/client';
 import { getItem, setItem, deleteItem, KEYS } from '../api/storage';
+import { prefetchCoreData } from '../api/hooks';
 import { USE_MOCKS } from '../api/config';
 import { resetTo } from '../navigation/navigationRef';
 import { queryClient } from '../api/queryClient';
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await api.get('/auth/me');
       setUser(data);
+      void prefetchCoreData(); // cache chaud → onglets instantanés, pas de flash
       return true;
     } catch {
       // On n'efface PAS l'utilisateur ici : une vraie expiration est gérée par
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await setItem(KEYS.access, data.accessToken);
     await setItem(KEYS.refresh, data.refreshToken);
     setUser(data.user);
+    void prefetchCoreData(); // précharge dès la connexion → écrans prêts sans flash
     return { isNewUser: data.isNewUser as boolean };
   };
 
