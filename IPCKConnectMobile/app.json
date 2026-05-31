@@ -15,7 +15,10 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "cd.ipck.connect"
+      "bundleIdentifier": "cd.ipck.connect",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
