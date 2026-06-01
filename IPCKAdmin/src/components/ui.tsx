@@ -111,6 +111,45 @@ export function CategoryBadge({ category }: { category: string }) {
   return <Tag tone="gray">{categoryLabel(category)}</Tag>;
 }
 
+/* ── Avatar à initiales (couleur déterministe ou imposée) ── */
+const AVATAR_COLORS = ['#0f62fe', '#8a3ffc', '#007d79', '#d02670', '#1192e8', '#fa4d56', '#6f6f6f'];
+function colorFor(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+}
+export function Avatar({
+  name,
+  color,
+  size = 32,
+}: {
+  name: string;
+  color?: string | null;
+  size?: number;
+}) {
+  const initials =
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((w) => w[0]?.toUpperCase() ?? '')
+      .join('') || '?';
+  return (
+    <span
+      className="cds-avatar2"
+      style={{
+        background: color || colorFor(name),
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+      }}
+      aria-hidden
+    >
+      {initials}
+    </span>
+  );
+}
+
 /* ── Thumb — vignette de contenu (image) ou placeholder à icône ── */
 export function Thumb({
   src,

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea } from '@carbon/react';
 import { Add, Group, Events } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Empty } from '../components/ui';
+import { PageHead, Panel, Empty, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -16,6 +16,7 @@ interface Group {
   members: number;
   leader: string;
   meets?: string | null;
+  color?: string | null;
 }
 
 interface EventRow {
@@ -26,6 +27,50 @@ interface EventRow {
   loc?: string | null;
   cap?: number | null;
   rsvp: number;
+  color?: string | null;
+}
+
+/** Pastille de date (jour + mois) dérivée d'une date ISO, marque "aujourd'hui". */
+function EventDate({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return <span className="cds-datepill"><span className="cds-datepill__day">—</span></span>;
+  }
+  const startOf = (x: Date) => {
+    const c = new Date(x);
+    c.setHours(0, 0, 0, 0);
+    return c.getTime();
+  };
+  const isToday = startOf(d) === startOf(new Date());
+  return (
+    <span
+      className={'cds-datepill' + (isToday ? ' cds-datepill--today' : '')}
+      title={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+    >
+      <span className="cds-datepill__day">{d.getDate()}</span>
+      <span className="cds-datepill__mon">{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
+    </span>
+  );
+}
+
+/** Jauge de remplissage d'un événement (RSVP / capacité). */
+function Rsvp({ rsvp, cap }: { rsvp: number; cap?: number | null }) {
+  if (!cap) {
+    return <span className="cds-rsvp__num"><strong>{rsvp}</strong> RSVP</span>;
+  }
+  const pct = Math.min(100, Math.round((rsvp / cap) * 100));
+  const full = rsvp >= cap;
+  return (
+    <span className="cds-rsvp">
+      <span className="cds-rsvp__num">
+        <strong>{rsvp}</strong> / {cap}
+      </span>
+      <span className="cds-rsvp__bar">
+        <span className={'cds-rsvp__fill' + (full ? ' cds-rsvp__fill--full' : '')} style={{ width: `${pct}%` }} />
+      </span>
+      {full && <span className="cds-rsvp__full">Complet</span>}
+    </span>
+  );
 }
 
 export default function Community() {
@@ -130,7 +175,7 @@ export default function Community() {
                 loadingLabel="Chargement des groupes…"
               >
                 {(rows) => (
-                  <table className="cds-data-table cds-data-table--compact">
+                  <table className="cds-data-table">
                     <thead>
                       <tr>
                         <th>Groupe</th>
@@ -153,8 +198,13 @@ export default function Community() {
                           }}
                         >
                           <td>
-                            <strong>{g.name}</strong>
-                            {g.meets && <div className="cds-tile__caption" style={{ marginTop: 2 }}>{g.meets}</div>}
+                            <div className="cds-namecell">
+                              <Avatar name={g.name} color={g.color} />
+                              <div className="cds-namecell__body">
+                                <div className="cds-namecell__title">{g.name}</div>
+                                {g.meets && <div className="cds-namecell__sub">{g.meets}</div>}
+                              </div>
+                            </div>
                           </td>
                           <td>{g.leader || '—'}</td>
                           <td className="num">{g.members}</td>
@@ -203,7 +253,7 @@ export default function Community() {
                 loadingLabel="Chargement des événements…"
               >
                 {(rows) => (
-                  <table className="cds-data-table cds-data-table--compact">
+                  <table className="cds-data-table">
                     <thead>
                       <tr>
                         <th>Quand</th>
@@ -225,14 +275,15 @@ export default function Community() {
                             }
                           }}
                         >
-                          <td className="text-mono">{new Date(e.startsAt).toLocaleDateString()}</td>
                           <td>
-                            <strong>{e.name}</strong>
-                            {e.loc && <div className="cds-tile__caption" style={{ marginTop: 2 }}>{e.loc}</div>}
+                            <EventDate iso={e.startsAt} />
+                          </td>
+                          <td>
+                            <div className="cds-namecell__title">{e.name}</div>
+                            {e.loc && <div className="cds-namecell__sub">{e.loc}</div>}
                           </td>
                           <td className="num">
-                            {e.rsvp}
-                            {e.cap ? <span className="text-05"> / {e.cap}</span> : null}
+                            <Rsvp rsvp={e.rsvp} cap={e.cap} />
                           </td>
                         </tr>
                       ))}
