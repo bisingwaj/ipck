@@ -486,6 +486,12 @@
   font: 400 0.6875rem/1 var(--font-sans); color: var(--text-05); margin-top: var(--spacing-02);
 }
 
+/* Puce de fonds (pastille couleur + nom) dans le ledger */
+.cds-fund-chip {
+  display: inline-flex; align-items: center; gap: var(--spacing-03);
+  white-space: nowrap;
+}
+
 /* ── Misc utilitaires ── */
 .cds-divider { height: 1px; background: var(--ui-03); }
 .flex { display: flex; }

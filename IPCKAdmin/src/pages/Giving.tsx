@@ -29,6 +29,10 @@ const channelLabel = (c: string) => CHANNEL_LABEL[c] ?? c;
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
+/** Date courte FR lisible ("31 mai 2026") au lieu du format US 5/31/2026. */
+const dateShort = (iso: string) =>
+  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
 interface Donation {
   id: string;
   ref: string;
@@ -201,7 +205,7 @@ export default function Giving() {
                     loadingLabel="Chargement du ledger…"
                   >
                     {(rows) => (
-                      <table className="cds-data-table cds-data-table--compact">
+                      <table className="cds-data-table cds-data-table--compact cds-data-table--zebra">
                         <thead>
                           <tr>
                             <th>Référence</th>
@@ -213,29 +217,40 @@ export default function Giving() {
                           </tr>
                         </thead>
                         <tbody>
-                          {rows.map((d) => (
-                            <tr
-                              key={d.id}
-                              className="is-clickable"
-                              tabIndex={0}
-                              onClick={() => setDetail(d)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault();
-                                  setDetail(d);
-                                }
-                              }}
-                            >
-                              <td className="text-mono">{d.ref}</td>
-                              <td className="text-mono">{new Date(d.createdAt).toLocaleDateString()}</td>
-                              <td>{fundName(d.fundId, data.funds)}</td>
-                              <td>{channelLabel(d.method)}</td>
-                              <td className="num">{money(d.amount)}</td>
-                              <td>
-                                <StatusBadge status={d.status} />
-                              </td>
-                            </tr>
-                          ))}
+                          {rows.map((d) => {
+                            const fund = data.funds.find((f) => f.id === d.fundId);
+                            return (
+                              <tr
+                                key={d.id}
+                                className="is-clickable"
+                                tabIndex={0}
+                                onClick={() => setDetail(d)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    setDetail(d);
+                                  }
+                                }}
+                              >
+                                <td className="text-mono">{d.ref}</td>
+                                <td className="text-mono">{dateShort(d.createdAt)}</td>
+                                <td>
+                                  <span className="cds-fund-chip">
+                                    <span
+                                      className="cds-fundrow__dot"
+                                      style={{ background: fund?.accent || 'var(--blue-60)' }}
+                                    />
+                                    {fund?.name ?? d.fundId}
+                                  </span>
+                                </td>
+                                <td className="text-02">{channelLabel(d.method)}</td>
+                                <td className="num" style={{ fontWeight: 600 }}>{money(d.amount)}</td>
+                                <td>
+                                  <StatusBadge status={d.status} />
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     )}
