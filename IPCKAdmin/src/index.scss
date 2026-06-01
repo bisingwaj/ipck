@@ -393,6 +393,27 @@
 .cds-data-table tbody tr:hover td { background: var(--hover-row); }
 .cds-data-table--compact tbody td { height: 2rem; }
 
+/* Zébrures discrètes : rythme de lecture sur les longues tables */
+.cds-data-table--zebra tbody tr:nth-child(even) td { background: var(--ui-01); }
+.cds-data-table--zebra tbody tr:nth-child(even):hover td { background: var(--hover-row); }
+
+/* Affordance « cliquable » : la dernière cellule reçoit un chevron au survol */
+.cds-data-table tbody tr.is-clickable { position: relative; }
+.cds-data-table tbody tr.is-clickable td:last-child { padding-right: var(--spacing-07); }
+.cds-data-table tbody tr.is-clickable td:last-child::after {
+  content: '›'; position: absolute; right: var(--spacing-05);
+  color: var(--text-03); font-size: 1.125rem; line-height: 1;
+  opacity: 0; transform: translateX(-3px); transition: opacity 110ms, transform 110ms;
+  pointer-events: none;
+}
+.cds-data-table tbody tr.is-clickable:hover td:last-child::after,
+.cds-data-table tbody tr.is-clickable:focus-visible td:last-child::after {
+  opacity: 1; transform: translateX(0);
+}
+/* Si la dernière colonne est une colonne d'actions, on n'ajoute pas le chevron. */
+.cds-data-table tbody tr.is-clickable td.num:last-child { padding-right: var(--spacing-05); }
+.cds-data-table tbody tr.is-clickable td.num:last-child::after { content: none; }
+
 /* ── Notification (inline banner) ── */
 .cds-notification {
   display: flex; gap: var(--spacing-04);
@@ -407,12 +428,19 @@
 .cds-notification__title { font: 600 0.875rem/1.125rem var(--font-sans); }
 .cds-notification__body  { font: 400 0.875rem/1.25rem var(--font-sans); color: var(--text-02); margin-top: 2px; }
 
-/* ── Empty state ── */
+/* ── Empty state (icône + texte + action optionnelle) ── */
 .cds-empty {
   padding: var(--spacing-09) var(--spacing-05);
   text-align: center; color: var(--text-05);
   font: 400 0.875rem/1.25rem var(--font-sans);
+  display: flex; flex-direction: column; align-items: center; gap: var(--spacing-04);
 }
+.cds-empty__icon {
+  width: 2.5rem; height: 2.5rem; display: flex; align-items: center; justify-content: center;
+  color: var(--text-03); background: var(--ui-01); border-radius: 50%;
+}
+.cds-empty__text { max-width: 22rem; }
+.cds-empty__action { margin-top: var(--spacing-02); }
 
 /* ── Misc utilitaires ── */
 .cds-divider { height: 1px; background: var(--ui-03); }

@@ -9,9 +9,9 @@ import {
   DatePicker,
   DatePickerInput,
 } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
+import { Add, Book } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty } from '../components/ui';
+import { PageHead, Panel, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -196,7 +196,27 @@ export default function Devotions() {
               <QueryBoundary
                 query={list}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucune dévotion. Ajoutez-en une.</Empty>}
+                empty={
+                  <Empty
+                    icon={<Book size={20} />}
+                    action={
+                      mayManage ? (
+                        <button
+                          className="cds-btn cds-btn--md"
+                          onClick={() => {
+                            setForm(EMPTY);
+                            setOpen(true);
+                          }}
+                        >
+                          Nouvelle dévotion
+                          <Add size={16} />
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    Aucune dévotion publiée pour le moment.
+                  </Empty>
+                }
                 loadingLabel="Chargement des dévotions…"
               >
                 {(rows) => (
@@ -236,7 +256,7 @@ export default function Devotions() {
                             <span className="cds-verse-ref cds-verse-ref--sm">{d.verseRef}</span>
                           </td>
                           <td>
-                            <Tag tone={d.status === 'published' ? 'green' : 'yellow'}>{d.status}</Tag>
+                            <StatusBadge status={d.status} />
                           </td>
                         </tr>
                       ))}
@@ -272,7 +292,7 @@ export default function Devotions() {
                           <td className="text-mono">{new Date(u.when).toLocaleDateString()}</td>
                           <td>{u.title}</td>
                           <td>
-                            <Tag tone="yellow">{u.status}</Tag>
+                            <StatusBadge status={u.status} />
                           </td>
                         </tr>
                       ))}
@@ -448,11 +468,7 @@ export default function Devotions() {
         open={!!detail}
         onClose={() => setDetail(null)}
         title={detail?.title ?? 'Dévotion'}
-        subtitle={
-          detail && (
-            <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
-          )
-        }
+        subtitle={detail && <StatusBadge status={detail.status} />}
       >
         {detail && (
           <>
@@ -474,7 +490,7 @@ export default function Devotions() {
               </Field>
               <Field label="Auteur">{detail.author || '—'}</Field>
               <Field label="Statut">
-                <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+                <StatusBadge status={detail.status} />
               </Field>
               <Field label="Publication">{new Date(detail.publishAt).toLocaleString('fr-FR')}</Field>
             </DetailSection>

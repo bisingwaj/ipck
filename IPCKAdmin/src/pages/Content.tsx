@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea, Select, SelectItem, Toggle } from '@carbon/react';
 import { Add, Edit, TrashCan } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty } from '../components/ui';
+import { PageHead, Panel, Tag, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -297,7 +297,7 @@ export default function ContentPage() {
                           <Tag tone="gray">{c.category}</Tag>
                         </td>
                         <td>
-                          <Tag tone={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Tag>
+                          <StatusBadge status={c.status} />
                         </td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <Toggle
@@ -429,7 +429,7 @@ export default function ContentPage() {
           detail && (
             <>
               <Tag tone="gray">{detail.category}</Tag>
-              <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+              <StatusBadge status={detail.status} />
               {detail.isLive && <Tag tone="red">EN DIRECT</Tag>}
               {detail.featured && <Tag tone="purple">À la une</Tag>}
             </>
@@ -487,7 +487,7 @@ export default function ContentPage() {
 
             <DetailSection title="Diffusion">
               <Field label="Statut">
-                <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+                <StatusBadge status={detail.status} />
               </Field>
               <Field label="En direct" hint={detail.isLive ? 'Signalé EN DIRECT dans l’app.' : undefined}>
                 {detail.isLive ? 'Oui' : 'Non'}

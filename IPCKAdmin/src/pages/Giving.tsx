@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Tile, Panel, Tag, Empty, Tone } from '../components/ui';
+import { PageHead, Tile, Panel, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -24,9 +24,6 @@ interface Donation {
   anonymous: boolean;
   createdAt: string;
 }
-
-const statusTone = (s: string): Tone =>
-  s === 'received' ? 'green' : s === 'pending' ? 'yellow' : 'red';
 
 const DON_STATUS_DESC: Record<string, string> = {
   received: 'Paiement reçu et réconcilié — comptabilisé dans les totaux du fonds.',
@@ -206,7 +203,7 @@ export default function Giving() {
                               <td>{d.method}</td>
                               <td className="num">${d.amount.toLocaleString()}</td>
                               <td>
-                                <Tag tone={statusTone(d.status)}>{d.status}</Tag>
+                                <StatusBadge status={d.status} />
                               </td>
                             </tr>
                           ))}
@@ -226,7 +223,7 @@ export default function Giving() {
         open={!!detail}
         onClose={() => setDetail(null)}
         title={detail ? `Don ${detail.ref}` : 'Don'}
-        subtitle={detail && <Tag tone={statusTone(detail.status)}>{detail.status}</Tag>}
+        subtitle={detail && <StatusBadge status={detail.status} />}
       >
         {detail && (
           <>
@@ -246,7 +243,7 @@ export default function Giving() {
               <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
               <Field label="Canal de paiement">{detail.method}</Field>
               <Field label="Statut" hint={DON_STATUS_DESC[detail.status]}>
-                <Tag tone={statusTone(detail.status)}>{detail.status}</Tag>
+                <StatusBadge status={detail.status} />
               </Field>
             </DetailSection>
 

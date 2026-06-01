@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Locked, Email, Checkmark, Close } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty } from '../components/ui';
+import { PageHead, Panel, Tag, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -165,7 +165,7 @@ export default function Care() {
                 loadingLabel="Chargement de la file…"
               >
                 {(rows) => (
-                  <table className="cds-data-table">
+                  <table className="cds-data-table cds-data-table--zebra">
                     <thead>
                       <tr>
                         <th>Demandeur</th>
@@ -266,7 +266,7 @@ export default function Care() {
                           <td>{memberName(a)}</td>
                           <td className="text-02">{a.topic.label}</td>
                           <td>
-                            <Tag tone={a.status === 'confirmed' ? 'green' : 'yellow'}>{a.status}</Tag>
+                            <StatusBadge status={a.status} />
                           </td>
                           {mayManageAppts && (
                             <td className="num" onClick={(e) => e.stopPropagation()}>
@@ -313,7 +313,7 @@ export default function Care() {
           prayer && (
             <>
               <Tag tone={visTone(prayer.visibility)}>{prayer.visibility}</Tag>
-              <Tag tone={prayer.status === 'approved' ? 'green' : 'yellow'}>{prayer.status}</Tag>
+              <StatusBadge status={prayer.status} />
             </>
           )
         }
@@ -376,7 +376,7 @@ export default function Care() {
         onClose={() => setAppt(null)}
         title={appt?.topic.label ?? 'Rendez-vous'}
         subtitle={
-          appt && <Tag tone={appt.status === 'confirmed' ? 'green' : 'yellow'}>{appt.status}</Tag>
+          appt && <StatusBadge status={appt.status} />
         }
         footer={
           appt &&
@@ -419,7 +419,7 @@ export default function Care() {
               <Field label="Date & heure">{dateLong(appt.slotStart)}</Field>
               <Field label="Lieu">{appt.location ?? '—'}</Field>
               <Field label="Statut" hint={APPT_STATUS_DESC[appt.status]}>
-                <Tag tone={appt.status === 'confirmed' ? 'green' : 'yellow'}>{appt.status}</Tag>
+                <StatusBadge status={appt.status} />
               </Field>
             </DetailSection>
 

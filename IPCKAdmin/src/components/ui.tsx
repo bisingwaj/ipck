@@ -49,6 +49,37 @@ export function LiveTag({ children = 'LIVE' }: { children?: ReactNode }) {
   return <span className="cds-tag cds-tag--live">{children}</span>;
 }
 
+/* ── StatusBadge — source unique de vérité statut → couleur + libellé FR ──
+   Évite que chaque page recalcule son ton et affiche l'anglais brut. */
+const STATUS_MAP: Record<string, { tone: Tone; label: string }> = {
+  // Contenu / dévotions
+  published: { tone: 'green', label: 'Publié' },
+  scheduled: { tone: 'yellow', label: 'Programmé' },
+  draft: { tone: 'gray', label: 'Brouillon' },
+  // Rendez-vous
+  confirmed: { tone: 'green', label: 'Confirmé' },
+  tentative: { tone: 'yellow', label: 'À confirmer' },
+  cancelled: { tone: 'red', label: 'Annulé' },
+  // Dons
+  received: { tone: 'green', label: 'Reçu' },
+  pending: { tone: 'yellow', label: 'En attente' },
+  failed: { tone: 'red', label: 'Échoué' },
+  // Prières
+  approved: { tone: 'green', label: 'Approuvée' },
+  answered: { tone: 'blue', label: 'Répondue' },
+  rejected: { tone: 'red', label: 'Rejetée' },
+};
+
+export function StatusBadge({ status }: { status: string }) {
+  const m = STATUS_MAP[status] ?? { tone: 'gray' as Tone, label: status };
+  return <Tag tone={m.tone}>{m.label}</Tag>;
+}
+
+/** Libellé FR d'un statut (pour les phrases descriptives), sans le badge. */
+export function statusLabel(status: string): string {
+  return STATUS_MAP[status]?.label ?? status;
+}
+
 /* ── KPI tile (tuile plate Carbon avec delta optionnel) ── */
 export function Tile({
   label,
@@ -185,9 +216,23 @@ export function PageHead({
   );
 }
 
-/* ── Empty + chevron helpers réutilisés par les pages ── */
-export function Empty({ children }: { children: ReactNode }) {
-  return <div className="cds-empty">{children}</div>;
+/* ── Empty enrichi : icône optionnelle + action optionnelle ── */
+export function Empty({
+  children,
+  icon,
+  action,
+}: {
+  children: ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="cds-empty">
+      {icon && <div className="cds-empty__icon">{icon}</div>}
+      <div className="cds-empty__text">{children}</div>
+      {action && <div className="cds-empty__action">{action}</div>}
+    </div>
+  );
 }
 
 export { ChevronRight };

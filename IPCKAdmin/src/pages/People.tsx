@@ -58,7 +58,7 @@ export default function People() {
                 loadingLabel="Chargement de l'annuaire…"
               >
                 {(rows) => (
-                  <table className="cds-data-table">
+                  <table className="cds-data-table cds-data-table--zebra">
                     <thead>
                       <tr>
                         <th>Membre</th>
