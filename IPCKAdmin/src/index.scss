@@ -499,6 +499,14 @@
   border-radius: 50%; flex-shrink: 0; letter-spacing: 0.2px;
 }
 
+/* Streak (flamme + valeur) */
+.cds-streak {
+  display: inline-flex; align-items: center; gap: 3px;
+  font: 600 0.875rem/1 var(--font-mono); color: var(--text-01);
+  font-variant-numeric: tabular-nums;
+}
+.cds-streak__flame { font-size: 0.8125rem; line-height: 1; }
+
 /* Cellule "média" générique (avatar/pastille + titre + sous-titre) */
 .cds-namecell { display: flex; align-items: center; gap: var(--spacing-04); }
 .cds-namecell__body { min-width: 0; }

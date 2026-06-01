@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { UserMultiple } from '@carbon/icons-react';
-import { PageHead, Panel, Empty, RoleBadge } from '../components/ui';
+import { PageHead, Panel, Empty, RoleBadge, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 
@@ -23,8 +23,27 @@ const ROLE_DESC: Record<string, string> = {
   member: 'Membre de la communauté — utilise l’app mobile.',
 };
 
+const hasName = (m: Member) => !!`${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
 const fullName = (m: { firstName: string | null; lastName: string | null }) =>
   `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || 'Membre';
+
+/** Graine d'avatar : le nom si présent, sinon le téléphone (lignes distinctes). */
+const avatarSeed = (m: Member) => (hasName(m) ? fullName(m) : m.phone || m.id);
+
+/** Date courte FR ("31 mai 2026"). */
+const dateShort = (iso: string) =>
+  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+
+/** Streak : flamme + valeur si actif, "—" discret sinon. */
+function Streak({ count }: { count: number }) {
+  if (count <= 0) return <span className="text-05">—</span>;
+  return (
+    <span className="cds-streak" title={`${count} jour(s) consécutif(s)`}>
+      <span className="cds-streak__flame">🔥</span>
+      {count}
+    </span>
+  );
+}
 
 export default function People() {
   const [detail, setDetail] = useState<Member | null>(null);
@@ -79,12 +98,22 @@ export default function People() {
                             }
                           }}
                         >
-                          <td>{fullName(m)}</td>
+                          <td>
+                            <div className="cds-namecell">
+                              <Avatar name={avatarSeed(m)} size={28} />
+                              <div className="cds-namecell__body">
+                                <div className="cds-namecell__title">{fullName(m)}</div>
+                                {!hasName(m) && <div className="cds-namecell__sub">Profil incomplet</div>}
+                              </div>
+                            </div>
+                          </td>
                           <td className="text-mono">{m.phone}</td>
                           <td>
                             <RoleBadge role={m.role} />
                           </td>
-                          <td className="num">{m.streakCount}</td>
+                          <td className="num">
+                            <Streak count={m.streakCount} />
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -126,8 +155,13 @@ export default function People() {
                             }
                           }}
                         >
-                          <td>{fullName(m)}</td>
-                          <td className="text-mono">{new Date(m.createdAt).toLocaleDateString()}</td>
+                          <td>
+                            <div className="cds-namecell">
+                              <Avatar name={avatarSeed(m)} size={28} />
+                              <div className="cds-namecell__title">{fullName(m)}</div>
+                            </div>
+                          </td>
+                          <td className="text-mono">{dateShort(m.createdAt)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -143,7 +177,16 @@ export default function People() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
-        title={detail ? fullName(detail) : 'Membre'}
+        title={
+          detail ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--spacing-04)' }}>
+              <Avatar name={avatarSeed(detail)} size={28} />
+              {fullName(detail)}
+            </span>
+          ) : (
+            'Membre'
+          )
+        }
         subtitle={detail && <RoleBadge role={detail.role} />}
       >
         {detail && (
@@ -176,7 +219,7 @@ export default function People() {
                 label="Série"
                 hint="Nombre de jours consécutifs de lecture de la dévotion."
               >
-                {detail.streakCount} jour(s)
+                <Streak count={detail.streakCount} />
               </Field>
               <Field label="Inscrit le">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
             </DetailSection>
