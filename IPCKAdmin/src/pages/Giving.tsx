@@ -2,17 +2,32 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Money } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Tile, Panel, Empty, StatusBadge } from '../components/ui';
+import { PageHead, Tile, Panel, Empty, StatusBadge, Meter } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
 interface Summary {
-  funds: { id: string; name: string; budget: number; ytd: number }[];
+  funds: { id: string; name: string; budget: number; ytd: number; accent?: string }[];
   channels: { name: string; amt: number; count: number }[];
   monthToDate: number;
 }
+
+// Canaux de paiement → libellé FR (le backend stocke le code brut).
+const CHANNEL_LABEL: Record<string, string> = {
+  wallet: 'Wallet Amen',
+  momo: 'Mobile money',
+  mpesa: 'M-Pesa',
+  airtel: 'Airtel Money',
+  orange: 'Orange Money',
+  afrimoney: 'Afrimoney',
+  card: 'Carte bancaire',
+  cash: 'Espèces',
+};
+const channelLabel = (c: string) => CHANNEL_LABEL[c] ?? c;
+
+const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
 interface Donation {
   id: string;
@@ -93,69 +108,83 @@ export default function Giving() {
         <QueryBoundary query={summary} loadingLabel="Chargement des indicateurs…">
           {(data) => {
             const ytdTotal = data.funds.reduce((s, f) => s + f.ytd, 0);
+            const monthCount = data.channels.reduce((s, c) => s + c.count, 0);
+            const budgetTotal = data.funds.reduce((s, f) => s + f.budget, 0);
+            const ytdPct = budgetTotal > 0 ? Math.round((ytdTotal / budgetTotal) * 100) : 0;
             return (
               <div className="cds-stack">
                 <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                   <Tile
                     label="Mois en cours"
-                    value={`$${data.monthToDate.toLocaleString()}`}
-                    caption="Total reçu ce mois-ci"
+                    value={money(data.monthToDate)}
+                    caption={monthCount > 0 ? `${monthCount} don(s) reçu(s) ce mois-ci` : 'Aucun don ce mois-ci'}
                   />
                   <Tile
                     label="YTD (tous fonds)"
-                    value={`$${ytdTotal.toLocaleString()}`}
-                    caption={`${data.funds.length} fonds suivis`}
-                  />
+                    value={money(ytdTotal)}
+                    caption={`${ytdPct}% du budget annuel · ${data.funds.length} fonds`}
+                  >
+                    <Meter pct={ytdPct} tone={ytdPct >= 100 ? 'green' : 'blue'} />
+                  </Tile>
                 </div>
 
                 <div className="cds-split" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                  <Panel title="Par fonds" sub="YTD vs budget">
+                  <Panel title="Par fonds" sub="Progression YTD vs budget annuel">
                     {data.funds.length > 0 ? (
-                      <table className="cds-data-table cds-data-table--compact">
-                        <thead>
-                          <tr>
-                            <th>Fonds</th>
-                            <th className="num">YTD</th>
-                            <th className="num">Budget</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.funds.map((f) => (
-                            <tr key={f.id}>
-                              <td>{f.name}</td>
-                              <td className="num">${f.ytd.toLocaleString()}</td>
-                              <td className="num text-05">${f.budget.toLocaleString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div className="cds-fundlist">
+                        {data.funds.map((f) => {
+                          const pct = f.budget > 0 ? Math.round((f.ytd / f.budget) * 100) : 0;
+                          return (
+                            <div key={f.id} className="cds-fundrow">
+                              <div className="cds-fundrow__head">
+                                <span className="cds-fundrow__name">
+                                  <span
+                                    className="cds-fundrow__dot"
+                                    style={{ background: f.accent || 'var(--blue-60)' }}
+                                  />
+                                  {f.name}
+                                </span>
+                                <span className="cds-fundrow__amt">
+                                  {money(f.ytd)}
+                                  <span className="cds-fundrow__budget"> / {money(f.budget)}</span>
+                                </span>
+                              </div>
+                              <Meter pct={pct} tone={pct >= 100 ? 'green' : pct >= 60 ? 'blue' : 'yellow'} />
+                              <div className="cds-fundrow__pct">{pct}% du budget</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <Empty>Aucun fonds</Empty>
                     )}
                   </Panel>
 
-                  <Panel title="Par canal" sub="Mois en cours">
+                  <Panel title="Par canal" sub="Répartition du mois en cours">
                     {data.channels.length > 0 ? (
-                      <table className="cds-data-table cds-data-table--compact">
-                        <thead>
-                          <tr>
-                            <th>Canal</th>
-                            <th className="num">Montant</th>
-                            <th className="num">Transactions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.channels.map((c) => (
-                            <tr key={c.name}>
-                              <td>{c.name}</td>
-                              <td className="num">${c.amt.toLocaleString()}</td>
-                              <td className="num text-05">{c.count}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                      <div className="cds-fundlist">
+                        {(() => {
+                          const total = data.channels.reduce((s, c) => s + c.amt, 0) || 1;
+                          return data.channels.map((c) => {
+                            const share = Math.round((c.amt / total) * 100);
+                            return (
+                              <div key={c.name} className="cds-fundrow">
+                                <div className="cds-fundrow__head">
+                                  <span className="cds-fundrow__name">{channelLabel(c.name)}</span>
+                                  <span className="cds-fundrow__amt">
+                                    {money(c.amt)}
+                                    <span className="cds-fundrow__budget"> · {c.count} don(s)</span>
+                                  </span>
+                                </div>
+                                <Meter pct={share} tone="blue" />
+                                <div className="cds-fundrow__pct">{share}% du total</div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
                     ) : (
-                      <Empty>Aucun canal</Empty>
+                      <Empty icon={<Money size={20} />}>Aucun don ce mois-ci.</Empty>
                     )}
                   </Panel>
                 </div>
@@ -200,8 +229,8 @@ export default function Giving() {
                               <td className="text-mono">{d.ref}</td>
                               <td className="text-mono">{new Date(d.createdAt).toLocaleDateString()}</td>
                               <td>{fundName(d.fundId, data.funds)}</td>
-                              <td>{d.method}</td>
-                              <td className="num">${d.amount.toLocaleString()}</td>
+                              <td>{channelLabel(d.method)}</td>
+                              <td className="num">{money(d.amount)}</td>
                               <td>
                                 <StatusBadge status={d.status} />
                               </td>
@@ -228,9 +257,9 @@ export default function Giving() {
         {detail && (
           <>
             <DetailLead accent={detail.status === 'failed'}>
-              Don de <strong>${detail.amount.toLocaleString()}</strong> vers le fonds «{' '}
+              Don de <strong>{money(detail.amount)}</strong> vers le fonds «{' '}
               {fundName(detail.fundId, summary.data?.funds ?? [])} », via{' '}
-              {detail.method}
+              {channelLabel(detail.method)}
               {detail.anonymous ? ', à titre anonyme' : ''}.{' '}
               {DON_STATUS_DESC[detail.status] ?? ''}
             </DetailLead>
@@ -239,9 +268,9 @@ export default function Giving() {
               <Field label="Référence">
                 <span className="text-mono">{detail.ref}</span>
               </Field>
-              <Field label="Montant">${detail.amount.toLocaleString()}</Field>
+              <Field label="Montant">{money(detail.amount)}</Field>
               <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
-              <Field label="Canal de paiement">{detail.method}</Field>
+              <Field label="Canal de paiement">{channelLabel(detail.method)}</Field>
               <Field label="Statut" hint={DON_STATUS_DESC[detail.status]}>
                 <StatusBadge status={detail.status} />
               </Field>

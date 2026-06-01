@@ -463,6 +463,29 @@
 }
 .cds-tile--clickable:hover .cds-tile__icon { color: var(--blue-60); }
 
+/* ── Liste de fonds / canaux avec jauges (Dons) ── */
+.cds-fundlist { display: flex; flex-direction: column; }
+.cds-fundrow {
+  padding: var(--spacing-05); border-bottom: 1px solid var(--ui-03);
+}
+.cds-fundrow:last-child { border-bottom: 0; }
+.cds-fundrow__head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-04);
+}
+.cds-fundrow__name {
+  display: inline-flex; align-items: center; gap: var(--spacing-03);
+  font: 600 0.875rem/1.125rem var(--font-sans); color: var(--text-01);
+}
+.cds-fundrow__dot { width: 0.625rem; height: 0.625rem; border-radius: 50%; flex-shrink: 0; }
+.cds-fundrow__amt {
+  font: 400 0.875rem/1.125rem var(--font-mono); color: var(--text-01);
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.cds-fundrow__budget { color: var(--text-05); }
+.cds-fundrow__pct {
+  font: 400 0.6875rem/1 var(--font-sans); color: var(--text-05); margin-top: var(--spacing-02);
+}
+
 /* ── Misc utilitaires ── */
 .cds-divider { height: 1px; background: var(--ui-03); }
 .flex { display: flex; }
