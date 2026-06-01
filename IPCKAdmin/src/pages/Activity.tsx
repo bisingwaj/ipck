@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
 
 interface ActivityRow {
   id: string;
@@ -20,6 +22,7 @@ const kindTone = (k: string): Tone => {
 };
 
 export default function Activity() {
+  const [detail, setDetail] = useState<ActivityRow | null>(null);
   const activity = useQuery({
     queryKey: ['activity'],
     queryFn: async () =>
@@ -54,13 +57,26 @@ export default function Activity() {
                   </thead>
                   <tbody>
                     {rows.map((a) => (
-                      <tr key={a.id}>
+                      <tr
+                        key={a.id}
+                        className="is-clickable"
+                        tabIndex={0}
+                        onClick={() => setDetail(a)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setDetail(a);
+                          }
+                        }}
+                      >
                         <td className="text-mono">{new Date(a.createdAt).toLocaleString()}</td>
                         <td>
                           <Tag tone={kindTone(a.kind)}>{a.kind}</Tag>
                         </td>
                         <td>{a.actorLabel}</td>
-                        <td style={{ color: 'var(--text-02)' }}>{a.description}</td>
+                        <td className="truncate" style={{ maxWidth: 360, color: 'var(--text-02)' }}>
+                          {a.description}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -70,6 +86,28 @@ export default function Activity() {
           </Panel>
         </div>
       </div>
+
+      {/* ── Détail entrée d'activité ── */}
+      <DetailPanel
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title="Entrée d'activité"
+        subtitle={detail && <Tag tone={kindTone(detail.kind)}>{detail.kind}</Tag>}
+      >
+        {detail && (
+          <>
+            <Field label="Type">{detail.kind}</Field>
+            <Field label="Acteur">{detail.actorLabel}</Field>
+            <Field label="Quand">{new Date(detail.createdAt).toLocaleString()}</Field>
+            <div style={{ marginTop: 'var(--spacing-04)' }}>
+              <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
+                Description
+              </div>
+              <DetailText>{detail.description}</DetailText>
+            </div>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

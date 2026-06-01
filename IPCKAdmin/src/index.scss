@@ -542,3 +542,72 @@
 
 /* ── Bouton désactivé (principe 3 : blocage visible) ── */
 .cds-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Ligne cliquable (ouvre le détail) ── */
+.cds-data-table tbody tr.is-clickable { cursor: pointer; }
+.cds-data-table tbody tr.is-clickable:hover td { background: var(--hover-row); }
+.cds-data-table tbody tr.is-clickable:focus-visible {
+  outline: 2px solid var(--blue-60); outline-offset: -2px;
+}
+
+/* ── Drawer de détail (même langage que le shell) ── */
+.cds-detail-overlay {
+  position: fixed; inset: 0; z-index: 8500;
+  background: rgba(22,22,22,0.45);
+  display: flex; justify-content: flex-end;
+  animation: cds-fade-in 0.15s ease-out;
+}
+@keyframes cds-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.cds-detail {
+  width: 100%; max-width: 30rem; height: 100%;
+  background: var(--ui-background);
+  border-left: 1px solid var(--ui-03);
+  display: flex; flex-direction: column;
+  box-shadow: -4px 0 16px rgba(0,0,0,0.16);
+  animation: cds-slide-in 0.2s ease-out;
+}
+@keyframes cds-slide-in { from { transform: translateX(24px); } to { transform: none; } }
+.cds-detail__head {
+  display: flex; align-items: flex-start; gap: var(--spacing-04);
+  padding: var(--spacing-05);
+  background: var(--header-bg); color: #fff;
+  flex-shrink: 0;
+}
+.cds-detail__head-text { flex: 1; min-width: 0; }
+.cds-detail__title { font: 400 1.25rem/1.625rem var(--font-sans); margin: 0; color: #fff; }
+.cds-detail__subtitle {
+  display: flex; align-items: center; gap: var(--spacing-03); flex-wrap: wrap;
+  font: 400 0.8125rem/1.125rem var(--font-sans); color: var(--gray-30); margin-top: var(--spacing-02);
+}
+.cds-detail__close {
+  background: transparent; border: 0; cursor: pointer; color: #fff;
+  display: flex; flex-shrink: 0; padding: 4px;
+}
+.cds-detail__close:hover { background: rgba(255,255,255,0.12); }
+.cds-detail__body {
+  flex: 1; overflow-y: auto; padding: var(--spacing-05);
+  display: flex; flex-direction: column; gap: var(--spacing-02);
+}
+.cds-detail__footer {
+  flex-shrink: 0; display: flex; justify-content: flex-end; gap: var(--spacing-03);
+  padding: var(--spacing-04) var(--spacing-05);
+  border-top: 1px solid var(--ui-03); background: var(--ui-background);
+}
+.cds-detail__text {
+  font: 400 0.875rem/1.375rem var(--font-sans); color: var(--text-01);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Champ label / valeur (détail) ── */
+.cds-field {
+  display: grid; grid-template-columns: 9rem 1fr; gap: var(--spacing-04);
+  padding: var(--spacing-03) 0; border-bottom: 1px solid var(--ui-03);
+}
+.cds-field:last-child { border-bottom: 0; }
+.cds-field__label {
+  font: 400 0.8125rem/1.125rem var(--font-sans); color: var(--text-02);
+}
+.cds-field__value {
+  font: 400 0.875rem/1.25rem var(--font-sans); color: var(--text-01);
+  word-break: break-word; min-width: 0;
+}

@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Tile, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -29,6 +31,7 @@ const statusTone = (s: string): Tone =>
 export default function Giving() {
   const { can } = useAuth();
   const mayExport = can('giving.export'); // miroir de @Roles('admin') côté backend
+  const [detail, setDetail] = useState<Donation | null>(null);
 
   const summary = useQuery({
     queryKey: ['giving-summary'],
@@ -179,7 +182,18 @@ export default function Giving() {
                         </thead>
                         <tbody>
                           {rows.map((d) => (
-                            <tr key={d.id}>
+                            <tr
+                              key={d.id}
+                              className="is-clickable"
+                              tabIndex={0}
+                              onClick={() => setDetail(d)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  setDetail(d);
+                                }
+                              }}
+                            >
                               <td className="text-mono">{d.ref}</td>
                               <td className="text-mono">{new Date(d.createdAt).toLocaleDateString()}</td>
                               <td>{fundName(d.fundId, data.funds)}</td>
@@ -200,6 +214,28 @@ export default function Giving() {
           }}
         </QueryBoundary>
       </div>
+
+      {/* ── Détail don ── */}
+      <DetailPanel
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail ? `Don ${detail.ref}` : 'Don'}
+        subtitle={detail && <Tag tone={statusTone(detail.status)}>{detail.status}</Tag>}
+      >
+        {detail && (
+          <>
+            <Field label="Référence">
+              <span className="text-mono">{detail.ref}</span>
+            </Field>
+            <Field label="Montant">${detail.amount.toLocaleString()}</Field>
+            <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
+            <Field label="Canal">{detail.method}</Field>
+            <Field label="Donateur">{detail.anonymous ? 'Anonyme' : 'Membre'}</Field>
+            <Field label="Statut">{detail.status}</Field>
+            <Field label="Date">{new Date(detail.createdAt).toLocaleString()}</Field>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

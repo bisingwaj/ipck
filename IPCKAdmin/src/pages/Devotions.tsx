@@ -5,6 +5,7 @@ import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -57,6 +58,7 @@ export default function Devotions() {
   const mayManage = can('devotionals.manage');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [detail, setDetail] = useState<Devotional | null>(null);
 
   const list = useQuery({
     queryKey: ['devotionals'],
@@ -153,7 +155,18 @@ export default function Devotions() {
                     </thead>
                     <tbody>
                       {rows.map((d) => (
-                        <tr key={d.id}>
+                        <tr
+                          key={d.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setDetail(d)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setDetail(d);
+                            }
+                          }}
+                        >
                           <td className="text-mono">{d.date}</td>
                           <td>
                             <strong>{d.title}</strong>
@@ -243,6 +256,28 @@ export default function Devotions() {
           <TextArea id="applySteps" labelText="Étapes d'application (une par ligne)" rows={3} value={form.applySteps} onChange={(e) => set({ applySteps: e.target.value })} />
         </div>
       </Modal>
+
+      {/* ── Détail dévotion ── */}
+      <DetailPanel
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.title ?? 'Dévotion'}
+        subtitle={
+          detail && (
+            <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+          )
+        }
+      >
+        {detail && (
+          <>
+            <Field label="Date">{detail.date}</Field>
+            <Field label="Verset">{detail.verseRef}</Field>
+            <Field label="Auteur">{detail.author || '—'}</Field>
+            <Field label="Statut">{detail.status}</Field>
+            <Field label="Publication">{new Date(detail.publishAt).toLocaleString()}</Field>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

@@ -5,6 +5,7 @@ import { Add, Edit, TrashCan } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -58,6 +59,7 @@ export default function ContentPage() {
   const mayManage = can('content.manage');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
+  const [detail, setDetail] = useState<Content | null>(null);
   const editingId = form.id;
 
   const list = useQuery({
@@ -122,6 +124,7 @@ export default function ContentPage() {
     }),
     successTitle: 'Contenu supprimé',
     errorTitle: 'La suppression a échoué',
+    onDone: () => setDetail(null),
   });
 
   const openCreate = () => {
@@ -227,7 +230,18 @@ export default function ContentPage() {
                   </thead>
                   <tbody>
                     {rows.map((c) => (
-                      <tr key={c.id}>
+                      <tr
+                        key={c.id}
+                        className="is-clickable"
+                        tabIndex={0}
+                        onClick={() => setDetail(c)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setDetail(c);
+                          }
+                        }}
+                      >
                         <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <strong>{c.title}</strong>
@@ -245,7 +259,7 @@ export default function ContentPage() {
                         <td>
                           <Tag tone={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Tag>
                         </td>
-                        <td>
+                        <td onClick={(e) => e.stopPropagation()}>
                           <Toggle
                             id={`live-${c.id}`}
                             size="sm"
@@ -259,7 +273,7 @@ export default function ContentPage() {
                           />
                         </td>
                         {mayManage && (
-                          <td className="num">
+                          <td className="num" onClick={(e) => e.stopPropagation()}>
                             <div style={{ display: 'inline-flex', gap: 4 }}>
                               <button
                                 className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
@@ -332,6 +346,73 @@ export default function ContentPage() {
           </div>
         </div>
       </Modal>
+
+      {/* ── Détail contenu ── */}
+      <DetailPanel
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail?.title ?? 'Contenu'}
+        subtitle={
+          detail && (
+            <>
+              <Tag tone="gray">{detail.category}</Tag>
+              <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+              {detail.isLive && <Tag tone="red">EN DIRECT</Tag>}
+              {detail.featured && <Tag tone="purple">À la une</Tag>}
+            </>
+          )
+        }
+        footer={
+          detail &&
+          mayManage && (
+            <>
+              <button
+                className="cds-btn cds-btn--danger cds-btn--md"
+                disabled={remove.isPending}
+                onClick={() => remove.run(detail)}
+              >
+                Supprimer
+                <TrashCan size={16} />
+              </button>
+              <button
+                className="cds-btn cds-btn--md"
+                onClick={() => {
+                  openEdit(detail);
+                  setDetail(null);
+                }}
+              >
+                Éditer
+                <Edit size={16} />
+              </button>
+            </>
+          )
+        }
+      >
+        {detail && (
+          <>
+            <Field label="Intervenant">{detail.speaker || '—'}</Field>
+            <Field label="Série">{detail.series || '—'}</Field>
+            <Field label="Catégorie">{detail.category}</Field>
+            <Field label="Durée">{detail.duration || '—'}</Field>
+            <Field label="Statut">{detail.status}</Field>
+            <Field label="En direct">{detail.isLive ? 'Oui' : 'Non'}</Field>
+            <Field label="Publié le">{new Date(detail.publishAt).toLocaleString()}</Field>
+            <Field label="Lien vidéo">
+              <span className="text-mono" style={{ wordBreak: 'break-all' }}>
+                {detail.videoUrl}
+              </span>
+            </Field>
+            {detail.description && (
+              <div style={{ marginTop: 'var(--spacing-04)' }}>
+                <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
+                  Description
+                </div>
+                <DetailText>{detail.description}</DetailText>
+              </div>
+            )}
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

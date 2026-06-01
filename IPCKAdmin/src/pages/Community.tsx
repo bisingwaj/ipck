@@ -5,6 +5,7 @@ import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -34,6 +35,8 @@ export default function Community() {
   const [eventOpen, setEventOpen] = useState(false);
   const [group, setGroup] = useState({ name: '', description: '', meets: '' });
   const [event, setEvent] = useState({ name: '', startsAt: '', location: '', capacity: '', description: '' });
+  const [groupDetail, setGroupDetail] = useState<Group | null>(null);
+  const [eventDetail, setEventDetail] = useState<EventRow | null>(null);
 
   const groups = useQuery({
     queryKey: ['groups'],
@@ -123,7 +126,18 @@ export default function Community() {
                     </thead>
                     <tbody>
                       {rows.map((g) => (
-                        <tr key={g.id}>
+                        <tr
+                          key={g.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setGroupDetail(g)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setGroupDetail(g);
+                            }
+                          }}
+                        >
                           <td>
                             <strong>{g.name}</strong>
                             {g.meets && <div className="cds-tile__caption" style={{ marginTop: 2 }}>{g.meets}</div>}
@@ -171,7 +185,18 @@ export default function Community() {
                     </thead>
                     <tbody>
                       {rows.map((e) => (
-                        <tr key={e.id}>
+                        <tr
+                          key={e.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setEventDetail(e)}
+                          onKeyDown={(ev) => {
+                            if (ev.key === 'Enter' || ev.key === ' ') {
+                              ev.preventDefault();
+                              setEventDetail(e);
+                            }
+                          }}
+                        >
                           <td className="text-mono">{new Date(e.startsAt).toLocaleDateString()}</td>
                           <td>
                             <strong>{e.name}</strong>
@@ -237,6 +262,47 @@ export default function Community() {
           <TextArea id="e-desc" labelText="Description" rows={3} value={event.description} onChange={(e) => setEvent((v) => ({ ...v, description: e.target.value }))} />
         </div>
       </Modal>
+
+      {/* ── Détail groupe ── */}
+      <DetailPanel
+        open={!!groupDetail}
+        onClose={() => setGroupDetail(null)}
+        title={groupDetail?.name ?? 'Groupe'}
+      >
+        {groupDetail && (
+          <>
+            <Field label="Leader">{groupDetail.leader || '—'}</Field>
+            <Field label="Membres">{groupDetail.members}</Field>
+            <Field label="Rencontres">{groupDetail.meets || '—'}</Field>
+            {groupDetail.description && (
+              <div style={{ marginTop: 'var(--spacing-04)' }}>
+                <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
+                  Description
+                </div>
+                <DetailText>{groupDetail.description}</DetailText>
+              </div>
+            )}
+          </>
+        )}
+      </DetailPanel>
+
+      {/* ── Détail événement ── */}
+      <DetailPanel
+        open={!!eventDetail}
+        onClose={() => setEventDetail(null)}
+        title={eventDetail?.name ?? 'Événement'}
+      >
+        {eventDetail && (
+          <>
+            <Field label="Quand">{new Date(eventDetail.startsAt).toLocaleString()}</Field>
+            <Field label="Lieu">{eventDetail.loc || '—'}</Field>
+            <Field label="RSVP">
+              {eventDetail.rsvp}
+              {eventDetail.cap ? ` / ${eventDetail.cap}` : ''}
+            </Field>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

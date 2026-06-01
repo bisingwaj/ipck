@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Locked, Email, Checkmark, Close } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -22,10 +24,17 @@ interface Appointment {
   user: { firstName: string | null; lastName: string | null };
 }
 
+const memberName = (a: Appointment) =>
+  `${a.user.firstName ?? ''} ${a.user.lastName ?? ''}`.trim() || 'Membre';
+
 export default function Care() {
   const { can } = useAuth();
   const mayManageCare = can('care.manage');
   const mayManageAppts = can('appointments.manage');
+
+  // Sélection courante → ouvre le détail (principe : clic ligne → détail).
+  const [prayer, setPrayer] = useState<PrayerRow | null>(null);
+  const [appt, setAppt] = useState<Appointment | null>(null);
 
   const queue = useQuery({
     queryKey: ['prayer-queue'],
@@ -36,7 +45,6 @@ export default function Care() {
     queryFn: async () => (await api.get('/appointments')).data as Appointment[],
   });
 
-  // Principe 3 : approuver = confirmation + blocage + retour obligatoire.
   const approve = useAction<PrayerRow>({
     mutationFn: (p) => api.patch(`/prayers/${p.id}/status`, { status: 'approved' }),
     invalidate: [['prayer-queue']],
@@ -47,6 +55,7 @@ export default function Care() {
     }),
     successTitle: 'Prière approuvée',
     errorTitle: "L'approbation a échoué",
+    onDone: () => setPrayer(null),
   });
 
   const respond = useAction<PrayerRow>({
@@ -76,7 +85,8 @@ export default function Care() {
     }),
     successTitle: (_data, { status }) =>
       status === 'confirmed' ? 'Rendez-vous confirmé' : 'Rendez-vous annulé',
-    errorTitle: "La mise à jour a échoué",
+    errorTitle: 'La mise à jour a échoué',
+    onDone: () => setAppt(null),
   });
 
   const visTone = (v: string) => (v === 'private' ? 'blue' : v === 'public' ? 'green' : 'gray');
@@ -129,7 +139,18 @@ export default function Care() {
                     </thead>
                     <tbody>
                       {rows.map((p) => (
-                        <tr key={p.id}>
+                        <tr
+                          key={p.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setPrayer(p)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setPrayer(p);
+                            }
+                          }}
+                        >
                           <td>{p.who}</td>
                           <td>
                             <Tag tone={visTone(p.visibility)}>{p.visibility}</Tag>
@@ -138,7 +159,7 @@ export default function Care() {
                             {p.text}
                           </td>
                           {mayManageCare && (
-                            <td className="num">
+                            <td className="num" onClick={(e) => e.stopPropagation()}>
                               <div style={{ display: 'inline-flex', gap: 4 }}>
                                 <button
                                   className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
@@ -192,17 +213,26 @@ export default function Care() {
                     </thead>
                     <tbody>
                       {rows.map((a) => (
-                        <tr key={a.id}>
+                        <tr
+                          key={a.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setAppt(a)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setAppt(a);
+                            }
+                          }}
+                        >
                           <td className="text-mono">{new Date(a.slotStart).toLocaleString()}</td>
-                          <td>
-                            {`${a.user.firstName ?? ''} ${a.user.lastName ?? ''}`.trim() || 'Membre'}
-                          </td>
+                          <td>{memberName(a)}</td>
                           <td className="text-02">{a.topic.label}</td>
                           <td>
                             <Tag tone={a.status === 'confirmed' ? 'green' : 'yellow'}>{a.status}</Tag>
                           </td>
                           {mayManageAppts && (
-                            <td className="num">
+                            <td className="num" onClick={(e) => e.stopPropagation()}>
                               <div style={{ display: 'inline-flex', gap: 4 }}>
                                 {a.status !== 'confirmed' && (
                                   <button
@@ -236,6 +266,103 @@ export default function Care() {
           </div>
         </div>
       </div>
+
+      {/* ── Détail prière ── */}
+      <DetailPanel
+        open={!!prayer}
+        onClose={() => setPrayer(null)}
+        title="Demande de prière"
+        subtitle={
+          prayer && (
+            <>
+              <Tag tone={visTone(prayer.visibility)}>{prayer.visibility}</Tag>
+              <Tag tone={prayer.status === 'approved' ? 'green' : 'yellow'}>{prayer.status}</Tag>
+            </>
+          )
+        }
+        footer={
+          prayer &&
+          mayManageCare && (
+            <>
+              <button
+                className="cds-btn cds-btn--ghost cds-btn--md"
+                disabled={respond.isPending}
+                onClick={() => respond.run(prayer)}
+              >
+                Répondre
+                <Email size={16} />
+              </button>
+              <button
+                className="cds-btn cds-btn--md"
+                disabled={approve.isPending}
+                onClick={() => approve.run(prayer)}
+              >
+                Approuver
+                <Checkmark size={16} />
+              </button>
+            </>
+          )
+        }
+      >
+        {prayer && (
+          <>
+            <Field label="Demandeur">{prayer.who}</Field>
+            <Field label="Visibilité">{prayer.visibility}</Field>
+            <Field label="Statut">{prayer.status}</Field>
+            <Field label="Reçue le">{new Date(prayer.at).toLocaleString()}</Field>
+            <div style={{ marginTop: 'var(--spacing-04)' }}>
+              <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
+                Demande
+              </div>
+              <DetailText>{prayer.text}</DetailText>
+            </div>
+          </>
+        )}
+      </DetailPanel>
+
+      {/* ── Détail rendez-vous ── */}
+      <DetailPanel
+        open={!!appt}
+        onClose={() => setAppt(null)}
+        title={appt?.topic.label ?? 'Rendez-vous'}
+        subtitle={
+          appt && <Tag tone={appt.status === 'confirmed' ? 'green' : 'yellow'}>{appt.status}</Tag>
+        }
+        footer={
+          appt &&
+          mayManageAppts && (
+            <>
+              <button
+                className="cds-btn cds-btn--danger cds-btn--md"
+                disabled={setApptStatus.isPending}
+                onClick={() => setApptStatus.run({ appt, status: 'cancelled' })}
+              >
+                Annuler le RDV
+                <Close size={16} />
+              </button>
+              {appt.status !== 'confirmed' && (
+                <button
+                  className="cds-btn cds-btn--md"
+                  disabled={setApptStatus.isPending}
+                  onClick={() => setApptStatus.run({ appt, status: 'confirmed' })}
+                >
+                  Confirmer
+                  <Checkmark size={16} />
+                </button>
+              )}
+            </>
+          )
+        }
+      >
+        {appt && (
+          <>
+            <Field label="Membre">{memberName(appt)}</Field>
+            <Field label="Sujet">{appt.topic.label}</Field>
+            <Field label="Quand">{new Date(appt.slotStart).toLocaleString()}</Field>
+            <Field label="Statut">{appt.status}</Field>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }

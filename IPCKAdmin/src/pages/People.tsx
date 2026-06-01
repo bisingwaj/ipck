@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { DetailPanel, Field } from '../components/DetailPanel';
 
 interface Member {
   id: string;
@@ -20,6 +22,7 @@ const fullName = (m: { firstName: string | null; lastName: string | null }) =>
   `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || 'Membre';
 
 export default function People() {
+  const [detail, setDetail] = useState<Member | null>(null);
   const members = useQuery({
     queryKey: ['members'],
     queryFn: async () =>
@@ -59,7 +62,18 @@ export default function People() {
                     </thead>
                     <tbody>
                       {rows.map((m) => (
-                        <tr key={m.id}>
+                        <tr
+                          key={m.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setDetail(m)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setDetail(m);
+                            }
+                          }}
+                        >
                           <td>{fullName(m)}</td>
                           <td className="text-mono">{m.phone}</td>
                           <td>
@@ -95,7 +109,18 @@ export default function People() {
                     </thead>
                     <tbody>
                       {rows.map((m) => (
-                        <tr key={m.id}>
+                        <tr
+                          key={m.id}
+                          className="is-clickable"
+                          tabIndex={0}
+                          onClick={() => setDetail(m)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              setDetail(m);
+                            }
+                          }}
+                        >
                           <td>{fullName(m)}</td>
                           <td className="text-mono">{new Date(m.createdAt).toLocaleDateString()}</td>
                         </tr>
@@ -108,6 +133,25 @@ export default function People() {
           </div>
         </div>
       </div>
+
+      {/* ── Détail membre ── */}
+      <DetailPanel
+        open={!!detail}
+        onClose={() => setDetail(null)}
+        title={detail ? fullName(detail) : 'Membre'}
+        subtitle={detail && <Tag tone={roleTone(detail.role)}>{detail.role}</Tag>}
+      >
+        {detail && (
+          <>
+            <Field label="Téléphone">
+              <span className="text-mono">{detail.phone}</span>
+            </Field>
+            <Field label="Rôle">{detail.role}</Field>
+            <Field label="Streak">{detail.streakCount} jour(s)</Field>
+            <Field label="Inscrit le">{new Date(detail.createdAt).toLocaleString()}</Field>
+          </>
+        )}
+      </DetailPanel>
     </>
   );
 }
