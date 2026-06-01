@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download } from '@carbon/icons-react';
+import { Download, Money } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Tile, Panel, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -168,7 +168,7 @@ export default function Giving() {
                   <QueryBoundary
                     query={donations}
                     isEmpty={(d) => d.length === 0}
-                    empty={<Empty>Aucun don</Empty>}
+                    empty={<Empty icon={<Money size={20} />}>Aucun don enregistré pour l'instant.</Empty>}
                     loadingLabel="Chargement du ledger…"
                   >
                     {(rows) => (

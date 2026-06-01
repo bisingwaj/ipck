@@ -80,6 +80,44 @@ export function statusLabel(status: string): string {
   return STATUS_MAP[status]?.label ?? status;
 }
 
+/* ── Rôles : libellé + couleur FR (miroir des rôles backend) ── */
+const ROLE_MAP: Record<string, { tone: Tone; label: string }> = {
+  admin: { tone: 'purple', label: 'Administrateur' },
+  pastor: { tone: 'blue', label: 'Pasteur' },
+  group_leader: { tone: 'teal', label: 'Responsable' },
+  member: { tone: 'gray', label: 'Membre' },
+};
+export function RoleBadge({ role }: { role: string }) {
+  const m = ROLE_MAP[role] ?? { tone: 'gray' as Tone, label: role };
+  return <Tag tone={m.tone}>{m.label}</Tag>;
+}
+export function roleLabel(role: string): string {
+  return ROLE_MAP[role]?.label ?? role;
+}
+
+/* ── Meter — barre de progression vs cible (engagement, capacité…) ── */
+export function Meter({
+  pct,
+  target,
+  tone = 'blue',
+}: {
+  pct: number;
+  target?: number;
+  tone?: 'blue' | 'green' | 'yellow' | 'red';
+}) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  return (
+    <div className="cds-meter">
+      <div className="cds-meter__track">
+        <div className={`cds-meter__fill cds-meter__fill--${tone}`} style={{ width: `${clamped}%` }} />
+        {target != null && (
+          <div className="cds-meter__target" style={{ left: `${Math.min(100, target)}%` }} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ── KPI tile (tuile plate Carbon avec delta optionnel) ── */
 export function Tile({
   label,
@@ -89,6 +127,9 @@ export function Tile({
   good,
   caption,
   live,
+  icon,
+  onClick,
+  children,
 }: {
   label: ReactNode;
   value: ReactNode;
@@ -97,14 +138,35 @@ export function Tile({
   good?: boolean;
   caption?: ReactNode;
   live?: boolean;
+  icon?: ReactNode;
+  onClick?: () => void;
+  children?: ReactNode;
 }) {
   const cls =
     delta == null ? 'flat' : delta > 0 ? (good ? 'up' : 'down') : good ? 'down' : 'up';
   const sign = delta != null && delta > 0 ? '+' : '';
   return (
-    <div className="cds-tile">
+    <div
+      className={'cds-tile' + (onClick ? ' cds-tile--clickable' : '')}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <div className="cds-tile__label">
-        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          {icon && <span className="cds-tile__icon">{icon}</span>}
+          {label}
+        </span>
         {live && <LiveTag />}
       </div>
       <div className="cds-tile__value">
@@ -118,6 +180,7 @@ export function Tile({
           </span>
         )}
       </div>
+      {children}
       {caption != null && <div className="cds-tile__caption">{caption}</div>}
     </div>
   );
@@ -183,9 +246,17 @@ export function PageHead({
   return (
     <div className="cds-page-head">
       <div className="cds-breadcrumb">
-        <a href="#">IPCK House</a>
+        <a
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            navigate('/');
+          }}
+        >
+          IPCK House
+        </a>
         <span className="sep">/</span>
-        <a href="#">Admin</a>
+        <span>Admin</span>
         <span className="sep">/</span>
         <span>{title}</span>
       </div>

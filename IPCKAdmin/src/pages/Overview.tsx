@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { UserMultiple, Money, VideoChat, Favorite, Book } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Tile, Panel } from '../components/ui';
+import { PageHead, Tile, Panel, Meter } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 
 interface Kpi {
@@ -16,7 +18,17 @@ interface EngagementMetric {
   target: number;
 }
 
+// Chaque KPI pointe vers la page qui le détaille (icône + navigation).
+const KPI_NAV: Record<string, { icon: typeof Money; to: string }> = {
+  members: { icon: UserMultiple, to: '/people' },
+  giving: { icon: Money, to: '/giving' },
+  viewers: { icon: VideoChat, to: '/content' },
+  prayers: { icon: Favorite, to: '/care' },
+  devo: { icon: Book, to: '/devotions' },
+};
+
 export default function Overview() {
+  const navigate = useNavigate();
   const overview = useQuery({
     queryKey: ['overview'],
     queryFn: async () => (await api.get('/admin/overview')).data as { kpis: Kpi[] },
@@ -43,15 +55,21 @@ export default function Overview() {
                   gridTemplateColumns: `repeat(${Math.min(Math.max(data.kpis.length, 1), 5)}, minmax(0, 1fr))`,
                 }}
               >
-                {data.kpis.map((k) => (
-                  <Tile
-                    key={k.id}
-                    label={k.label}
-                    value={k.value.toLocaleString()}
-                    live={k.live}
-                    caption={k.live ? 'en direct' : undefined}
-                  />
-                ))}
+                {data.kpis.map((k) => {
+                  const nav = KPI_NAV[k.id];
+                  const Icon = nav?.icon;
+                  return (
+                    <Tile
+                      key={k.id}
+                      label={k.label}
+                      value={k.value.toLocaleString()}
+                      live={k.live}
+                      caption={k.live ? 'en direct' : nav ? 'Voir le détail →' : undefined}
+                      icon={Icon ? <Icon size={16} /> : undefined}
+                      onClick={nav ? () => navigate(nav.to) : undefined}
+                    />
+                  );
+                })}
               </div>
 
               <Panel
@@ -70,16 +88,21 @@ export default function Overview() {
                       className="cds-grid"
                       style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 4)}, minmax(0, 1fr))` }}
                     >
-                      {metrics.map((m) => (
-                        <Tile
-                          key={m.label}
-                          label={m.label}
-                          value={`${m.pct}%`}
-                          delta={m.pct - m.target}
-                          good
-                          caption={`cible ${m.target}%`}
-                        />
-                      ))}
+                      {metrics.map((m) => {
+                        const onTarget = m.pct >= m.target;
+                        return (
+                          <Tile
+                            key={m.label}
+                            label={m.label}
+                            value={`${m.pct}%`}
+                            delta={m.pct - m.target}
+                            good
+                            caption={`cible ${m.target}%`}
+                          >
+                            <Meter pct={m.pct} target={m.target} tone={onTarget ? 'green' : 'yellow'} />
+                          </Tile>
+                        );
+                      })}
                     </div>
                   )}
                 </QueryBoundary>

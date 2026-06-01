@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea } from '@carbon/react';
-import { Add } from '@carbon/icons-react';
+import { Add, Group, Events } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -112,7 +112,21 @@ export default function Community() {
               <QueryBoundary
                 query={groups}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucun groupe</Empty>}
+                empty={
+                  <Empty
+                    icon={<Group size={20} />}
+                    action={
+                      mayManage ? (
+                        <button className="cds-btn cds-btn--md" onClick={() => setGroupOpen(true)}>
+                          Nouveau groupe
+                          <Add size={16} />
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    Aucun groupe de maison pour l'instant.
+                  </Empty>
+                }
                 loadingLabel="Chargement des groupes…"
               >
                 {(rows) => (
@@ -171,7 +185,21 @@ export default function Community() {
               <QueryBoundary
                 query={events}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucun événement</Empty>}
+                empty={
+                  <Empty
+                    icon={<Events size={20} />}
+                    action={
+                      mayManage ? (
+                        <button className="cds-btn cds-btn--md" onClick={() => setEventOpen(true)}>
+                          Nouvel événement
+                          <Add size={16} />
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    Aucun événement planifié.
+                  </Empty>
+                }
                 loadingLabel="Chargement des événements…"
               >
                 {(rows) => (

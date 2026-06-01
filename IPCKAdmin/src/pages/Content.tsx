@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea, Select, SelectItem, Toggle } from '@carbon/react';
-import { Add, Edit, TrashCan } from '@carbon/icons-react';
+import { Add, Edit, TrashCan, Video } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -254,7 +254,21 @@ export default function ContentPage() {
             <QueryBoundary
               query={list}
               isEmpty={(d) => d.length === 0}
-              empty={<Empty>Aucun contenu. Ajoutez-en un.</Empty>}
+              empty={
+                <Empty
+                  icon={<Video size={20} />}
+                  action={
+                    mayManage ? (
+                      <button className="cds-btn cds-btn--md" onClick={openCreate}>
+                        Nouveau contenu
+                        <Add size={16} />
+                      </button>
+                    ) : undefined
+                  }
+                >
+                  Aucun contenu dans la bibliothèque.
+                </Empty>
+              }
               loadingLabel="Chargement de la bibliothèque…"
             >
               {(rows) => (

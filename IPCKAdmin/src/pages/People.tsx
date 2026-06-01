@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
+import { UserMultiple } from '@carbon/icons-react';
+import { PageHead, Panel, Empty, RoleBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 
@@ -14,9 +15,6 @@ interface Member {
   streakCount: number;
   createdAt: string;
 }
-
-const roleTone = (r: string): Tone =>
-  r === 'admin' ? 'purple' : r === 'pastor' ? 'blue' : r === 'group_leader' ? 'teal' : 'gray';
 
 const ROLE_DESC: Record<string, string> = {
   admin: 'Administrateur — accès complet au dashboard, dont les exports financiers.',
@@ -54,7 +52,7 @@ export default function People() {
               <QueryBoundary
                 query={members}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucun membre</Empty>}
+                empty={<Empty icon={<UserMultiple size={20} />}>Aucun membre dans l'annuaire.</Empty>}
                 loadingLabel="Chargement de l'annuaire…"
               >
                 {(rows) => (
@@ -84,7 +82,7 @@ export default function People() {
                           <td>{fullName(m)}</td>
                           <td className="text-mono">{m.phone}</td>
                           <td>
-                            <Tag tone={roleTone(m.role)}>{m.role}</Tag>
+                            <RoleBadge role={m.role} />
                           </td>
                           <td className="num">{m.streakCount}</td>
                         </tr>
@@ -146,7 +144,7 @@ export default function People() {
         open={!!detail}
         onClose={() => setDetail(null)}
         title={detail ? fullName(detail) : 'Membre'}
-        subtitle={detail && <Tag tone={roleTone(detail.role)}>{detail.role}</Tag>}
+        subtitle={detail && <RoleBadge role={detail.role} />}
       >
         {detail && (
           <>
@@ -169,7 +167,7 @@ export default function People() {
                 <span className="text-mono">{detail.phone}</span>
               </Field>
               <Field label="Rôle" hint={ROLE_DESC[detail.role]}>
-                <Tag tone={roleTone(detail.role)}>{detail.role}</Tag>
+                <RoleBadge role={detail.role} />
               </Field>
             </DetailSection>
 
