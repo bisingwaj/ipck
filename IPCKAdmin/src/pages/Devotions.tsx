@@ -5,7 +5,7 @@ import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -270,11 +270,26 @@ export default function Devotions() {
       >
         {detail && (
           <>
-            <Field label="Date">{detail.date}</Field>
-            <Field label="Verset">{detail.verseRef}</Field>
-            <Field label="Auteur">{detail.author || '—'}</Field>
-            <Field label="Statut">{detail.status}</Field>
-            <Field label="Publication">{new Date(detail.publishAt).toLocaleString()}</Field>
+            <DetailLead>
+              Dévotion du <strong>{detail.date}</strong>, ancrée sur{' '}
+              <strong>{detail.verseRef}</strong>
+              {detail.author ? `, rédigée par ${detail.author}` : ''}.{' '}
+              {detail.status === 'published'
+                ? 'Publiée et lisible par les membres.'
+                : detail.status === 'scheduled'
+                  ? 'Programmée — pas encore visible.'
+                  : 'Brouillon — non visible des membres.'}
+            </DetailLead>
+
+            <DetailSection title="Informations">
+              <Field label="Date">{detail.date}</Field>
+              <Field label="Verset clé">{detail.verseRef}</Field>
+              <Field label="Auteur">{detail.author || '—'}</Field>
+              <Field label="Statut">
+                <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+              </Field>
+              <Field label="Publication">{new Date(detail.publishAt).toLocaleString('fr-FR')}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>

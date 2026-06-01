@@ -4,7 +4,7 @@ import { Locked, Email, Checkmark, Close } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -20,12 +20,49 @@ interface Appointment {
   id: string;
   slotStart: string;
   status: string;
-  topic: { label: string };
-  user: { firstName: string | null; lastName: string | null };
+  topic: { label: string; description?: string | null };
+  user: { firstName: string | null; lastName: string | null; phone?: string | null };
+  pastor?: { firstName: string | null; lastName: string | null } | null;
+  location?: string | null;
+  notes?: string | null;
+  createdAt?: string | null;
 }
 
 const memberName = (a: Appointment) =>
   `${a.user.firstName ?? ''} ${a.user.lastName ?? ''}`.trim() || 'Membre';
+
+const pastorName = (a: Appointment) =>
+  a.pastor ? `${a.pastor.firstName ?? ''} ${a.pastor.lastName ?? ''}`.trim() : '';
+
+// Décrit le statut en langage clair plutôt que de répéter le code brut.
+const APPT_STATUS_DESC: Record<string, string> = {
+  tentative: 'Demande reçue, en attente de confirmation par le staff.',
+  confirmed: 'Rendez-vous confirmé — le membre a été notifié.',
+  cancelled: 'Rendez-vous annulé.',
+};
+const PRAYER_STATUS_DESC: Record<string, string> = {
+  pending: 'En attente de modération dans la file de care.',
+  approved: 'Approuvée et visible sur le mur de prière.',
+  answered: 'Une réponse pastorale a été envoyée au demandeur.',
+  rejected: 'Demande rejetée.',
+};
+const VISIBILITY_DESC: Record<string, string> = {
+  private: 'Confidentielle — visible du staff uniquement, exclue des analyses et exports.',
+  anon: 'Publique mais anonyme — le nom du demandeur n’est pas affiché.',
+  public: 'Publique — visible et nominative sur le mur de prière.',
+};
+
+const dateLong = (iso?: string | null) =>
+  iso
+    ? new Date(iso).toLocaleString('fr-FR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : '';
 
 export default function Care() {
   const { can } = useAuth();
@@ -306,16 +343,29 @@ export default function Care() {
       >
         {prayer && (
           <>
-            <Field label="Demandeur">{prayer.who}</Field>
-            <Field label="Visibilité">{prayer.visibility}</Field>
-            <Field label="Statut">{prayer.status}</Field>
-            <Field label="Reçue le">{new Date(prayer.at).toLocaleString()}</Field>
-            <div style={{ marginTop: 'var(--spacing-04)' }}>
-              <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
-                Demande
-              </div>
+            <DetailLead>
+              <strong>{prayer.who}</strong> a soumis une demande de prière{' '}
+              {prayer.at ? `le ${dateLong(prayer.at)}` : ''}.{' '}
+              {PRAYER_STATUS_DESC[prayer.status] ?? ''}
+            </DetailLead>
+
+            <DetailSection title="Contenu de la demande">
               <DetailText>{prayer.text}</DetailText>
-            </div>
+            </DetailSection>
+
+            <DetailSection title="Suivi pastoral">
+              <Field label="Demandeur">{prayer.who}</Field>
+              <Field
+                label="Confidentialité"
+                hint={VISIBILITY_DESC[prayer.visibility]}
+              >
+                <Tag tone={visTone(prayer.visibility)}>{prayer.visibility}</Tag>
+              </Field>
+              <Field label="Statut" hint={PRAYER_STATUS_DESC[prayer.status]}>
+                {prayer.status}
+              </Field>
+              <Field label="Reçue le">{prayer.at ? dateLong(prayer.at) : '—'}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>
@@ -356,10 +406,47 @@ export default function Care() {
       >
         {appt && (
           <>
-            <Field label="Membre">{memberName(appt)}</Field>
-            <Field label="Sujet">{appt.topic.label}</Field>
-            <Field label="Quand">{new Date(appt.slotStart).toLocaleString()}</Field>
-            <Field label="Statut">{appt.status}</Field>
+            <DetailLead>
+              <strong>{memberName(appt)}</strong> a pris rendez-vous pour «{' '}
+              {appt.topic.label} » le <strong>{dateLong(appt.slotStart)}</strong>.{' '}
+              {APPT_STATUS_DESC[appt.status] ?? ''}
+            </DetailLead>
+
+            <DetailSection title="Rendez-vous">
+              <Field label="Sujet" hint={appt.topic.description ?? undefined}>
+                {appt.topic.label}
+              </Field>
+              <Field label="Date & heure">{dateLong(appt.slotStart)}</Field>
+              <Field label="Lieu">{appt.location ?? '—'}</Field>
+              <Field label="Statut" hint={APPT_STATUS_DESC[appt.status]}>
+                <Tag tone={appt.status === 'confirmed' ? 'green' : 'yellow'}>{appt.status}</Tag>
+              </Field>
+            </DetailSection>
+
+            <DetailSection title="Personnes">
+              <Field label="Membre">{memberName(appt)}</Field>
+              {appt.user.phone && (
+                <Field label="Téléphone">
+                  <span className="text-mono">{appt.user.phone}</span>
+                </Field>
+              )}
+              <Field
+                label="Pasteur"
+                hint={pastorName(appt) ? undefined : 'Aucun pasteur n’a encore été assigné.'}
+              >
+                {pastorName(appt) || '—'}
+              </Field>
+            </DetailSection>
+
+            <DetailSection title="Note du membre">
+              <DetailText>{appt.notes ?? ''}</DetailText>
+            </DetailSection>
+
+            {appt.createdAt && (
+              <DetailSection title="Historique">
+                <Field label="Demandé le">{dateLong(appt.createdAt)}</Field>
+              </DetailSection>
+            )}
           </>
         )}
       </DetailPanel>

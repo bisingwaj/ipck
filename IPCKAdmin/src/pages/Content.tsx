@@ -5,7 +5,7 @@ import { Add, Edit, TrashCan } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -390,26 +390,43 @@ export default function ContentPage() {
       >
         {detail && (
           <>
-            <Field label="Intervenant">{detail.speaker || '—'}</Field>
-            <Field label="Série">{detail.series || '—'}</Field>
-            <Field label="Catégorie">{detail.category}</Field>
-            <Field label="Durée">{detail.duration || '—'}</Field>
-            <Field label="Statut">{detail.status}</Field>
-            <Field label="En direct">{detail.isLive ? 'Oui' : 'Non'}</Field>
-            <Field label="Publié le">{new Date(detail.publishAt).toLocaleString()}</Field>
-            <Field label="Lien vidéo">
-              <span className="text-mono" style={{ wordBreak: 'break-all' }}>
-                {detail.videoUrl}
-              </span>
-            </Field>
-            {detail.description && (
-              <div style={{ marginTop: 'var(--spacing-04)' }}>
-                <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
-                  Description
-                </div>
-                <DetailText>{detail.description}</DetailText>
-              </div>
-            )}
+            <DetailLead>
+              {detail.isLive ? 'Contenu diffusé en direct' : 'Vidéo à la demande'} de la
+              catégorie « {detail.category} »
+              {detail.speaker ? `, présenté par ${detail.speaker}` : ''}.{' '}
+              {detail.status === 'published'
+                ? 'Publié et visible dans l’app mobile.'
+                : detail.status === 'scheduled'
+                  ? 'Programmé — pas encore visible.'
+                  : 'Brouillon — non visible des membres.'}
+            </DetailLead>
+
+            <DetailSection title="Description">
+              <DetailText>{detail.description ?? ''}</DetailText>
+            </DetailSection>
+
+            <DetailSection title="Informations">
+              <Field label="Intervenant">{detail.speaker || '—'}</Field>
+              <Field label="Série">{detail.series || '—'}</Field>
+              <Field label="Catégorie">{detail.category}</Field>
+              <Field label="Durée">{detail.duration || '—'}</Field>
+            </DetailSection>
+
+            <DetailSection title="Diffusion">
+              <Field label="Statut">
+                <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
+              </Field>
+              <Field label="En direct" hint={detail.isLive ? 'Signalé EN DIRECT dans l’app.' : undefined}>
+                {detail.isLive ? 'Oui' : 'Non'}
+              </Field>
+              <Field label="À la une">{detail.featured ? 'Oui' : 'Non'}</Field>
+              <Field label="Publié le">{new Date(detail.publishAt).toLocaleString('fr-FR')}</Field>
+              <Field label="Lien vidéo">
+                <span className="text-mono" style={{ wordBreak: 'break-all' }}>
+                  {detail.videoUrl}
+                </span>
+              </Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>

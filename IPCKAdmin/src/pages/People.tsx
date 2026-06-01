@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 
 interface Member {
   id: string;
@@ -17,6 +17,13 @@ interface Member {
 
 const roleTone = (r: string): Tone =>
   r === 'admin' ? 'purple' : r === 'pastor' ? 'blue' : r === 'group_leader' ? 'teal' : 'gray';
+
+const ROLE_DESC: Record<string, string> = {
+  admin: 'Administrateur — accès complet au dashboard, dont les exports financiers.',
+  pastor: 'Pasteur — gère le soin pastoral, les contenus et la communauté.',
+  group_leader: 'Responsable de groupe — anime un groupe de maison.',
+  member: 'Membre de la communauté — utilise l’app mobile.',
+};
 
 const fullName = (m: { firstName: string | null; lastName: string | null }) =>
   `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || 'Membre';
@@ -143,12 +150,38 @@ export default function People() {
       >
         {detail && (
           <>
-            <Field label="Téléphone">
-              <span className="text-mono">{detail.phone}</span>
-            </Field>
-            <Field label="Rôle">{detail.role}</Field>
-            <Field label="Streak">{detail.streakCount} jour(s)</Field>
-            <Field label="Inscrit le">{new Date(detail.createdAt).toLocaleString()}</Field>
+            <DetailLead>
+              <strong>{fullName(detail)}</strong> a rejoint l'IPCK le{' '}
+              {new Date(detail.createdAt).toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+              })}
+              . {ROLE_DESC[detail.role] ?? ''}{' '}
+              {detail.streakCount > 0
+                ? `Série de lecture en cours : ${detail.streakCount} jour(s).`
+                : 'Aucune série de lecture en cours.'}
+            </DetailLead>
+
+            <DetailSection title="Identité">
+              <Field label="Nom">{fullName(detail)}</Field>
+              <Field label="Téléphone">
+                <span className="text-mono">{detail.phone}</span>
+              </Field>
+              <Field label="Rôle" hint={ROLE_DESC[detail.role]}>
+                <Tag tone={roleTone(detail.role)}>{detail.role}</Tag>
+              </Field>
+            </DetailSection>
+
+            <DetailSection title="Engagement">
+              <Field
+                label="Série"
+                hint="Nombre de jours consécutifs de lecture de la dévotion."
+              >
+                {detail.streakCount} jour(s)
+              </Field>
+              <Field label="Inscrit le">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>

@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 
 interface ActivityRow {
   id: string;
@@ -20,6 +20,17 @@ const kindTone = (k: string): Tone => {
   if (k.includes('user') || k.includes('member')) return 'teal';
   return 'gray';
 };
+
+const KIND_DESC: Record<string, string> = {
+  give: 'Un don a été effectué.',
+  appts: 'Un rendez-vous pastoral a été pris ou modifié.',
+  events: 'Un membre a répondu à un événement (RSVP).',
+  broadcast: 'Une notification a été diffusée aux membres.',
+  care: 'Action de soin pastoral (prière).',
+  content: 'Contenu créé ou mis à jour.',
+};
+const kindDesc = (k: string) =>
+  KIND_DESC[k] ?? 'Action enregistrée dans le journal de la plateforme.';
 
 export default function Activity() {
   const [detail, setDetail] = useState<ActivityRow | null>(null);
@@ -96,15 +107,29 @@ export default function Activity() {
       >
         {detail && (
           <>
-            <Field label="Type">{detail.kind}</Field>
-            <Field label="Acteur">{detail.actorLabel}</Field>
-            <Field label="Quand">{new Date(detail.createdAt).toLocaleString()}</Field>
-            <div style={{ marginTop: 'var(--spacing-04)' }}>
-              <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
-                Description
-              </div>
+            <DetailLead>
+              <strong>{detail.actorLabel}</strong> —{' '}
+              {new Date(detail.createdAt).toLocaleString('fr-FR', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              . {kindDesc(detail.kind)}
+            </DetailLead>
+
+            <DetailSection title="Détail de l'action">
               <DetailText>{detail.description}</DetailText>
-            </div>
+            </DetailSection>
+
+            <DetailSection title="Métadonnées">
+              <Field label="Type" hint={kindDesc(detail.kind)}>
+                <Tag tone={kindTone(detail.kind)}>{detail.kind}</Tag>
+              </Field>
+              <Field label="Acteur">{detail.actorLabel}</Field>
+              <Field label="Horodatage">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>

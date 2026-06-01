@@ -586,8 +586,27 @@
 .cds-detail__close:hover { background: rgba(255,255,255,0.12); }
 .cds-detail__body {
   flex: 1; overflow-y: auto; padding: var(--spacing-05);
-  display: flex; flex-direction: column; gap: var(--spacing-02);
+  display: flex; flex-direction: column; gap: var(--spacing-05);
 }
+
+/* Phrase descriptive d'introduction */
+.cds-detail__lead {
+  font: 400 0.9375rem/1.5rem var(--font-sans); color: var(--text-01); margin: 0;
+}
+.cds-detail__lead.is-accent {
+  padding: var(--spacing-04) var(--spacing-05);
+  background: var(--ui-01); border-left: 3px solid var(--blue-60);
+  color: var(--text-02);
+}
+
+/* Section titrée */
+.cds-detail__section { display: flex; flex-direction: column; gap: var(--spacing-02); }
+.cds-detail__section-title {
+  font: 600 0.6875rem/1rem var(--font-sans); letter-spacing: 0.96px;
+  text-transform: uppercase; color: var(--text-03);
+  padding-bottom: var(--spacing-02); border-bottom: 1px solid var(--ui-03);
+}
+.cds-detail__section-body { display: flex; flex-direction: column; }
 .cds-detail__footer {
   flex-shrink: 0; display: flex; justify-content: flex-end; gap: var(--spacing-03);
   padding: var(--spacing-04) var(--spacing-05);
@@ -596,6 +615,10 @@
 .cds-detail__text {
   font: 400 0.875rem/1.375rem var(--font-sans); color: var(--text-01);
   white-space: pre-wrap; word-break: break-word;
+}
+.cds-detail__empty-text {
+  font: 400 0.875rem/1.375rem var(--font-sans); font-style: italic;
+  color: var(--text-03); margin: 0;
 }
 
 /* ── Champ label / valeur (détail) ── */
@@ -610,4 +633,9 @@
 .cds-field__value {
   font: 400 0.875rem/1.25rem var(--font-sans); color: var(--text-01);
   word-break: break-word; min-width: 0;
+}
+.cds-field__empty { color: var(--text-03); font-style: italic; }
+.cds-field__hint {
+  font: 400 0.75rem/1.125rem var(--font-sans); color: var(--text-03);
+  margin-top: 2px;
 }

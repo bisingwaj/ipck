@@ -4,18 +4,20 @@ import { Close } from '@carbon/icons-react';
 /**
  * Drawer de détail latéral — même langage visuel que le reste du dashboard
  * (Carbon plat, tokens `cds-`, angles droits, en-tête sombre). Ouvert au clic
- * sur une ligne de tableau. Ne réinvente aucun style : réutilise `cds-tag`,
- * la grille label/valeur, et les boutons `cds-btn`.
+ * sur une ligne de tableau.
  *
- * Cohérent avec les principes cardinaux : le détail n'affiche que la vérité
- * déjà chargée (principe 1) et les actions y restent confirmées via `useAction`
- * (principe 3) — ce composant n'est qu'une coquille de présentation.
+ * Objectif : un détail **structuré et descriptif** (pas une recopie de colonnes).
+ * Composition recommandée : `DetailLead` (phrase qui décrit l'objet) →
+ * `DetailSection` (groupes titrés de `Field`) → `DetailText` (contenus longs).
+ *
+ * Cohérent avec les principes cardinaux : n'affiche que la vérité déjà chargée
+ * (principe 1) ; les actions du pied restent confirmées via `useAction` (principe 3).
  */
 interface DetailPanelProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
-  /** Sous-titre / éléments contextuels (ex. statut). */
+  /** Éléments contextuels en en-tête (ex. badges de statut). */
   subtitle?: ReactNode;
   /** Pied de panneau : boutons d'action (déjà câblés sur useAction). */
   footer?: ReactNode;
@@ -23,7 +25,6 @@ interface DetailPanelProps {
 }
 
 export function DetailPanel({ open, onClose, title, subtitle, footer, children }: DetailPanelProps) {
-  // Fermeture au clavier (Échap) — guidage et accessibilité.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -37,12 +38,7 @@ export function DetailPanel({ open, onClose, title, subtitle, footer, children }
 
   return (
     <div className="cds-detail-overlay" onClick={onClose}>
-      <aside
-        className="cds-detail"
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <aside className="cds-detail" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <header className="cds-detail__head">
           <div className="cds-detail__head-text">
             <h3 className="cds-detail__title">{title}</h3>
@@ -61,17 +57,51 @@ export function DetailPanel({ open, onClose, title, subtitle, footer, children }
   );
 }
 
-/** Ligne label / valeur dans le détail (même esprit que le résumé mobile). */
-export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
+/**
+ * Phrase d'introduction qui **décrit** l'objet en langage naturel, pour que
+ * l'admin comprenne de quoi il s'agit avant de lire les champs. Optionnellement
+ * accentuée (encadré) pour les informations sensibles.
+ */
+export function DetailLead({ children, accent }: { children: ReactNode; accent?: boolean }) {
+  return <p className={'cds-detail__lead' + (accent ? ' is-accent' : '')}>{children}</p>;
+}
+
+/** Groupe titré de champs — structure le détail en sections lisibles. */
+export function DetailSection({ title, children }: { title: ReactNode; children: ReactNode }) {
+  return (
+    <section className="cds-detail__section">
+      <div className="cds-detail__section-title">{title}</div>
+      <div className="cds-detail__section-body">{children}</div>
+    </section>
+  );
+}
+
+/** Ligne label / valeur. `hint` ajoute une explication sous la valeur. */
+export function Field({
+  label,
+  children,
+  hint,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  hint?: ReactNode;
+}) {
+  const empty = children === null || children === undefined || children === '' || children === '—';
   return (
     <div className="cds-field">
       <div className="cds-field__label">{label}</div>
-      <div className="cds-field__value">{children ?? '—'}</div>
+      <div className="cds-field__value">
+        {empty ? <span className="cds-field__empty">Non renseigné</span> : children}
+        {hint && !empty && <div className="cds-field__hint">{hint}</div>}
+      </div>
     </div>
   );
 }
 
 /** Bloc de texte long (méditation, message, description) dans le détail. */
 export function DetailText({ children }: { children: ReactNode }) {
+  if (children === null || children === undefined || children === '') {
+    return <p className="cds-detail__empty-text">Aucun contenu fourni.</p>;
+  }
   return <div className="cds-detail__text">{children}</div>;
 }

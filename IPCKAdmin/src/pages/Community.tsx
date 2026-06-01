@@ -5,7 +5,7 @@ import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field, DetailText } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -271,17 +271,21 @@ export default function Community() {
       >
         {groupDetail && (
           <>
-            <Field label="Leader">{groupDetail.leader || '—'}</Field>
-            <Field label="Membres">{groupDetail.members}</Field>
-            <Field label="Rencontres">{groupDetail.meets || '—'}</Field>
-            {groupDetail.description && (
-              <div style={{ marginTop: 'var(--spacing-04)' }}>
-                <div className="cds-field__label" style={{ marginBottom: 'var(--spacing-03)' }}>
-                  Description
-                </div>
-                <DetailText>{groupDetail.description}</DetailText>
-              </div>
-            )}
+            <DetailLead>
+              Groupe de maison réunissant <strong>{groupDetail.members}</strong> membre(s)
+              {groupDetail.leader ? `, animé par ${groupDetail.leader}` : ''}
+              {groupDetail.meets ? `. Se réunit ${groupDetail.meets}` : ''}.
+            </DetailLead>
+
+            <DetailSection title="Description">
+              <DetailText>{groupDetail.description ?? ''}</DetailText>
+            </DetailSection>
+
+            <DetailSection title="Informations">
+              <Field label="Leader">{groupDetail.leader || '—'}</Field>
+              <Field label="Membres">{groupDetail.members}</Field>
+              <Field label="Rencontres">{groupDetail.meets || '—'}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>
@@ -294,12 +298,40 @@ export default function Community() {
       >
         {eventDetail && (
           <>
-            <Field label="Quand">{new Date(eventDetail.startsAt).toLocaleString()}</Field>
-            <Field label="Lieu">{eventDetail.loc || '—'}</Field>
-            <Field label="RSVP">
-              {eventDetail.rsvp}
-              {eventDetail.cap ? ` / ${eventDetail.cap}` : ''}
-            </Field>
+            <DetailLead>
+              Événement prévu le{' '}
+              <strong>
+                {new Date(eventDetail.startsAt).toLocaleString('fr-FR', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </strong>
+              {eventDetail.loc ? ` à ${eventDetail.loc}` : ''}.{' '}
+              <strong>{eventDetail.rsvp}</strong> participant(s) confirmé(s)
+              {eventDetail.cap ? ` sur ${eventDetail.cap} places` : ''}.
+            </DetailLead>
+
+            <DetailSection title="Détails">
+              <Field label="Date & heure">
+                {new Date(eventDetail.startsAt).toLocaleString('fr-FR')}
+              </Field>
+              <Field label="Lieu">{eventDetail.loc || '—'}</Field>
+              <Field
+                label="Participation"
+                hint={
+                  eventDetail.cap
+                    ? `${Math.round((eventDetail.rsvp / eventDetail.cap) * 100)}% de la capacité`
+                    : undefined
+                }
+              >
+                {eventDetail.rsvp}
+                {eventDetail.cap ? ` / ${eventDetail.cap}` : ' RSVP'}
+              </Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>

@@ -4,7 +4,7 @@ import { Download } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Tile, Panel, Tag, Empty, Tone } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
-import { DetailPanel, Field } from '../components/DetailPanel';
+import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
 
@@ -27,6 +27,12 @@ interface Donation {
 
 const statusTone = (s: string): Tone =>
   s === 'received' ? 'green' : s === 'pending' ? 'yellow' : 'red';
+
+const DON_STATUS_DESC: Record<string, string> = {
+  received: 'Paiement reçu et réconcilié — comptabilisé dans les totaux du fonds.',
+  pending: 'Paiement initié, en attente de confirmation du fournisseur.',
+  failed: 'Le paiement a échoué — aucun montant n’a été comptabilisé.',
+};
 
 export default function Giving() {
   const { can } = useAuth();
@@ -224,15 +230,35 @@ export default function Giving() {
       >
         {detail && (
           <>
-            <Field label="Référence">
-              <span className="text-mono">{detail.ref}</span>
-            </Field>
-            <Field label="Montant">${detail.amount.toLocaleString()}</Field>
-            <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
-            <Field label="Canal">{detail.method}</Field>
-            <Field label="Donateur">{detail.anonymous ? 'Anonyme' : 'Membre'}</Field>
-            <Field label="Statut">{detail.status}</Field>
-            <Field label="Date">{new Date(detail.createdAt).toLocaleString()}</Field>
+            <DetailLead accent={detail.status === 'failed'}>
+              Don de <strong>${detail.amount.toLocaleString()}</strong> vers le fonds «{' '}
+              {fundName(detail.fundId, summary.data?.funds ?? [])} », via{' '}
+              {detail.method}
+              {detail.anonymous ? ', à titre anonyme' : ''}.{' '}
+              {DON_STATUS_DESC[detail.status] ?? ''}
+            </DetailLead>
+
+            <DetailSection title="Transaction">
+              <Field label="Référence">
+                <span className="text-mono">{detail.ref}</span>
+              </Field>
+              <Field label="Montant">${detail.amount.toLocaleString()}</Field>
+              <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
+              <Field label="Canal de paiement">{detail.method}</Field>
+              <Field label="Statut" hint={DON_STATUS_DESC[detail.status]}>
+                <Tag tone={statusTone(detail.status)}>{detail.status}</Tag>
+              </Field>
+            </DetailSection>
+
+            <DetailSection title="Donateur & date">
+              <Field
+                label="Donateur"
+                hint={detail.anonymous ? 'Le don a été fait de manière anonyme.' : undefined}
+              >
+                {detail.anonymous ? 'Anonyme' : 'Membre'}
+              </Field>
+              <Field label="Date">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+            </DetailSection>
           </>
         )}
       </DetailPanel>
