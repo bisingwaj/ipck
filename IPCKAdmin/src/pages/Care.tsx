@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Locked, Email, Checkmark, Close } from '@carbon/icons-react';
+import { Locked, Email, Checkmark, Close, Calendar } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty, StatusBadge } from '../components/ui';
+import { PageHead, Panel, Tag, Empty, StatusBadge, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -63,6 +63,32 @@ const dateLong = (iso?: string | null) =>
         minute: '2-digit',
       })
     : '';
+
+/** Cellule "quand" : pastille de date + heure dessous (au lieu d'une date US verbeuse). */
+function WhenCell({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return <span className="text-mono">—</span>;
+  const startOf = (x: Date) => {
+    const c = new Date(x);
+    c.setHours(0, 0, 0, 0);
+    return c.getTime();
+  };
+  const isToday = startOf(d) === startOf(new Date());
+  return (
+    <div className="cds-namecell">
+      <span
+        className={'cds-datepill' + (isToday ? ' cds-datepill--today' : '')}
+        title={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      >
+        <span className="cds-datepill__day">{d.getDate()}</span>
+        <span className="cds-datepill__mon">{d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}</span>
+      </span>
+      <span className="cds-namecell__sub" style={{ marginTop: 0 }}>
+        {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+      </span>
+    </div>
+  );
+}
 
 export default function Care() {
   const { can } = useAuth();
@@ -188,7 +214,12 @@ export default function Care() {
                             }
                           }}
                         >
-                          <td>{p.who}</td>
+                          <td>
+                            <div className="cds-namecell">
+                              <Avatar name={p.who} size={28} />
+                              <div className="cds-namecell__title">{p.who}</div>
+                            </div>
+                          </td>
                           <td>
                             <Tag tone={visTone(p.visibility)}>{p.visibility}</Tag>
                           </td>
@@ -234,11 +265,11 @@ export default function Care() {
               <QueryBoundary
                 query={appts}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucun rendez-vous</Empty>}
+                empty={<Empty icon={<Calendar size={20} />}>Aucun rendez-vous planifié.</Empty>}
                 loadingLabel="Chargement des rendez-vous…"
               >
                 {(rows) => (
-                  <table className="cds-data-table cds-data-table--compact">
+                  <table className="cds-data-table">
                     <thead>
                       <tr>
                         <th>Quand</th>
@@ -262,8 +293,15 @@ export default function Care() {
                             }
                           }}
                         >
-                          <td className="text-mono">{new Date(a.slotStart).toLocaleString()}</td>
-                          <td>{memberName(a)}</td>
+                          <td>
+                            <WhenCell iso={a.slotStart} />
+                          </td>
+                          <td>
+                            <div className="cds-namecell">
+                              <Avatar name={memberName(a)} size={28} />
+                              <div className="cds-namecell__title">{memberName(a)}</div>
+                            </div>
+                          </td>
                           <td className="text-02">{a.topic.label}</td>
                           <td>
                             <StatusBadge status={a.status} />
@@ -354,7 +392,12 @@ export default function Care() {
             </DetailSection>
 
             <DetailSection title="Suivi pastoral">
-              <Field label="Demandeur">{prayer.who}</Field>
+              <Field label="Demandeur">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Avatar name={prayer.who} size={22} />
+                  {prayer.who}
+                </span>
+              </Field>
               <Field
                 label="Confidentialité"
                 hint={VISIBILITY_DESC[prayer.visibility]}
@@ -424,7 +467,12 @@ export default function Care() {
             </DetailSection>
 
             <DetailSection title="Personnes">
-              <Field label="Membre">{memberName(appt)}</Field>
+              <Field label="Membre">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Avatar name={memberName(appt)} size={22} />
+                  {memberName(appt)}
+                </span>
+              </Field>
               {appt.user.phone && (
                 <Field label="Téléphone">
                   <span className="text-mono">{appt.user.phone}</span>
