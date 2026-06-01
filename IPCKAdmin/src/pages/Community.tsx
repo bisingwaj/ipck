@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Modal, TextInput, TextArea } from '@carbon/react';
+import { Modal, TextInput, TextArea, DatePicker, DatePickerInput } from '@carbon/react';
 import { Add, Group, Events } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty, Avatar } from '../components/ui';
@@ -28,6 +28,14 @@ interface EventRow {
   cap?: number | null;
   rsvp: number;
   color?: string | null;
+}
+
+/** Formate un Date local en `YYYY-MM-DD` (valeur du DatePicker). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 /** Pastille de date (jour + mois) dérivée d'une date ISO, marque "aujourd'hui". */
@@ -79,7 +87,15 @@ export default function Community() {
   const [groupOpen, setGroupOpen] = useState(false);
   const [eventOpen, setEventOpen] = useState(false);
   const [group, setGroup] = useState({ name: '', description: '', meets: '' });
-  const [event, setEvent] = useState({ name: '', startsAt: '', location: '', capacity: '', description: '' });
+  // date = YYYY-MM-DD (DatePicker) · time = HH:MM (input time). startsAt dérivé.
+  const [event, setEvent] = useState({
+    name: '',
+    date: '',
+    time: '',
+    location: '',
+    capacity: '',
+    description: '',
+  });
   const [groupDetail, setGroupDetail] = useState<Group | null>(null);
   const [eventDetail, setEventDetail] = useState<EventRow | null>(null);
 
@@ -109,11 +125,15 @@ export default function Community() {
     },
   });
 
+  // Combine date (YYYY-MM-DD) + heure (HH:MM) en ISO local, ou '' si incomplet.
+  const eventStartsAt =
+    event.date && event.time ? new Date(`${event.date}T${event.time}`) : null;
+
   const createEvent = useAction<void>({
     mutationFn: () =>
       api.post('/events', {
         name: event.name,
-        startsAt: new Date(event.startsAt).toISOString(),
+        startsAt: eventStartsAt!.toISOString(),
         location: event.location || undefined,
         capacity: event.capacity ? Number(event.capacity) : undefined,
         description: event.description || undefined,
@@ -124,13 +144,17 @@ export default function Community() {
     errorTitle: 'La création a échoué',
     onDone: () => {
       setEventOpen(false);
-      setEvent({ name: '', startsAt: '', location: '', capacity: '', description: '' });
+      setEvent({ name: '', date: '', time: '', location: '', capacity: '', description: '' });
     },
   });
 
   // Validation locale du créneau (principe 2 : guider avant d'envoyer au serveur).
-  const eventStartValid = !event.startsAt || !Number.isNaN(new Date(event.startsAt).getTime());
-  const canCreateEvent = !!event.name.trim() && !!event.startsAt.trim() && eventStartValid;
+  const canCreateEvent =
+    !!event.name.trim() &&
+    !!event.date &&
+    !!event.time &&
+    !!eventStartsAt &&
+    !Number.isNaN(eventStartsAt.getTime());
 
   return (
     <>
@@ -300,13 +324,22 @@ export default function Community() {
       <Modal
         open={groupOpen}
         modalHeading="Nouveau groupe"
+        modalLabel="Communauté · groupe de maison"
         primaryButtonText={createGroup.isPending ? 'Création…' : 'Créer'}
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!group.name.trim() || createGroup.isPending}
         onRequestClose={() => setGroupOpen(false)}
         onRequestSubmit={() => createGroup.run()}
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
+        <div className="cds-form">
+          {/* Aperçu identité (avatar + nom) */}
+          <div className="cds-namecell" style={{ paddingBottom: 'var(--spacing-04)', borderBottom: '1px solid var(--ui-03)' }}>
+            <Avatar name={group.name || 'Groupe'} size={44} />
+            <div className="cds-namecell__body">
+              <div className="cds-namecell__title">{group.name.trim() || 'Nom du groupe'}</div>
+              <div className="cds-namecell__sub">{group.meets.trim() || 'Horaire de rencontre'}</div>
+            </div>
+          </div>
           <TextInput id="g-name" labelText="Nom" value={group.name} onChange={(e) => setGroup((g) => ({ ...g, name: e.target.value }))} />
           <TextInput id="g-meets" labelText="Rencontres (ex. Mardi 19h)" value={group.meets} onChange={(e) => setGroup((g) => ({ ...g, meets: e.target.value }))} />
           <TextArea id="g-desc" labelText="Description" rows={3} value={group.description} onChange={(e) => setGroup((g) => ({ ...g, description: e.target.value }))} />
@@ -317,28 +350,65 @@ export default function Community() {
       <Modal
         open={eventOpen}
         modalHeading="Nouvel événement"
+        modalLabel="Communauté · agenda"
         primaryButtonText={createEvent.isPending ? 'Création…' : 'Créer'}
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!canCreateEvent || createEvent.isPending}
         onRequestClose={() => setEventOpen(false)}
         onRequestSubmit={() => createEvent.run()}
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <TextInput id="e-name" labelText="Nom" value={event.name} onChange={(e) => setEvent((v) => ({ ...v, name: e.target.value }))} />
-          <TextInput
-            id="e-start"
-            labelText="Début (ex. 2026-06-15T18:00)"
-            placeholder="AAAA-MM-JJTHH:MM"
-            value={event.startsAt}
-            invalid={!eventStartValid}
-            invalidText="Date invalide — format AAAA-MM-JJTHH:MM"
-            onChange={(e) => setEvent((v) => ({ ...v, startsAt: e.target.value }))}
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem' }}>
+        <div className="cds-form">
+          <TextInput id="e-name" labelText="Nom de l'événement" value={event.name} onChange={(e) => setEvent((v) => ({ ...v, name: e.target.value }))} />
+
+          {/* Date (calendrier) + heure */}
+          <div className="cds-form__row cds-form__row--2">
+            <DatePicker
+              datePickerType="single"
+              dateFormat="Y-m-d"
+              value={event.date || undefined}
+              onChange={(dates: Date[]) => setEvent((v) => ({ ...v, date: dates[0] ? toISODate(dates[0]) : '' }))}
+            >
+              <DatePickerInput id="e-date" labelText="Date" placeholder="AAAA-MM-JJ" />
+            </DatePicker>
+            <TextInput
+              id="e-time"
+              type="time"
+              labelText="Heure"
+              value={event.time}
+              onChange={(e) => setEvent((v) => ({ ...v, time: e.target.value }))}
+            />
+          </div>
+
+          <div className="cds-form__row cds-form__row--ref">
             <TextInput id="e-loc" labelText="Lieu" value={event.location} onChange={(e) => setEvent((v) => ({ ...v, location: e.target.value }))} />
-            <TextInput id="e-cap" labelText="Capacité" value={event.capacity} onChange={(e) => setEvent((v) => ({ ...v, capacity: e.target.value }))} />
+            <TextInput id="e-cap" type="number" min="0" labelText="Capacité" value={event.capacity} onChange={(e) => setEvent((v) => ({ ...v, capacity: e.target.value }))} />
           </div>
           <TextArea id="e-desc" labelText="Description" rows={3} value={event.description} onChange={(e) => setEvent((v) => ({ ...v, description: e.target.value }))} />
+
+          {/* Aperçu : pastille de date + nom + capacité */}
+          {eventStartsAt && !Number.isNaN(eventStartsAt.getTime()) && (
+            <div className="cds-content-preview">
+              <EventDate iso={eventStartsAt.toISOString()} />
+              <div className="cds-content-preview__body">
+                <div className="cds-content-preview__title">{event.name.trim() || "Nom de l'événement"}</div>
+                <div className="cds-content-preview__sub">
+                  {eventStartsAt.toLocaleString('fr-FR', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                  {event.location ? ` · ${event.location}` : ''}
+                </div>
+                {event.capacity && (
+                  <div className="cds-content-preview__badges">
+                    <span className="cds-content-preview__dur">Capacité : {event.capacity} places</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
