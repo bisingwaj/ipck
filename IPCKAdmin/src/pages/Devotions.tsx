@@ -29,6 +29,13 @@ interface Upcoming {
 
 const STATUSES = ['published', 'draft', 'scheduled'];
 
+// Effet réel de chaque statut, pour ne pas piéger l'admin.
+const STATUS_HINT: Record<string, string> = {
+  published: 'Visible par les membres selon la date de publication.',
+  draft: 'Brouillon — invisible des membres tant qu’il n’est pas publié.',
+  scheduled: 'Programmé — nécessite une date/heure de publication ci-dessous.',
+};
+
 interface FormState {
   date: string;
   title: string;
@@ -39,6 +46,8 @@ interface FormState {
   applyTitle: string;
   applySteps: string;
   status: string;
+  author: string;
+  publishAt: string;
 }
 
 const EMPTY: FormState = {
@@ -51,7 +60,17 @@ const EMPTY: FormState = {
   applyTitle: '',
   applySteps: '',
   status: 'published',
+  author: '',
+  publishAt: '',
 };
+
+/** Découpe les étapes d'application (une par ligne) en tableau nettoyé. */
+function parseSteps(raw: string): string[] {
+  return raw
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
 
 export default function Devotions() {
   const { can } = useAuth();
@@ -72,24 +91,25 @@ export default function Devotions() {
 
   const create = useAction<FormState>({
     mutationFn: (body) =>
+      // Payload nettoyé, strictement conforme au CreateDevotionalDto.
+      // publishAt/author optionnels → envoyés seulement si renseignés.
       api.post('/devotionals', {
-        date: body.date,
-        title: body.title,
-        verseRef: body.verseRef,
-        verseText: body.verseText,
-        body: body.body,
-        prayer: body.prayer,
-        applyTitle: body.applyTitle,
-        applySteps: body.applySteps
-          .split('\n')
-          .map((s) => s.trim())
-          .filter(Boolean),
+        date: body.date.trim(),
+        title: body.title.trim(),
+        verseRef: body.verseRef.trim(),
+        verseText: body.verseText.trim(),
+        body: body.body.trim(),
+        prayer: body.prayer.trim(),
+        applyTitle: body.applyTitle.trim(),
+        applySteps: parseSteps(body.applySteps),
         status: body.status,
+        author: body.author.trim() || undefined,
+        publishAt: body.publishAt ? new Date(body.publishAt).toISOString() : undefined,
       }),
     invalidate: [['devotionals'], ['content-upcoming']],
     successTitle: (_d, body) =>
       body.status === 'published' ? 'Dévotion publiée' : 'Dévotion enregistrée',
-    successSubtitle: (_d, body) => body.title,
+    successSubtitle: (_d, body) => body.title.trim(),
     errorTitle: "L'enregistrement a échoué",
     onDone: () => {
       setOpen(false);
@@ -98,14 +118,33 @@ export default function Devotions() {
   });
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
-  const canSave =
-    !!form.date.trim() &&
-    !!form.title.trim() &&
-    !!form.verseRef.trim() &&
-    !!form.verseText.trim() &&
-    !!form.body.trim() &&
-    !!form.prayer.trim() &&
-    !!form.applyTitle.trim();
+
+  // Validation centralisée : conditionne le bouton ET explique tout blocage
+  // (principe 6 : rien de silencieux). Ordre = ordre des champs dans le form.
+  const publishAtValid = !form.publishAt || !Number.isNaN(new Date(form.publishAt).getTime());
+  const blocker: string | null =
+    !form.date.trim()
+      ? 'La date est obligatoire (ex. 2026-06-01).'
+      : !form.title.trim()
+        ? 'Le titre est obligatoire.'
+        : !form.verseRef.trim()
+          ? 'La référence du verset est obligatoire.'
+          : !form.verseText.trim()
+            ? 'Le texte du verset est obligatoire.'
+            : !form.body.trim()
+              ? 'La méditation est obligatoire.'
+              : !form.prayer.trim()
+                ? 'La prière est obligatoire.'
+                : !form.applyTitle.trim()
+                  ? "Le titre de l'application est obligatoire."
+                  : parseSteps(form.applySteps).length === 0
+                    ? "Ajoutez au moins une étape d'application (une par ligne)."
+                    : form.status === 'scheduled' && !form.publishAt
+                      ? 'Un statut « programmé » exige une date/heure de publication.'
+                      : !publishAtValid
+                        ? 'La date de publication est invalide.'
+                        : null;
+  const canSave = !blocker;
 
   const devoUpcoming = upcoming.data?.filter((u) => u.type === 'Devotional') ?? [];
 
@@ -238,13 +277,41 @@ export default function Devotions() {
       >
         <div style={{ display: 'grid', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <TextInput id="date" labelText="Date (ex. 2026-06-01)" value={form.date} onChange={(e) => set({ date: e.target.value })} />
-            <Select id="status" labelText="Statut" value={form.status} onChange={(e) => set({ status: e.target.value })}>
+            <TextInput
+              id="date"
+              labelText="Date affichée (ex. 2026-06-01)"
+              value={form.date}
+              invalid={!form.date.trim() && form.title.length > 0}
+              invalidText="La date est obligatoire."
+              onChange={(e) => set({ date: e.target.value })}
+            />
+            <Select
+              id="status"
+              labelText="Statut"
+              helperText={STATUS_HINT[form.status]}
+              value={form.status}
+              onChange={(e) => set({ status: e.target.value })}
+            >
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s} text={s} />
               ))}
             </Select>
           </div>
+          {form.status === 'scheduled' && (
+            <TextInput
+              id="publishAt"
+              labelText="Publication programmée (AAAA-MM-JJTHH:MM)"
+              placeholder="2026-06-15T06:00"
+              value={form.publishAt}
+              invalid={!publishAtValid || (form.status === 'scheduled' && !form.publishAt)}
+              invalidText={
+                !publishAtValid
+                  ? 'Date de publication invalide.'
+                  : 'Une dévotion programmée exige une date de publication.'
+              }
+              onChange={(e) => set({ publishAt: e.target.value })}
+            />
+          )}
           <TextInput id="title" labelText="Titre" value={form.title} onChange={(e) => set({ title: e.target.value })} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
             <TextInput id="verseRef" labelText="Référence (ex. Jean 3:16)" value={form.verseRef} onChange={(e) => set({ verseRef: e.target.value })} />
@@ -253,7 +320,26 @@ export default function Devotions() {
           <TextArea id="body" labelText="Méditation" rows={4} value={form.body} onChange={(e) => set({ body: e.target.value })} />
           <TextArea id="prayer" labelText="Prière" rows={2} value={form.prayer} onChange={(e) => set({ prayer: e.target.value })} />
           <TextInput id="applyTitle" labelText="Titre de l'application" value={form.applyTitle} onChange={(e) => set({ applyTitle: e.target.value })} />
-          <TextArea id="applySteps" labelText="Étapes d'application (une par ligne)" rows={3} value={form.applySteps} onChange={(e) => set({ applySteps: e.target.value })} />
+          <TextArea
+            id="applySteps"
+            labelText="Étapes d'application — une par ligne (au moins une)"
+            rows={3}
+            value={form.applySteps}
+            onChange={(e) => set({ applySteps: e.target.value })}
+          />
+          <TextInput
+            id="author"
+            labelText="Auteur (optionnel)"
+            value={form.author}
+            onChange={(e) => set({ author: e.target.value })}
+          />
+
+          {/* Principe 6 : pas de bouton désactivé sans explication. */}
+          {blocker && (
+            <div className="cds-notification cds-notification--warn">
+              <div className="cds-notification__body">Pour enregistrer : {blocker}</div>
+            </div>
+          )}
         </div>
       </Modal>
 
