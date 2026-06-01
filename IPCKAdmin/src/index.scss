@@ -731,6 +731,28 @@
   white-space: pre-wrap; word-break: break-word;
 }
 
+/* Pastille de date (jour + mois empilés) — repère vertical scannable */
+.cds-datepill {
+  display: inline-flex; flex-direction: column; align-items: center;
+  min-width: 2.75rem; padding: var(--spacing-02) var(--spacing-03);
+  background: var(--ui-01); border: 1px solid var(--ui-03);
+}
+.cds-datepill__day {
+  font: 600 1.0625rem/1 var(--font-sans); color: var(--text-01);
+  font-variant-numeric: tabular-nums;
+}
+.cds-datepill__mon {
+  font: 600 0.5625rem/1 var(--font-sans); letter-spacing: 0.6px;
+  text-transform: uppercase; color: var(--text-03); margin-top: 2px;
+}
+.cds-datepill--today { background: var(--blue-20); border-color: transparent; }
+.cds-datepill--today .cds-datepill__day { color: var(--blue-80); }
+.cds-datepill--today .cds-datepill__mon { color: var(--blue-70); }
+
+/* Cellule "titre éditorial" d'une dévotion */
+.cds-devo-title { font: 600 0.9375rem/1.25rem var(--font-sans); color: var(--text-01); }
+.cds-devo-author { font: 400 0.75rem/1rem var(--font-sans); color: var(--text-05); margin-top: 2px; }
+
 /* ── Formulaire structuré en sections (modal) ── */
 .cds-form { display: flex; flex-direction: column; gap: var(--spacing-06); }
 .cds-form__section { display: flex; flex-direction: column; gap: var(--spacing-04); }

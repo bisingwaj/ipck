@@ -9,7 +9,7 @@ import {
   DatePicker,
   DatePickerInput,
 } from '@carbon/react';
-import { Add, Book } from '@carbon/icons-react';
+import { Add, Book, Calendar } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty, StatusBadge } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -86,6 +86,34 @@ function toISODate(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+/**
+ * Pastille de date dérivée de `publishAt` (ISO fiable) — corrige la colonne
+ * Date du backend (texte libre qui dupliquait le verset). Marque "aujourd'hui".
+ */
+function DatePill({ iso }: { iso: string }) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) {
+    return <span className="cds-datepill"><span className="cds-datepill__day">—</span></span>;
+  }
+  const startOf = (x: Date) => {
+    const c = new Date(x);
+    c.setHours(0, 0, 0, 0);
+    return c.getTime();
+  };
+  const isToday = startOf(d) === startOf(new Date());
+  return (
+    <span
+      className={'cds-datepill' + (isToday ? ' cds-datepill--today' : '')}
+      title={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+    >
+      <span className="cds-datepill__day">{d.getDate()}</span>
+      <span className="cds-datepill__mon">
+        {d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}
+      </span>
+    </span>
+  );
 }
 
 export default function Devotions() {
@@ -220,11 +248,11 @@ export default function Devotions() {
                 loadingLabel="Chargement des dévotions…"
               >
                 {(rows) => (
-                  <table className="cds-data-table cds-data-table--compact">
+                  <table className="cds-data-table">
                     <thead>
                       <tr>
                         <th>Date</th>
-                        <th>Titre</th>
+                        <th>Dévotion</th>
                         <th>Verset</th>
                         <th>Statut</th>
                       </tr>
@@ -243,14 +271,12 @@ export default function Devotions() {
                             }
                           }}
                         >
-                          <td className="text-mono">{d.date}</td>
                           <td>
-                            <strong>{d.title}</strong>
-                            {d.author && (
-                              <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                                {d.author}
-                              </div>
-                            )}
+                            <DatePill iso={d.publishAt} />
+                          </td>
+                          <td>
+                            <div className="cds-devo-title">{d.title}</div>
+                            {d.author && <div className="cds-devo-author">{d.author}</div>}
                           </td>
                           <td>
                             <span className="cds-verse-ref cds-verse-ref--sm">{d.verseRef}</span>
@@ -274,11 +300,11 @@ export default function Devotions() {
               <QueryBoundary
                 query={upcoming}
                 isEmpty={() => devoUpcoming.length === 0}
-                empty={<Empty>Rien de planifié</Empty>}
+                empty={<Empty icon={<Calendar size={20} />}>Aucune dévotion programmée.</Empty>}
                 loadingLabel="Chargement du planning…"
               >
                 {() => (
-                  <table className="cds-data-table cds-data-table--compact">
+                  <table className="cds-data-table">
                     <thead>
                       <tr>
                         <th>Quand</th>
@@ -289,8 +315,12 @@ export default function Devotions() {
                     <tbody>
                       {devoUpcoming.map((u, i) => (
                         <tr key={i}>
-                          <td className="text-mono">{new Date(u.when).toLocaleDateString()}</td>
-                          <td>{u.title}</td>
+                          <td>
+                            <DatePill iso={u.when} />
+                          </td>
+                          <td>
+                            <div className="cds-devo-title">{u.title}</div>
+                          </td>
                           <td>
                             <StatusBadge status={u.status} />
                           </td>
