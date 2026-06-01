@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea, Select, SelectItem, Toggle } from '@carbon/react';
 import { Add, Edit, TrashCan, Video, Music, Microphone } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Tile, Empty, StatusBadge, CategoryBadge, categoryLabel, Thumb } from '../components/ui';
+import { PageHead, Panel, Tag, Tile, Empty, StatusBadge, CategoryBadge, categoryLabel, statusLabel, Thumb } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -380,75 +380,128 @@ export default function ContentPage() {
 
       <Modal
         open={open}
+        className="cds-modal-lg"
         modalHeading={editingId ? 'Modifier le contenu' : 'Nouveau contenu'}
+        modalLabel="Watch · bibliothèque vidéo"
         primaryButtonText={save.isPending ? 'Enregistrement…' : 'Enregistrer'}
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!canSave || save.isPending}
         onRequestClose={() => setOpen(false)}
         onRequestSubmit={() => save.run(form)}
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <TextInput
-            id="title"
-            labelText="Titre"
-            value={form.title}
-            invalid={!!titleError}
-            invalidText={titleError ?? undefined}
-            onChange={(e) => set({ title: e.target.value })}
-          />
-          <TextInput
-            id="videoUrl"
-            labelText="Lien vidéo (MP4 / HLS .m3u8) ou chemin auto-hébergé"
-            placeholder="/media/videos/sunday-service.mp4  ou  https://…/stream.m3u8"
-            value={form.videoUrl}
-            invalid={!!videoError}
-            invalidText={videoError ?? undefined}
-            onChange={(e) => set({ videoUrl: e.target.value })}
-          />
-          <TextInput
-            id="thumbnailUrl"
-            labelText="Vignette (URL d'image, optionnel)"
-            placeholder="https://…/cover.jpg"
-            value={form.thumbnailUrl ?? ''}
-            invalid={!!thumbError}
-            invalidText={thumbError ?? undefined}
-            onChange={(e) => set({ thumbnailUrl: e.target.value })}
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <Select id="category" labelText="Catégorie" value={form.category} onChange={(e) => set({ category: e.target.value })}>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c} text={c} />
-              ))}
-            </Select>
-            <Select
-              id="status"
-              labelText="Statut"
-              helperText={STATUS_HINT[form.status]}
-              value={form.status}
-              onChange={(e) => set({ status: e.target.value })}
-            >
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s} text={s} />
-              ))}
-            </Select>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <TextInput id="speaker" labelText="Intervenant" value={form.speaker ?? ''} onChange={(e) => set({ speaker: e.target.value })} />
-            <TextInput id="series" labelText="Série" value={form.series ?? ''} onChange={(e) => set({ series: e.target.value })} />
-          </div>
-          <TextInput id="duration" labelText="Durée (ex. 38 min)" value={form.duration ?? ''} onChange={(e) => set({ duration: e.target.value })} />
-          <TextArea id="description" labelText="Description" rows={3} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
-          <div style={{ display: 'flex', gap: '2rem' }}>
-            <Toggle id="isLive" labelText="Type : en direct" labelA="Vidéo" labelB="Live" toggled={!!form.isLive} onToggle={(c: boolean) => set({ isLive: c })} />
-            <Toggle id="featured" labelText="Mettre à la une" labelA="Non" labelB="Oui" toggled={!!form.featured} onToggle={(c: boolean) => set({ featured: c })} />
-          </div>
+        <div className="cds-form">
+          {/* 1 · Identité */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">1</span>
+              <span className="cds-form__legend-title">Identité</span>
+            </div>
+            <TextInput
+              id="title"
+              labelText="Titre"
+              value={form.title}
+              invalid={!!titleError}
+              invalidText={titleError ?? undefined}
+              onChange={(e) => set({ title: e.target.value })}
+            />
+            <div className="cds-form__row cds-form__row--2">
+              <TextInput id="speaker" labelText="Intervenant" value={form.speaker ?? ''} onChange={(e) => set({ speaker: e.target.value })} />
+              <TextInput id="series" labelText="Série" value={form.series ?? ''} onChange={(e) => set({ series: e.target.value })} />
+            </div>
+            <TextArea id="description" labelText="Description" rows={3} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
+          </section>
+
+          {/* 2 · Média */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">2</span>
+              <span className="cds-form__legend-title">Média</span>
+              <span className="cds-form__legend-sub">Lien lu par l'app mobile</span>
+            </div>
+            <TextInput
+              id="videoUrl"
+              labelText="Lien vidéo (MP4 / HLS .m3u8) ou chemin auto-hébergé"
+              placeholder="/media/videos/sunday-service.mp4  ou  https://…/stream.m3u8"
+              value={form.videoUrl}
+              invalid={!!videoError}
+              invalidText={videoError ?? undefined}
+              onChange={(e) => set({ videoUrl: e.target.value })}
+            />
+            <div className="cds-form__row cds-form__row--2">
+              <TextInput
+                id="thumbnailUrl"
+                labelText="Vignette (URL d'image, optionnel)"
+                placeholder="https://…/cover.jpg"
+                value={form.thumbnailUrl ?? ''}
+                invalid={!!thumbError}
+                invalidText={thumbError ?? undefined}
+                onChange={(e) => set({ thumbnailUrl: e.target.value })}
+              />
+              <TextInput id="duration" labelText="Durée (ex. 38 min)" value={form.duration ?? ''} onChange={(e) => set({ duration: e.target.value })} />
+            </div>
+          </section>
+
+          {/* 3 · Classement & diffusion */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">3</span>
+              <span className="cds-form__legend-title">Classement &amp; diffusion</span>
+            </div>
+            <div className="cds-form__row cds-form__row--2">
+              <Select id="category" labelText="Catégorie" value={form.category} onChange={(e) => set({ category: e.target.value })}>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c} text={categoryLabel(c)} />
+                ))}
+              </Select>
+              <Select
+                id="status"
+                labelText="Statut"
+                helperText={STATUS_HINT[form.status]}
+                value={form.status}
+                onChange={(e) => set({ status: e.target.value })}
+              >
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s} text={statusLabel(s)} />
+                ))}
+              </Select>
+            </div>
+            <div style={{ display: 'flex', gap: '2rem' }}>
+              <Toggle id="isLive" labelText="Type" labelA="Vidéo" labelB="En direct" toggled={!!form.isLive} onToggle={(c: boolean) => set({ isLive: c })} />
+              <Toggle id="featured" labelText="Mettre à la une" labelA="Non" labelB="Oui" toggled={!!form.featured} onToggle={(c: boolean) => set({ featured: c })} />
+            </div>
+          </section>
+
+          {/* Aperçu de la carte (comme dans l'app) */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-title" style={{ color: 'var(--text-03)' }}>Aperçu</span>
+            </div>
+            <div className="cds-content-preview">
+              <Thumb src={form.thumbnailUrl} icon={categoryIcon(form.category)} alt={form.title} />
+              <div className="cds-content-preview__body">
+                <div className="cds-content-preview__title">
+                  {form.title.trim() || 'Titre du contenu'}
+                  {form.featured && <Tag tone="purple">À la une</Tag>}
+                  {form.isLive && <Tag tone="red">EN DIRECT</Tag>}
+                </div>
+                {(form.speaker || form.series) && (
+                  <div className="cds-content-preview__sub">
+                    {[form.speaker, form.series].filter(Boolean).join(' · ')}
+                  </div>
+                )}
+                <div className="cds-content-preview__badges">
+                  <CategoryBadge category={form.category} />
+                  <StatusBadge status={form.status} />
+                  {form.duration && <span className="cds-content-preview__dur">{form.duration}</span>}
+                </div>
+              </div>
+            </div>
+          </section>
 
           {/* Principe 6 : on ne laisse jamais un bouton désactivé sans dire pourquoi. */}
           {firstBlocker && (
             <div className="cds-notification cds-notification--warn">
-              <div className="cds-notification__body">
-                Pour enregistrer : {firstBlocker}
-              </div>
+              <div className="cds-notification__body">Pour enregistrer : {firstBlocker}</div>
             </div>
           )}
         </div>

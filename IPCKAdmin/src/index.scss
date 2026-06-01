@@ -912,6 +912,29 @@
 /* ── Modal élargi pour le contenu éditorial ── */
 .cds-modal-lg .cds--modal-container { max-width: 48rem; width: 90vw; }
 
+/* Aperçu de carte de contenu (modal Nouveau contenu) */
+.cds-content-preview {
+  display: flex; gap: var(--spacing-04); align-items: flex-start;
+  padding: var(--spacing-05);
+  background: var(--ui-01); border-left: 3px solid var(--blue-60);
+}
+.cds-content-preview .cds-thumb { width: 5rem; height: 3.25rem; }
+.cds-content-preview__body { min-width: 0; flex: 1; }
+.cds-content-preview__title {
+  display: flex; align-items: center; gap: var(--spacing-03); flex-wrap: wrap;
+  font: 600 0.9375rem/1.25rem var(--font-sans); color: var(--text-01);
+}
+.cds-content-preview__sub {
+  font: 400 0.8125rem/1.125rem var(--font-sans); color: var(--text-05); margin-top: 2px;
+}
+.cds-content-preview__badges {
+  display: flex; align-items: center; gap: var(--spacing-03); flex-wrap: wrap;
+  margin-top: var(--spacing-04);
+}
+.cds-content-preview__dur {
+  font: 400 0.75rem/1 var(--font-mono); color: var(--text-05);
+}
+
 /* Le calendrier Flatpickr (DatePicker Carbon) doit flotter au-dessus du modal. */
 .flatpickr-calendar { z-index: 9999 !important; }
 
