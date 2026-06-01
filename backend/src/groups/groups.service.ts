@@ -172,6 +172,42 @@ export class GroupsService {
     await this.prisma.groupMembership.deleteMany({ where: { userId, groupId } });
   }
 
+  /** Conversation du groupe pour modération (staff) — sans condition d'appartenance. */
+  async messagesForStaff(groupId: string, query: PaginationQueryDto): Promise<Paginated<unknown>> {
+    await this.ensureGroup(groupId);
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.groupMessage.findMany({
+        where: { groupId },
+        skip: query.skip,
+        take: query.take,
+        orderBy: { createdAt: 'desc' },
+        include: { author: true },
+      }),
+      this.prisma.groupMessage.count({ where: { groupId } }),
+    ]);
+    const data = rows.reverse().map((m) => ({
+      id: m.id,
+      who:
+        `${m.author.firstName ?? ''} ${m.author.lastName ?? ''}`.trim() ||
+        m.author.phone ||
+        'Membre',
+      authorId: m.authorId,
+      text: m.text,
+      at: m.createdAt.toISOString(),
+    }));
+    return paginate(data, total, query);
+  }
+
+  /** Supprime un message du groupe (staff / modération). */
+  async deleteMessage(groupId: string, messageId: string) {
+    await this.ensureGroup(groupId);
+    const message = await this.prisma.groupMessage.findUnique({ where: { id: messageId } });
+    if (!message || message.groupId !== groupId) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Message introuvable' });
+    }
+    await this.prisma.groupMessage.delete({ where: { id: messageId } });
+  }
+
   async update(userId: string, role: string, id: string, dto: UpdateGroupDto) {
     const group = await this.ensureGroup(id);
     const isStaff = role === 'pastor' || role === 'admin';

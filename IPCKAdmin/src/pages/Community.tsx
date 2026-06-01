@@ -8,7 +8,7 @@ import {
   DatePickerInput,
   ComboBox,
 } from '@carbon/react';
-import { Add, Group, Events, TrashCan, UserFollow } from '@carbon/icons-react';
+import { Add, Group, Events, TrashCan, UserFollow, Chat } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -216,6 +216,102 @@ function GroupMembers({ groupId, mayManage }: { groupId: string; mayManage: bool
   );
 }
 
+interface GroupMessage {
+  id: string;
+  who: string;
+  authorId: string;
+  text: string;
+  at: string;
+}
+
+/**
+ * Conversation d'un groupe pour modération (staff). Affiche les messages et
+ * permet de supprimer un message (confirmé). Lecture via /admin/messages
+ * (sans condition d'appartenance) ; suppression via DELETE /:id/messages/:msgId.
+ */
+function GroupConversation({
+  group,
+  mayManage,
+  onClose,
+}: {
+  group: Group;
+  mayManage: boolean;
+  onClose: () => void;
+}) {
+  const messages = useQuery({
+    queryKey: ['group-messages', group.id],
+    queryFn: async () =>
+      (await api.get(`/groups/${group.id}/admin/messages`, { params: { pageSize: 100 } })).data
+        .data as GroupMessage[],
+  });
+
+  const del = useAction<GroupMessage>({
+    mutationFn: (m) => api.delete(`/groups/${group.id}/messages/${m.id}`),
+    invalidate: [['group-messages', group.id], ['groups']],
+    confirm: (m) => ({
+      title: 'Supprimer ce message ?',
+      message: `Le message de ${m.who} sera définitivement retiré de la conversation.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    }),
+    successTitle: 'Message supprimé',
+    errorTitle: 'La suppression a échoué',
+  });
+
+  return (
+    <DetailPanel
+      open
+      onClose={onClose}
+      media={<Avatar name={group.name} color={group.color} size={44} />}
+      eyebrow="Conversation du groupe"
+      title={group.name}
+    >
+      <QueryBoundary
+        query={messages}
+        isEmpty={(d) => d.length === 0}
+        empty={<Empty icon={<Chat size={20} />}>Aucun message dans ce groupe.</Empty>}
+        loadingLabel="Chargement de la conversation…"
+      >
+        {(rows) => (
+          <div className="cds-chatlog">
+            {rows.map((m) => (
+              <div key={m.id} className="cds-chatmsg">
+                <Avatar name={m.who} size={28} />
+                <div className="cds-chatmsg__body">
+                  <div className="cds-chatmsg__head">
+                    <span className="cds-chatmsg__who">{m.who}</span>
+                    <span className="cds-chatmsg__at">
+                      {new Date(m.at).toLocaleString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+                  <div className="cds-chatmsg__text">{m.text}</div>
+                </div>
+                {mayManage && (
+                  <button
+                    className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                    title="Supprimer le message"
+                    aria-label="Supprimer le message"
+                    style={{ color: 'var(--red-60)' }}
+                    disabled={del.isPending}
+                    onClick={() => del.run(m)}
+                  >
+                    <TrashCan size={16} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </QueryBoundary>
+    </DetailPanel>
+  );
+}
+
 export default function Community() {
   const { can } = useAuth();
   const mayManage = can('community.manage');
@@ -233,6 +329,7 @@ export default function Community() {
   });
   const [groupDetail, setGroupDetail] = useState<Group | null>(null);
   const [eventDetail, setEventDetail] = useState<EventRow | null>(null);
+  const [convo, setConvo] = useState<Group | null>(null);
 
   const groups = useQuery({
     queryKey: ['groups'],
@@ -340,6 +437,7 @@ export default function Community() {
                         <th>Groupe</th>
                         <th>Leader</th>
                         <th className="num">Membres</th>
+                        <th className="num">Conversation</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -367,6 +465,16 @@ export default function Community() {
                           </td>
                           <td>{g.leader || '—'}</td>
                           <td className="num">{g.members}</td>
+                          <td className="num" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                              title="Ouvrir la conversation du groupe"
+                              aria-label={`Conversation de ${g.name}`}
+                              onClick={() => setConvo(g)}
+                            >
+                              <Chat size={16} />
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -577,6 +685,11 @@ export default function Community() {
           </>
         )}
       </DetailPanel>
+
+      {/* ── Conversation du groupe (modération) ── */}
+      {convo && (
+        <GroupConversation group={convo} mayManage={mayManage} onClose={() => setConvo(null)} />
+      )}
 
       {/* ── Détail événement ── */}
       <DetailPanel
