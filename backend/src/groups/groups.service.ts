@@ -131,6 +131,47 @@ export class GroupsService {
     return this.prisma.group.create({ data: dto });
   }
 
+  // ───────────────────────── Membres (staff) ─────────────────────────
+
+  /** Liste les membres d'un groupe avec leur identité publique (dashboard). */
+  async listMembers(groupId: string) {
+    await this.ensureGroup(groupId);
+    const memberships = await this.prisma.groupMembership.findMany({
+      where: { groupId },
+      include: { user: true },
+      orderBy: { joinedAt: 'asc' },
+    });
+    return memberships.map((m) => ({
+      id: m.user.id,
+      firstName: m.user.firstName,
+      lastName: m.user.lastName,
+      phone: m.user.phone,
+      role: m.role,
+      joinedAt: m.joinedAt.toISOString(),
+    }));
+  }
+
+  /** Ajoute un membre arbitraire au groupe (staff). Idempotent. */
+  async addMember(groupId: string, userId: string) {
+    await this.ensureGroup(groupId);
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException({ code: 'NOT_FOUND', message: 'Utilisateur introuvable' });
+    }
+    await this.prisma.groupMembership.upsert({
+      where: { userId_groupId: { userId, groupId } },
+      create: { userId, groupId },
+      update: {},
+    });
+    return { ok: true };
+  }
+
+  /** Retire un membre du groupe (staff). */
+  async removeMember(groupId: string, userId: string) {
+    await this.ensureGroup(groupId);
+    await this.prisma.groupMembership.deleteMany({ where: { userId, groupId } });
+  }
+
   async update(userId: string, role: string, id: string, dto: UpdateGroupDto) {
     const group = await this.ensureGroup(id);
     const isStaff = role === 'pastor' || role === 'admin';

@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { GroupsService } from './groups.service';
-import { CreateGroupDto, UpdateGroupDto, SendMessageDto } from './dto/groups.dto';
+import { CreateGroupDto, UpdateGroupDto, SendMessageDto, AddMemberDto } from './dto/groups.dto';
 import { CurrentUser, AuthUser } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { PaginationQueryDto } from '../common/dto/pagination.dto';
@@ -87,5 +87,29 @@ export class GroupsController {
   @ApiOperation({ summary: 'Met à jour un groupe (leader ou staff)' })
   update(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: UpdateGroupDto) {
     return this.groups.update(user.id, user.role, id, dto);
+  }
+
+  // ── Gestion des membres (staff) ──
+  @Get(':id/members')
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Membres du groupe (staff)' })
+  members(@Param('id') id: string) {
+    return this.groups.listMembers(id);
+  }
+
+  @Post(':id/members')
+  @HttpCode(HttpStatus.OK)
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Ajoute un membre au groupe (staff)' })
+  addMember(@Param('id') id: string, @Body() dto: AddMemberDto) {
+    return this.groups.addMember(id, dto.userId);
+  }
+
+  @Delete(':id/members/:userId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Retire un membre du groupe (staff)' })
+  removeMember(@Param('id') id: string, @Param('userId') userId: string) {
+    return this.groups.removeMember(id, userId);
   }
 }

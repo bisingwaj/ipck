@@ -1,4 +1,4 @@
-# docs/mobile-integration.md — Intégration de l'API dans l'app mobile (Phase 4)
+ # docs/mobile-integration.md — Intégration de l'API dans l'app mobile (Phase 4)
 
 > **But** : remplacer les données mockées de `IPCKConnectMobile/src/data/mock.ts` par l'API réelle **sans casser l'UI existante**.
 > **Principe non destructif** : on n'édite pas les écrans ; on ajoute une couche `src/api/` dont les hooks renvoient **la même forme de données que `mock.ts`**. Un écran passe de `import { x } from '@/data/mock'` à `const { data: x } = useX()`.
