@@ -1,7 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Modal, TextInput, TextArea, DatePicker, DatePickerInput } from '@carbon/react';
-import { Add, Group, Events } from '@carbon/icons-react';
+import {
+  Modal,
+  TextInput,
+  TextArea,
+  DatePicker,
+  DatePickerInput,
+  ComboBox,
+} from '@carbon/react';
+import { Add, Group, Events, TrashCan, UserFollow } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Empty, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
@@ -78,6 +85,134 @@ function Rsvp({ rsvp, cap }: { rsvp: number; cap?: number | null }) {
       </span>
       {full && <span className="cds-rsvp__full">Complet</span>}
     </span>
+  );
+}
+
+interface GroupMember {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+  role: string;
+  joinedAt: string;
+}
+interface DirUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string;
+}
+
+const personName = (m: { firstName: string | null; lastName: string | null; phone?: string }) =>
+  `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || m.phone || 'Membre';
+
+/**
+ * Section « Membres » du détail de groupe : liste les membres (avatar + retrait)
+ * et permet d'ajouter un membre via un sélecteur de l'annuaire. Réservé au staff
+ * (le backend revérifie via @Roles('pastor')).
+ */
+function GroupMembers({ groupId, mayManage }: { groupId: string; mayManage: boolean }) {
+  const [picked, setPicked] = useState<DirUser | null>(null);
+
+  const members = useQuery({
+    queryKey: ['group-members', groupId],
+    queryFn: async () => (await api.get(`/groups/${groupId}/members`)).data as GroupMember[],
+  });
+
+  // Annuaire complet (pour le sélecteur d'ajout) — uniquement si gestion permise.
+  const directory = useQuery({
+    queryKey: ['members'],
+    queryFn: async () =>
+      (await api.get('/users', { params: { pageSize: 100, sort: 'createdAt:desc' } })).data
+        .data as DirUser[],
+    enabled: mayManage,
+  });
+
+  const add = useAction<DirUser>({
+    mutationFn: (u) => api.post(`/groups/${groupId}/members`, { userId: u.id }),
+    invalidate: [['group-members', groupId], ['groups']],
+    successTitle: 'Membre ajouté',
+    successSubtitle: (_d, u) => personName(u),
+    errorTitle: "L'ajout a échoué",
+    onDone: () => setPicked(null),
+  });
+
+  const remove = useAction<GroupMember>({
+    mutationFn: (m) => api.delete(`/groups/${groupId}/members/${m.id}`),
+    invalidate: [['group-members', groupId], ['groups']],
+    confirm: (m) => ({
+      title: 'Retirer ce membre ?',
+      message: `${personName(m)} sera retiré du groupe.`,
+      confirmLabel: 'Retirer',
+      danger: true,
+    }),
+    successTitle: 'Membre retiré',
+    errorTitle: 'Le retrait a échoué',
+  });
+
+  // Exclut les membres déjà présents de la liste d'ajout.
+  const memberIds = new Set((members.data ?? []).map((m) => m.id));
+  const addable = (directory.data ?? []).filter((u) => !memberIds.has(u.id));
+
+  return (
+    <DetailSection title={`Membres${members.data ? ` · ${members.data.length}` : ''}`}>
+      {mayManage && (
+        <div className="cds-member-add">
+          <ComboBox
+            id={`add-member-${groupId}`}
+            items={addable}
+            selectedItem={picked}
+            itemToString={(u: DirUser | null) =>
+              u ? `${personName(u)} · ${u.phone}` : ''
+            }
+            placeholder="Rechercher un membre à ajouter…"
+            disabled={directory.isLoading || add.isPending}
+            onChange={({ selectedItem }: { selectedItem?: DirUser | null }) => setPicked(selectedItem ?? null)}
+            size="sm"
+          />
+          <button
+            className="cds-btn cds-btn--md"
+            disabled={!picked || add.isPending}
+            onClick={() => picked && add.run(picked)}
+          >
+            Ajouter
+            <UserFollow size={16} />
+          </button>
+        </div>
+      )}
+
+      <QueryBoundary
+        query={members}
+        isEmpty={(d) => d.length === 0}
+        empty={<Empty icon={<Group size={20} />}>Aucun membre dans ce groupe.</Empty>}
+        loadingLabel="Chargement des membres…"
+      >
+        {(rows) => (
+          <ul className="cds-memberlist">
+            {rows.map((m) => (
+              <li key={m.id} className="cds-memberlist__item">
+                <Avatar name={personName(m)} size={28} />
+                <div className="cds-memberlist__body">
+                  <div className="cds-memberlist__name">{personName(m)}</div>
+                  <div className="cds-memberlist__meta text-mono">{m.phone}</div>
+                </div>
+                {mayManage && (
+                  <button
+                    className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                    title="Retirer du groupe"
+                    style={{ color: 'var(--red-60)' }}
+                    disabled={remove.isPending}
+                    onClick={() => remove.run(m)}
+                  >
+                    <TrashCan size={16} />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </QueryBoundary>
+    </DetailSection>
   );
 }
 
@@ -437,6 +572,8 @@ export default function Community() {
               <Field label="Membres">{groupDetail.members}</Field>
               <Field label="Rencontres">{groupDetail.meets || '—'}</Field>
             </DetailSection>
+
+            <GroupMembers groupId={groupDetail.id} mayManage={mayManage} />
           </>
         )}
       </DetailPanel>

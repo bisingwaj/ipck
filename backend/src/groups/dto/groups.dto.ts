@@ -36,3 +36,9 @@ export class SendMessageDto {
   @MaxLength(2000)
   text!: string;
 }
+
+export class AddMemberDto {
+  @ApiProperty({ description: 'Identifiant du membre à ajouter au groupe' })
+  @IsString()
+  userId!: string;
+}
