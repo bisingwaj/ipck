@@ -100,3 +100,23 @@ Tous les domaines de l'app mobile ont désormais un pendant dans le dashboard.
 Endpoints restants non câblés (hors périmètre admin, propres au membre) : chat de
 groupe en temps réel (`/groups/:id/messages`), wallet personnel (`/giving/wallet/*`),
 flux d'amens live (`/live/:id/amens`).
+
+---
+
+## 5. Principes cardinaux de la logique dashboard
+
+> Objectif : un outil **qui ne ment jamais, ne piège jamais, et guide l'admin pas à pas**.
+> Infrastructure partagée : `api/errors.ts`, `auth/permissions.ts`, `components/feedback.tsx`,
+> `components/state.tsx`, `api/useAction.ts`.
+
+| # | Principe | Implémentation |
+| --- | --- | --- |
+| 1 | **Vérité serveur** | Aucun état métier en dur côté front. Après chaque écriture, `useAction.invalidate` re-télécharge l'état réel (pas de présomption optimiste). Le fallback baseURL ne concerne que le transport. |
+| 2 | **Cycle d'état explicite** | `QueryBoundary` rend systématiquement `loading → error(+réessayer) → empty → success`. `AuthProvider.ready` empêche le faux écran de login pendant la réhydratation. Validation locale des champs (ex. date d'événement) avant envoi. |
+| 3 | **Action = confirmation + blocage + retour** | `useAction` : `confirm()` (modale) avant toute action sensible, `isPending` bloque le double-clic, toast succès/erreur **obligatoire** en sortie. |
+| 4 | **Permissions UI = miroir du serveur** | `auth/permissions.ts` réplique la hiérarchie `roles.guard.ts` (member<group_leader<pastor<admin). `can('giving.export')` exige `admin` comme `@Roles('admin')` ; le reste `pastor`. L'UI masque/désactive, **le serveur revérifie toujours** (un 403 retombe en toast). |
+| 5 | **Conflits anticipés** | `useAction.onError` détecte `409 / code CONFLICT`, affiche un message dédié (« l'élément a changé, rechargez ») **et réinvalide** les requêtes pour resynchroniser (rollback de l'état affiché). |
+| 6 | **Rien de silencieux** | Toasts pour tout succès/erreur ; `FreshnessBadge` signale « Actualisation… » (refetch en cours) et « Données possiblement obsolètes » (refetch en échec) sans masquer la donnée. Les toasts d'erreur ne s'auto-effacent pas. |
+
+Toute nouvelle action d'écriture doit passer par `useAction` ; toute nouvelle vue serveur par
+`QueryBoundary` + `FreshnessBadge`. C'est la garantie que les six principes restent tenus.

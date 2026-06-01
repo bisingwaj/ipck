@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loading, InlineNotification } from '@carbon/react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
+import { QueryBoundary, FreshnessBadge } from '../components/state';
 
 interface Member {
   id: string;
@@ -23,8 +23,7 @@ export default function People() {
   const members = useQuery({
     queryKey: ['members'],
     queryFn: async () =>
-      (await api.get('/users', { params: { pageSize: 100, sort: 'createdAt:desc' } })).data
-        .data as Member[],
+      (await api.get('/users', { params: { pageSize: 100, sort: 'createdAt:desc' } })).data.data as Member[],
   });
   const fresh = useQuery({
     queryKey: ['members-new'],
@@ -37,70 +36,74 @@ export default function People() {
       <div className="cds-tab-panel">
         <div className="cds-stack">
           <div className="cds-split" style={{ gridTemplateColumns: '1.6fr 1fr' }}>
-            {/* Annuaire */}
             <Panel
               title="Annuaire"
               sub={members.data ? `${members.data.length} membres` : undefined}
+              actions={<FreshnessBadge query={members} />}
             >
-              {members.isLoading ? (
-                <Loading withOverlay={false} />
-              ) : members.error ? (
-                <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
-              ) : members.data && members.data.length > 0 ? (
-                <table className="cds-data-table">
-                  <thead>
-                    <tr>
-                      <th>Membre</th>
-                      <th>Téléphone</th>
-                      <th>Rôle</th>
-                      <th className="num">Streak</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {members.data.map((m) => (
-                      <tr key={m.id}>
-                        <td>{fullName(m)}</td>
-                        <td className="text-mono">{m.phone}</td>
-                        <td>
-                          <Tag tone={roleTone(m.role)}>{m.role}</Tag>
-                        </td>
-                        <td className="num">{m.streakCount}</td>
+              <QueryBoundary
+                query={members}
+                isEmpty={(d) => d.length === 0}
+                empty={<Empty>Aucun membre</Empty>}
+                loadingLabel="Chargement de l'annuaire…"
+              >
+                {(rows) => (
+                  <table className="cds-data-table">
+                    <thead>
+                      <tr>
+                        <th>Membre</th>
+                        <th>Téléphone</th>
+                        <th>Rôle</th>
+                        <th className="num">Streak</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty>Aucun membre</Empty>
-              )}
+                    </thead>
+                    <tbody>
+                      {rows.map((m) => (
+                        <tr key={m.id}>
+                          <td>{fullName(m)}</td>
+                          <td className="text-mono">{m.phone}</td>
+                          <td>
+                            <Tag tone={roleTone(m.role)}>{m.role}</Tag>
+                          </td>
+                          <td className="num">{m.streakCount}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </QueryBoundary>
             </Panel>
 
-            {/* Nouveaux membres */}
             <Panel
               title="Nouveaux membres"
               sub={fresh.data ? `${fresh.data.length} récents` : undefined}
+              actions={<FreshnessBadge query={fresh} />}
             >
-              {fresh.isLoading ? (
-                <Loading withOverlay={false} />
-              ) : fresh.data && fresh.data.length > 0 ? (
-                <table className="cds-data-table cds-data-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Membre</th>
-                      <th>Inscrit le</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fresh.data.map((m) => (
-                      <tr key={m.id}>
-                        <td>{fullName(m)}</td>
-                        <td className="text-mono">{new Date(m.createdAt).toLocaleDateString()}</td>
+              <QueryBoundary
+                query={fresh}
+                isEmpty={(d) => d.length === 0}
+                empty={<Empty>Aucun nouveau membre</Empty>}
+                loadingLabel="Chargement…"
+              >
+                {(rows) => (
+                  <table className="cds-data-table cds-data-table--compact">
+                    <thead>
+                      <tr>
+                        <th>Membre</th>
+                        <th>Inscrit le</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty>Aucun nouveau membre</Empty>
-              )}
+                    </thead>
+                    <tbody>
+                      {rows.map((m) => (
+                        <tr key={m.id}>
+                          <td>{fullName(m)}</td>
+                          <td className="text-mono">{new Date(m.createdAt).toLocaleDateString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </QueryBoundary>
             </Panel>
           </div>
         </div>

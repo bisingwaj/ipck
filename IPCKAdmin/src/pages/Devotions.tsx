@@ -1,17 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Loading,
-  InlineNotification,
-  Modal,
-  TextInput,
-  TextArea,
-  Select,
-  SelectItem,
-} from '@carbon/react';
+import { useQuery } from '@tanstack/react-query';
+import { Modal, TextInput, TextArea, Select, SelectItem } from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
+import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { useAction } from '../api/useAction';
+import { useAuth } from '../auth/AuthContext';
 
 interface Devotional {
   id: string;
@@ -58,7 +53,8 @@ const EMPTY: FormState = {
 };
 
 export default function Devotions() {
-  const qc = useQueryClient();
+  const { can } = useAuth();
+  const mayManage = can('devotionals.manage');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
 
@@ -72,8 +68,8 @@ export default function Devotions() {
     queryFn: async () => (await api.get('/admin/content/upcoming')).data as Upcoming[],
   });
 
-  const create = useMutation({
-    mutationFn: (body: FormState) =>
+  const create = useAction<FormState>({
+    mutationFn: (body) =>
       api.post('/devotionals', {
         date: body.date,
         title: body.title,
@@ -88,9 +84,12 @@ export default function Devotions() {
           .filter(Boolean),
         status: body.status,
       }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['devotionals'] });
-      qc.invalidateQueries({ queryKey: ['content-upcoming'] });
+    invalidate: [['devotionals'], ['content-upcoming']],
+    successTitle: (_d, body) =>
+      body.status === 'published' ? 'Dévotion publiée' : 'Dévotion enregistrée',
+    successSubtitle: (_d, body) => body.title,
+    errorTitle: "L'enregistrement a échoué",
+    onDone: () => {
       setOpen(false);
       setForm(EMPTY);
     },
@@ -98,13 +97,13 @@ export default function Devotions() {
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
   const canSave =
-    form.date.trim() &&
-    form.title.trim() &&
-    form.verseRef.trim() &&
-    form.verseText.trim() &&
-    form.body.trim() &&
-    form.prayer.trim() &&
-    form.applyTitle.trim();
+    !!form.date.trim() &&
+    !!form.title.trim() &&
+    !!form.verseRef.trim() &&
+    !!form.verseText.trim() &&
+    !!form.body.trim() &&
+    !!form.prayer.trim() &&
+    !!form.applyTitle.trim();
 
   const devoUpcoming = upcoming.data?.filter((u) => u.type === 'Devotional') ?? [];
 
@@ -114,86 +113,102 @@ export default function Devotions() {
         title="Dévotions"
         subtitle="Dévotion quotidienne · verset, méditation, prière & application"
         actions={
-          <button className="cds-btn cds-btn--md" onClick={() => { setForm(EMPTY); setOpen(true); }}>
-            Nouvelle dévotion
-            <Add size={16} />
-          </button>
+          mayManage ? (
+            <button
+              className="cds-btn cds-btn--md"
+              onClick={() => {
+                setForm(EMPTY);
+                setOpen(true);
+              }}
+            >
+              Nouvelle dévotion
+              <Add size={16} />
+            </button>
+          ) : undefined
         }
       />
       <div className="cds-tab-panel">
         <div className="cds-stack">
-          {create.isError && (
-            <InlineNotification kind="error" title="Échec de l'enregistrement" lowContrast />
-          )}
-
           <div className="cds-split" style={{ gridTemplateColumns: '1.6fr 1fr' }}>
-            <Panel title="Publiées" sub={list.data ? `${list.data.length} dévotions` : undefined}>
-              {list.isLoading ? (
-                <Loading withOverlay={false} />
-              ) : list.error ? (
-                <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
-              ) : list.data && list.data.length > 0 ? (
-                <table className="cds-data-table cds-data-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Date</th>
-                      <th>Titre</th>
-                      <th>Verset</th>
-                      <th>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.data.map((d) => (
-                      <tr key={d.id}>
-                        <td className="text-mono">{d.date}</td>
-                        <td>
-                          <strong>{d.title}</strong>
-                          {d.author && (
-                            <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                              {d.author}
-                            </div>
-                          )}
-                        </td>
-                        <td className="text-mono">{d.verseRef}</td>
-                        <td>
-                          <Tag tone={d.status === 'published' ? 'green' : 'yellow'}>{d.status}</Tag>
-                        </td>
+            <Panel
+              title="Publiées"
+              sub={list.data ? `${list.data.length} dévotions` : undefined}
+              actions={<FreshnessBadge query={list} />}
+            >
+              <QueryBoundary
+                query={list}
+                isEmpty={(d) => d.length === 0}
+                empty={<Empty>Aucune dévotion. Ajoutez-en une.</Empty>}
+                loadingLabel="Chargement des dévotions…"
+              >
+                {(rows) => (
+                  <table className="cds-data-table cds-data-table--compact">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Titre</th>
+                        <th>Verset</th>
+                        <th>Statut</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty>Aucune dévotion. Ajoutez-en une.</Empty>
-              )}
+                    </thead>
+                    <tbody>
+                      {rows.map((d) => (
+                        <tr key={d.id}>
+                          <td className="text-mono">{d.date}</td>
+                          <td>
+                            <strong>{d.title}</strong>
+                            {d.author && (
+                              <div className="cds-tile__caption" style={{ marginTop: 2 }}>
+                                {d.author}
+                              </div>
+                            )}
+                          </td>
+                          <td className="text-mono">{d.verseRef}</td>
+                          <td>
+                            <Tag tone={d.status === 'published' ? 'green' : 'yellow'}>{d.status}</Tag>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </QueryBoundary>
             </Panel>
 
-            <Panel title="À venir" sub={`${devoUpcoming.length} planifiées`}>
-              {upcoming.isLoading ? (
-                <Loading withOverlay={false} />
-              ) : devoUpcoming.length > 0 ? (
-                <table className="cds-data-table cds-data-table--compact">
-                  <thead>
-                    <tr>
-                      <th>Quand</th>
-                      <th>Titre</th>
-                      <th>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {devoUpcoming.map((u, i) => (
-                      <tr key={i}>
-                        <td className="text-mono">{new Date(u.when).toLocaleDateString()}</td>
-                        <td>{u.title}</td>
-                        <td>
-                          <Tag tone="yellow">{u.status}</Tag>
-                        </td>
+            <Panel
+              title="À venir"
+              sub={`${devoUpcoming.length} planifiées`}
+              actions={<FreshnessBadge query={upcoming} />}
+            >
+              <QueryBoundary
+                query={upcoming}
+                isEmpty={() => devoUpcoming.length === 0}
+                empty={<Empty>Rien de planifié</Empty>}
+                loadingLabel="Chargement du planning…"
+              >
+                {() => (
+                  <table className="cds-data-table cds-data-table--compact">
+                    <thead>
+                      <tr>
+                        <th>Quand</th>
+                        <th>Titre</th>
+                        <th>Statut</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Empty>Rien de planifié</Empty>
-              )}
+                    </thead>
+                    <tbody>
+                      {devoUpcoming.map((u, i) => (
+                        <tr key={i}>
+                          <td className="text-mono">{new Date(u.when).toLocaleDateString()}</td>
+                          <td>{u.title}</td>
+                          <td>
+                            <Tag tone="yellow">{u.status}</Tag>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </QueryBoundary>
             </Panel>
           </div>
         </div>
@@ -206,13 +221,15 @@ export default function Devotions() {
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!canSave || create.isPending}
         onRequestClose={() => setOpen(false)}
-        onRequestSubmit={() => create.mutate(form)}
+        onRequestSubmit={() => create.run(form)}
       >
         <div style={{ display: 'grid', gap: '1rem' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <TextInput id="date" labelText="Date (ex. 2026-06-01)" value={form.date} onChange={(e) => set({ date: e.target.value })} />
             <Select id="status" labelText="Statut" value={form.status} onChange={(e) => set({ status: e.target.value })}>
-              {STATUSES.map((s) => <SelectItem key={s} value={s} text={s} />)}
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s} text={s} />
+              ))}
             </Select>
           </div>
           <TextInput id="title" labelText="Titre" value={form.title} onChange={(e) => set({ title: e.target.value })} />

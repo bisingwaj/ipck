@@ -1,18 +1,12 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Loading,
-  InlineNotification,
-  Toggle,
-  Modal,
-  TextInput,
-  TextArea,
-  Select,
-  SelectItem,
-} from '@carbon/react';
+import { useQuery } from '@tanstack/react-query';
+import { Modal, TextInput, TextArea, Select, SelectItem, Toggle } from '@carbon/react';
 import { Add, Edit, TrashCan } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
+import { QueryBoundary, FreshnessBadge } from '../components/state';
+import { useAction } from '../api/useAction';
+import { useAuth } from '../auth/AuthContext';
 
 interface LiveSession {
   id: string;
@@ -60,25 +54,24 @@ const EMPTY: FormState = {
 };
 
 export default function ContentPage() {
-  const qc = useQueryClient();
+  const { can } = useAuth();
+  const mayManage = can('content.manage');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY);
   const editingId = form.id;
 
   const list = useQuery({
     queryKey: ['admin-content'],
-    queryFn: async () => (await api.get('/content/admin', { params: { pageSize: 100 } })).data.data as Content[],
+    queryFn: async () =>
+      (await api.get('/content/admin', { params: { pageSize: 100 } })).data.data as Content[],
   });
-
   const live = useQuery({
     queryKey: ['live-current'],
     queryFn: async () => (await api.get('/live/current')).data as LiveSession | null,
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['admin-content'] });
-
-  const save = useMutation({
-    mutationFn: (body: FormState) => {
+  const save = useAction<FormState>({
+    mutationFn: (body) => {
       const payload = {
         title: body.title,
         videoUrl: body.videoUrl,
@@ -94,32 +87,67 @@ export default function ContentPage() {
       };
       return body.id ? api.patch(`/content/${body.id}`, payload) : api.post('/content', payload);
     },
-    onSuccess: () => { invalidate(); setOpen(false); setForm(EMPTY); },
+    invalidate: [['admin-content'], ['live-current']],
+    successTitle: (_d, body) => (body.id ? 'Contenu mis à jour' : 'Contenu créé'),
+    errorTitle: "L'enregistrement a échoué",
+    onDone: () => {
+      setOpen(false);
+      setForm(EMPTY);
+    },
   });
 
-  const toggleLive = useMutation({
-    mutationFn: ({ id, isLive }: { id: string; isLive: boolean }) => api.patch(`/content/${id}`, { isLive }),
-    onSuccess: invalidate,
+  const toggleLive = useAction<{ c: Content; isLive: boolean }>({
+    mutationFn: ({ c, isLive }) => api.patch(`/content/${c.id}`, { isLive }),
+    invalidate: [['admin-content'], ['live-current']],
+    confirm: ({ c, isLive }) => ({
+      title: isLive ? 'Passer ce contenu en direct ?' : 'Arrêter le direct ?',
+      message: isLive
+        ? `« ${c.title} » sera signalé EN DIRECT dans l'app mobile des membres.`
+        : `« ${c.title} » ne sera plus signalé en direct.`,
+      confirmLabel: isLive ? 'Passer en direct' : 'Arrêter',
+      danger: !isLive,
+    }),
+    successTitle: (_d, { isLive }) => (isLive ? 'Direct activé' : 'Direct arrêté'),
+    errorTitle: 'Le changement a échoué',
   });
 
-  const remove = useMutation({
-    mutationFn: (id: string) => api.delete(`/content/${id}`),
-    onSuccess: invalidate,
+  const remove = useAction<Content>({
+    mutationFn: (c) => api.delete(`/content/${c.id}`),
+    invalidate: [['admin-content'], ['live-current']],
+    confirm: (c) => ({
+      title: 'Supprimer ce contenu ?',
+      message: `« ${c.title} » sera définitivement retiré de l'app. Cette action est irréversible.`,
+      confirmLabel: 'Supprimer',
+      danger: true,
+    }),
+    successTitle: 'Contenu supprimé',
+    errorTitle: 'La suppression a échoué',
   });
 
-  const openCreate = () => { setForm(EMPTY); setOpen(true); };
+  const openCreate = () => {
+    setForm(EMPTY);
+    setOpen(true);
+  };
   const openEdit = (c: Content) => {
     setForm({
-      id: c.id, title: c.title, videoUrl: c.videoUrl, category: c.category, status: c.status,
-      speaker: c.speaker ?? '', series: c.series ?? '', duration: c.duration ?? '',
-      description: c.description ?? '', thumbnailUrl: c.thumbnailUrl ?? '',
-      isLive: c.isLive, featured: c.featured,
+      id: c.id,
+      title: c.title,
+      videoUrl: c.videoUrl,
+      category: c.category,
+      status: c.status,
+      speaker: c.speaker ?? '',
+      series: c.series ?? '',
+      duration: c.duration ?? '',
+      description: c.description ?? '',
+      thumbnailUrl: c.thumbnailUrl ?? '',
+      isLive: c.isLive,
+      featured: c.featured,
     });
     setOpen(true);
   };
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
-  const canSave = form.title.trim() && form.videoUrl.trim();
+  const canSave = !!form.title.trim() && !!form.videoUrl.trim();
 
   return (
     <>
@@ -127,128 +155,137 @@ export default function ContentPage() {
         title="Contenus"
         subtitle="Vidéos, sermons & directs · l'app se met à jour automatiquement"
         actions={
-          <button className="cds-btn cds-btn--md" onClick={openCreate}>
-            Nouveau contenu
-            <Add size={16} />
-          </button>
+          mayManage ? (
+            <button className="cds-btn cds-btn--md" onClick={openCreate}>
+              Nouveau contenu
+              <Add size={16} />
+            </button>
+          ) : undefined
         }
       />
       <div className="cds-tab-panel">
         <div className="cds-stack">
-          {save.isError && (
-            <InlineNotification kind="error" title="Échec de l'enregistrement" lowContrast />
-          )}
-
           {/* Direct en cours */}
-          <Panel title="Direct" sub="Session de culte en temps réel">
-            {live.isLoading ? (
-              <Loading withOverlay={false} />
-            ) : live.data ? (
-              <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                <div>
-                  <div className="cds-tile__label">
-                    <span>{live.data.title}</span>
-                    {live.data.state === 'live' && <Tag tone="red">EN DIRECT</Tag>}
+          <Panel title="Direct" sub="Session de culte en temps réel" actions={<FreshnessBadge query={live} />}>
+            <QueryBoundary
+              query={live}
+              isEmpty={(d) => d === null}
+              empty={<Empty>Aucune session live. Activez « En direct » sur un contenu ci-dessous.</Empty>}
+              loadingLabel="Chargement du direct…"
+            >
+              {(session) =>
+                session ? (
+                  <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
+                    <div>
+                      <div className="cds-tile__label">
+                        <span>{session.title}</span>
+                        {session.state === 'live' && <Tag tone="red">EN DIRECT</Tag>}
+                      </div>
+                      <div className="cds-tile__caption" style={{ marginTop: 2 }}>
+                        {[session.speaker, session.series].filter(Boolean).join(' · ') || '—'}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="cds-tile__caption">Spectateurs</div>
+                      <strong>{session.viewersLive.toLocaleString()}</strong>
+                    </div>
+                    <div>
+                      <div className="cds-tile__caption">Pic</div>
+                      <strong>{session.viewersPeak.toLocaleString()}</strong>
+                    </div>
+                    <div>
+                      <div className="cds-tile__caption">Amens</div>
+                      <strong>{session.amenCount.toLocaleString()}</strong>
+                    </div>
                   </div>
-                  <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                    {[live.data.speaker, live.data.series].filter(Boolean).join(' · ') || '—'}
-                  </div>
-                </div>
-                <div>
-                  <div className="cds-tile__caption">Spectateurs</div>
-                  <strong>{live.data.viewersLive.toLocaleString()}</strong>
-                </div>
-                <div>
-                  <div className="cds-tile__caption">Pic</div>
-                  <strong>{live.data.viewersPeak.toLocaleString()}</strong>
-                </div>
-                <div>
-                  <div className="cds-tile__caption">Amens</div>
-                  <strong>{live.data.amenCount.toLocaleString()}</strong>
-                </div>
-              </div>
-            ) : (
-              <Empty>Aucune session live. Activez « En direct » sur un contenu ci-dessous.</Empty>
-            )}
+                ) : null
+              }
+            </QueryBoundary>
           </Panel>
 
           <Panel
             title="Bibliothèque"
             sub="Collez un lien MP4 / flux HLS (.m3u8) ou un chemin auto-hébergé, choisissez la catégorie et activez le direct."
+            actions={<FreshnessBadge query={list} />}
           >
-            {list.isLoading ? (
-              <Loading withOverlay={false} />
-            ) : list.error ? (
-              <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
-            ) : list.data && list.data.length > 0 ? (
-              <table className="cds-data-table cds-data-table--compact">
-                <thead>
-                  <tr>
-                    <th>Titre</th>
-                    <th>Catégorie</th>
-                    <th>Statut</th>
-                    <th>En direct</th>
-                    <th className="num">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.data.map((c) => (
-                    <tr key={c.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <strong>{c.title}</strong>
-                          {c.featured && <Tag tone="purple">À la une</Tag>}
-                        </div>
-                        {(c.speaker || c.series) && (
-                          <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                            {[c.speaker, c.series].filter(Boolean).join(' · ')}
-                          </div>
-                        )}
-                      </td>
-                      <td>
-                        <Tag tone="gray">{c.category}</Tag>
-                      </td>
-                      <td>
-                        <Tag tone={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Tag>
-                      </td>
-                      <td>
-                        <Toggle
-                          id={`live-${c.id}`}
-                          size="sm"
-                          hideLabel
-                          labelText="En direct"
-                          labelA="Non"
-                          labelB="Live"
-                          toggled={c.isLive}
-                          onToggle={(checked: boolean) => toggleLive.mutate({ id: c.id, isLive: checked })}
-                        />
-                      </td>
-                      <td className="num">
-                        <div style={{ display: 'inline-flex', gap: 4 }}>
-                          <button
-                            className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
-                            title="Éditer"
-                            onClick={() => openEdit(c)}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
-                            title="Supprimer"
-                            style={{ color: 'var(--red-60)' }}
-                            onClick={() => remove.mutate(c.id)}
-                          >
-                            <TrashCan size={16} />
-                          </button>
-                        </div>
-                      </td>
+            <QueryBoundary
+              query={list}
+              isEmpty={(d) => d.length === 0}
+              empty={<Empty>Aucun contenu. Ajoutez-en un.</Empty>}
+              loadingLabel="Chargement de la bibliothèque…"
+            >
+              {(rows) => (
+                <table className="cds-data-table cds-data-table--compact">
+                  <thead>
+                    <tr>
+                      <th>Titre</th>
+                      <th>Catégorie</th>
+                      <th>Statut</th>
+                      <th>En direct</th>
+                      {mayManage && <th className="num">Actions</th>}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <Empty>Aucun contenu. Ajoutez-en un.</Empty>
-            )}
+                  </thead>
+                  <tbody>
+                    {rows.map((c) => (
+                      <tr key={c.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <strong>{c.title}</strong>
+                            {c.featured && <Tag tone="purple">À la une</Tag>}
+                          </div>
+                          {(c.speaker || c.series) && (
+                            <div className="cds-tile__caption" style={{ marginTop: 2 }}>
+                              {[c.speaker, c.series].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <Tag tone="gray">{c.category}</Tag>
+                        </td>
+                        <td>
+                          <Tag tone={c.status === 'published' ? 'green' : 'yellow'}>{c.status}</Tag>
+                        </td>
+                        <td>
+                          <Toggle
+                            id={`live-${c.id}`}
+                            size="sm"
+                            hideLabel
+                            labelText="En direct"
+                            labelA="Non"
+                            labelB="Live"
+                            toggled={c.isLive}
+                            disabled={!mayManage || toggleLive.isPending}
+                            onToggle={(checked: boolean) => toggleLive.run({ c, isLive: checked })}
+                          />
+                        </td>
+                        {mayManage && (
+                          <td className="num">
+                            <div style={{ display: 'inline-flex', gap: 4 }}>
+                              <button
+                                className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                                title="Éditer"
+                                onClick={() => openEdit(c)}
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
+                                title="Supprimer"
+                                style={{ color: 'var(--red-60)' }}
+                                disabled={remove.isPending}
+                                onClick={() => remove.run(c)}
+                              >
+                                <TrashCan size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </QueryBoundary>
           </Panel>
         </div>
       </div>
@@ -260,7 +297,7 @@ export default function ContentPage() {
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!canSave || save.isPending}
         onRequestClose={() => setOpen(false)}
-        onRequestSubmit={() => save.mutate(form)}
+        onRequestSubmit={() => save.run(form)}
       >
         <div style={{ display: 'grid', gap: '1rem' }}>
           <TextInput id="title" labelText="Titre" value={form.title} onChange={(e) => set({ title: e.target.value })} />
@@ -273,10 +310,14 @@ export default function ContentPage() {
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Select id="category" labelText="Catégorie" value={form.category} onChange={(e) => set({ category: e.target.value })}>
-              {CATEGORIES.map((c) => <SelectItem key={c} value={c} text={c} />)}
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c} text={c} />
+              ))}
             </Select>
             <Select id="status" labelText="Statut" value={form.status} onChange={(e) => set({ status: e.target.value })}>
-              {STATUSES.map((s) => <SelectItem key={s} value={s} text={s} />)}
+              {STATUSES.map((s) => (
+                <SelectItem key={s} value={s} text={s} />
+              ))}
             </Select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>

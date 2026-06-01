@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Loading } from '@carbon/react';
 import { useAuth } from './auth/AuthContext';
 import AppShell from './components/AppShell';
 import Login from './pages/Login';
@@ -13,8 +14,18 @@ import Community from './pages/Community';
 import Communications from './pages/Communications';
 
 function Protected({ children }: { children: JSX.Element }) {
-  const { isStaff } = useAuth();
+  const { isStaff, ready } = useAuth();
   const hasToken = !!localStorage.getItem('ipck_admin_token');
+  // Principe 2 : tant que la session n'est pas réhydratée, on n'affirme rien
+  // (ni connecté, ni déconnecté) — on évite le faux écran de login.
+  if (hasToken && !ready) {
+    return (
+      <div className="cds-state cds-state--loading" style={{ minHeight: '100vh' }}>
+        <Loading withOverlay={false} description="Vérification de la session…" />
+        <span className="cds-state__label">Vérification de la session…</span>
+      </div>
+    );
+  }
   if (!hasToken && !isStaff) return <Navigate to="/login" replace />;
   return <AppShell>{children}</AppShell>;
 }

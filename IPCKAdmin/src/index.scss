@@ -456,3 +456,89 @@
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--gray-30); }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-40); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Principes cardinaux — états explicites, feedback, fraîcheur
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── États de requête (loading / error / empty) ── */
+.cds-state {
+  display: flex; align-items: center; gap: var(--spacing-04);
+  padding: var(--spacing-06) var(--spacing-05);
+}
+.cds-state--loading { justify-content: center; color: var(--text-03); flex-direction: column; }
+.cds-state__label { font: 400 0.875rem/1.25rem var(--font-sans); color: var(--text-03); }
+.cds-state--error {
+  align-items: flex-start;
+  background: var(--ui-background);
+  border-left: 3px solid var(--red-60);
+}
+.cds-state__icon { display: flex; flex-shrink: 0; color: var(--red-60); }
+.cds-state__body { flex: 1; min-width: 0; }
+.cds-state__title { font: 600 0.875rem/1.125rem var(--font-sans); color: var(--text-01); }
+.cds-state__msg { font: 400 0.875rem/1.25rem var(--font-sans); color: var(--text-02); margin-top: 2px; }
+
+/* ── Badge de fraîcheur (principe 6 : obsolescence signalée) ── */
+.cds-fresh {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: 500 0.6875rem/1 var(--font-sans); letter-spacing: 0.32px;
+  padding: 3px 6px; vertical-align: middle;
+}
+.cds-fresh--syncing { color: var(--blue-60); }
+.cds-fresh--syncing svg { animation: cds-spin 1s linear infinite; }
+.cds-fresh--stale { color: var(--yellow-30); }
+@keyframes cds-spin { to { transform: rotate(360deg); } }
+
+/* ── Toasts (principe 6 : rien de silencieux) ── */
+.cds-toasts {
+  position: fixed; top: var(--spacing-05); right: var(--spacing-05);
+  display: flex; flex-direction: column; gap: var(--spacing-03);
+  z-index: 9000; max-width: 24rem; width: 100%;
+}
+.cds-toast {
+  display: flex; gap: var(--spacing-04); align-items: flex-start;
+  padding: var(--spacing-04) var(--spacing-05);
+  background: var(--ui-background, #fff);
+  border-left: 3px solid var(--gray-50);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  animation: cds-toast-in 0.18s ease-out;
+}
+@keyframes cds-toast-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+.cds-toast--success { border-left-color: var(--green-50); }
+.cds-toast--success .cds-toast__icon { color: var(--green-50); }
+.cds-toast--error { border-left-color: var(--red-60); }
+.cds-toast--error .cds-toast__icon { color: var(--red-60); }
+.cds-toast--warning { border-left-color: var(--yellow-30); }
+.cds-toast--warning .cds-toast__icon { color: var(--yellow-30); }
+.cds-toast--info { border-left-color: var(--blue-60); }
+.cds-toast--info .cds-toast__icon { color: var(--blue-60); }
+.cds-toast__icon { display: flex; flex-shrink: 0; margin-top: 1px; }
+.cds-toast__content { flex: 1; min-width: 0; }
+.cds-toast__title { font: 600 0.875rem/1.125rem var(--font-sans); color: var(--text-01); }
+.cds-toast__subtitle { font: 400 0.8125rem/1.25rem var(--font-sans); color: var(--text-02); margin-top: 2px; word-break: break-word; }
+.cds-toast__close {
+  background: transparent; border: 0; cursor: pointer; color: var(--text-03);
+  display: flex; flex-shrink: 0; padding: 2px;
+}
+.cds-toast__close:hover { color: var(--text-01); }
+
+/* ── Confirmation (principe 3) ── */
+.cds-confirm-overlay {
+  position: fixed; inset: 0; z-index: 9500;
+  background: rgba(22,22,22,0.55);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--spacing-05);
+}
+.cds-confirm {
+  background: var(--ui-background, #fff);
+  max-width: 26rem; width: 100%;
+  padding: var(--spacing-06);
+  display: flex; flex-direction: column; gap: var(--spacing-04);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.24);
+}
+.cds-confirm__title { font: 400 1.25rem/1.625rem var(--font-sans); color: var(--text-01); margin: 0; }
+.cds-confirm__message { font: 400 0.875rem/1.375rem var(--font-sans); color: var(--text-02); margin: 0; }
+.cds-confirm__actions { display: flex; justify-content: flex-end; gap: var(--spacing-03); margin-top: var(--spacing-02); }
+
+/* ── Bouton désactivé (principe 3 : blocage visible) ── */
+.cds-btn:disabled { opacity: 0.5; cursor: not-allowed; }

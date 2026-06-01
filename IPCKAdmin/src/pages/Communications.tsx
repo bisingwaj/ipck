@@ -1,37 +1,52 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import {
-  InlineNotification,
-  TextInput,
-  TextArea,
-  Select,
-  SelectItem,
-} from '@carbon/react';
+import { TextInput, TextArea, Select, SelectItem } from '@carbon/react';
 import { SendAlt } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel } from '../components/ui';
+import { useAction } from '../api/useAction';
+import { useAuth } from '../auth/AuthContext';
 
 const AUDIENCES = [
   { value: 'all', text: 'Tous les membres' },
   { value: 'devo-subscribers', text: 'Abonnés dévotion' },
 ];
 
+interface BroadcastResult {
+  recipients: number;
+  pushed: number;
+}
+
 export default function Communications() {
+  const { can } = useAuth();
+  const mayBroadcast = can('broadcast.send');
   const [form, setForm] = useState({ audience: 'all', title: '', body: '' });
 
-  const broadcast = useMutation({
+  // Principe 3 : diffusion = action à fort impact → confirmation explicite,
+  // blocage pendant l'envoi, et retour chiffré (combien de membres touchés).
+  const broadcast = useAction<void, { data: BroadcastResult }>({
     mutationFn: () =>
       api.post('/notifications/broadcast', {
         audience: form.audience,
         title: form.title,
         body: form.body,
       }),
-    onSuccess: () => setForm((f) => ({ ...f, title: '', body: '' })),
+    confirm: () => ({
+      title: 'Diffuser cette notification ?',
+      message:
+        'Le message sera envoyé en push et apparaîtra dans l\'onglet Today de tous les membres ciblés. Cette action est irréversible.',
+      confirmLabel: 'Diffuser maintenant',
+    }),
+    successTitle: 'Notification diffusée',
+    successSubtitle: (res) => {
+      const r = res?.data;
+      return r ? `${r.recipients} membre(s) notifié(s) · ${r.pushed} push envoyé(s).` : undefined;
+    },
+    errorTitle: "La diffusion a échoué",
+    onDone: () => setForm((f) => ({ ...f, title: '', body: '' })),
   });
 
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
-  const canSend = form.title.trim() && form.body.trim();
-  const sent = (broadcast.data?.data as { sent: number } | undefined)?.sent;
+  const canSend = !!form.title.trim() && !!form.body.trim();
 
   return (
     <>
@@ -41,16 +56,13 @@ export default function Communications() {
       />
       <div className="cds-tab-panel">
         <div className="cds-stack">
-          {broadcast.isSuccess && (
-            <InlineNotification
-              kind="success"
-              title="Notification envoyée"
-              subtitle={sent != null ? `Diffusée à ${sent} membre(s).` : undefined}
-              lowContrast
-            />
-          )}
-          {broadcast.isError && (
-            <InlineNotification kind="error" title="Échec de l'envoi" lowContrast />
+          {!mayBroadcast && (
+            <div className="cds-notification cds-notification--warn">
+              <div className="cds-notification__body">
+                Vous n'avez pas les droits pour diffuser une notification. Réservé au staff
+                (pasteur/administrateur).
+              </div>
+            </div>
           )}
 
           <Panel
@@ -62,6 +74,7 @@ export default function Communications() {
                 id="audience"
                 labelText="Audience"
                 value={form.audience}
+                disabled={!mayBroadcast}
                 onChange={(e) => set({ audience: e.target.value })}
               >
                 {AUDIENCES.map((a) => (
@@ -72,6 +85,7 @@ export default function Communications() {
                 id="title"
                 labelText="Titre"
                 maxLength={120}
+                disabled={!mayBroadcast}
                 value={form.title}
                 onChange={(e) => set({ title: e.target.value })}
               />
@@ -80,14 +94,15 @@ export default function Communications() {
                 labelText="Message"
                 rows={4}
                 maxLength={500}
+                disabled={!mayBroadcast}
                 value={form.body}
                 onChange={(e) => set({ body: e.target.value })}
               />
               <div>
                 <button
                   className="cds-btn cds-btn--md"
-                  onClick={() => broadcast.mutate()}
-                  disabled={!canSend || broadcast.isPending}
+                  onClick={() => broadcast.run()}
+                  disabled={!mayBroadcast || !canSend || broadcast.isPending}
                 >
                   {broadcast.isPending ? 'Envoi…' : 'Diffuser'}
                   <SendAlt size={16} />

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loading, InlineNotification } from '@carbon/react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty, Tone } from '../components/ui';
+import { QueryBoundary, FreshnessBadge } from '../components/state';
 
 interface ActivityRow {
   id: string;
@@ -20,7 +20,7 @@ const kindTone = (k: string): Tone => {
 };
 
 export default function Activity() {
-  const { data, isLoading, error } = useQuery({
+  const activity = useQuery({
     queryKey: ['activity'],
     queryFn: async () =>
       (await api.get('/admin/activity', { params: { pageSize: 100 } })).data.data as ActivityRow[],
@@ -31,37 +31,42 @@ export default function Activity() {
       <PageHead title="Activité" subtitle="Journal des actions transverses de la plateforme" />
       <div className="cds-tab-panel">
         <div className="cds-stack">
-          <Panel title="Flux d'activité" sub={data ? `${data.length} entrées` : undefined}>
-            {isLoading ? (
-              <Loading withOverlay={false} />
-            ) : error ? (
-              <InlineNotification kind="error" title="Erreur de chargement" lowContrast />
-            ) : data && data.length > 0 ? (
-              <table className="cds-data-table">
-                <thead>
-                  <tr>
-                    <th>Quand</th>
-                    <th>Type</th>
-                    <th>Acteur</th>
-                    <th>Description</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.map((a) => (
-                    <tr key={a.id}>
-                      <td className="text-mono">{new Date(a.createdAt).toLocaleString()}</td>
-                      <td>
-                        <Tag tone={kindTone(a.kind)}>{a.kind}</Tag>
-                      </td>
-                      <td>{a.actorLabel}</td>
-                      <td style={{ color: 'var(--text-02)' }}>{a.description}</td>
+          <Panel
+            title="Flux d'activité"
+            sub={activity.data ? `${activity.data.length} entrées` : undefined}
+            actions={<FreshnessBadge query={activity} />}
+          >
+            <QueryBoundary
+              query={activity}
+              isEmpty={(d) => d.length === 0}
+              empty={<Empty>Aucune activité enregistrée</Empty>}
+              loadingLabel="Chargement du journal…"
+            >
+              {(rows) => (
+                <table className="cds-data-table">
+                  <thead>
+                    <tr>
+                      <th>Quand</th>
+                      <th>Type</th>
+                      <th>Acteur</th>
+                      <th>Description</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <Empty>Aucune activité enregistrée</Empty>
-            )}
+                  </thead>
+                  <tbody>
+                    {rows.map((a) => (
+                      <tr key={a.id}>
+                        <td className="text-mono">{new Date(a.createdAt).toLocaleString()}</td>
+                        <td>
+                          <Tag tone={kindTone(a.kind)}>{a.kind}</Tag>
+                        </td>
+                        <td>{a.actorLabel}</td>
+                        <td style={{ color: 'var(--text-02)' }}>{a.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </QueryBoundary>
           </Panel>
         </div>
       </div>
