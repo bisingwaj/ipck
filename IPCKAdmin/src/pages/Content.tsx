@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Modal, TextInput, TextArea, Select, SelectItem, Toggle } from '@carbon/react';
-import { Add, Edit, TrashCan, Video } from '@carbon/icons-react';
+import { Add, Edit, TrashCan, Video, Music, Microphone } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Tag, Empty, StatusBadge } from '../components/ui';
+import { PageHead, Panel, Tag, Tile, Empty, StatusBadge, CategoryBadge, categoryLabel, Thumb } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
@@ -45,6 +45,13 @@ const STATUS_HINT: Record<string, string> = {
   draft: 'Brouillon — invisible des membres tant qu’il n’est pas publié.',
   scheduled: 'Programmé — invisible jusqu’à publication manuelle.',
 };
+
+/** Icône de secours quand un contenu n'a pas de vignette (typée par catégorie). */
+function categoryIcon(category: string) {
+  if (category === 'podcast') return <Microphone size={18} />;
+  if (category === 'worship') return <Music size={18} />;
+  return <Video size={18} />;
+}
 
 /**
  * Le lecteur mobile (expo-video) lit : une URL absolue http(s) (MP4/HLS),
@@ -216,33 +223,41 @@ export default function ContentPage() {
               empty={<Empty>Aucune session live. Activez « En direct » sur un contenu ci-dessous.</Empty>}
               loadingLabel="Chargement du direct…"
             >
-              {(session) =>
-                session ? (
-                  <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(4, minmax(0, 1fr))' }}>
-                    <div>
-                      <div className="cds-tile__label">
-                        <span>{session.title}</span>
-                        {session.state === 'live' && <Tag tone="red">EN DIRECT</Tag>}
+              {(session) => {
+                if (!session) return null;
+                const isOn = session.state === 'live';
+                return (
+                  <>
+                    {/* En-tête : titre du live + état pulsant */}
+                    <div className={'cds-live-head' + (isOn ? ' cds-live-head--on' : '')}>
+                      <span
+                        className={'cds-live-head__pulse' + (isOn ? '' : ' cds-live-head__pulse--off')}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="cds-live-head__title">{session.title}</div>
+                        <div className="cds-live-head__meta">
+                          {[session.speaker, session.series].filter(Boolean).join(' · ') || '—'}
+                        </div>
                       </div>
-                      <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                        {[session.speaker, session.series].filter(Boolean).join(' · ') || '—'}
-                      </div>
+                      {isOn ? (
+                        <Tag tone="red">EN DIRECT</Tag>
+                      ) : (
+                        <span className="cds-live-head__state">Hors ligne</span>
+                      )}
                     </div>
-                    <div>
-                      <div className="cds-tile__caption">Spectateurs</div>
-                      <strong>{session.viewersLive.toLocaleString()}</strong>
+
+                    {/* KPIs du live */}
+                    <div
+                      className="cds-grid"
+                      style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+                    >
+                      <Tile label="Spectateurs" value={session.viewersLive.toLocaleString()} live={isOn} />
+                      <Tile label="Pic d'audience" value={session.viewersPeak.toLocaleString()} />
+                      <Tile label="Amens" value={session.amenCount.toLocaleString()} />
                     </div>
-                    <div>
-                      <div className="cds-tile__caption">Pic</div>
-                      <strong>{session.viewersPeak.toLocaleString()}</strong>
-                    </div>
-                    <div>
-                      <div className="cds-tile__caption">Amens</div>
-                      <strong>{session.amenCount.toLocaleString()}</strong>
-                    </div>
-                  </div>
-                ) : null
-              }
+                  </>
+                );
+              }}
             </QueryBoundary>
           </Panel>
 
@@ -297,18 +312,23 @@ export default function ContentPage() {
                         }}
                       >
                         <td>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <strong>{c.title}</strong>
-                            {c.featured && <Tag tone="purple">À la une</Tag>}
-                          </div>
-                          {(c.speaker || c.series) && (
-                            <div className="cds-tile__caption" style={{ marginTop: 2 }}>
-                              {[c.speaker, c.series].filter(Boolean).join(' · ')}
+                          <div className="cds-media-cell">
+                            <Thumb src={c.thumbnailUrl} icon={categoryIcon(c.category)} alt={c.title} />
+                            <div className="cds-media-cell__body">
+                              <div className="cds-media-cell__title">
+                                {c.title}
+                                {c.featured && <Tag tone="purple">À la une</Tag>}
+                              </div>
+                              {(c.speaker || c.series) && (
+                                <div className="cds-media-cell__sub">
+                                  {[c.speaker, c.series].filter(Boolean).join(' · ')}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </td>
                         <td>
-                          <Tag tone="gray">{c.category}</Tag>
+                          <CategoryBadge category={c.category} />
                         </td>
                         <td>
                           <StatusBadge status={c.status} />
@@ -442,7 +462,7 @@ export default function ContentPage() {
         subtitle={
           detail && (
             <>
-              <Tag tone="gray">{detail.category}</Tag>
+              <CategoryBadge category={detail.category} />
               <StatusBadge status={detail.status} />
               {detail.isLive && <Tag tone="red">EN DIRECT</Tag>}
               {detail.featured && <Tag tone="purple">À la une</Tag>}
@@ -479,7 +499,7 @@ export default function ContentPage() {
           <>
             <DetailLead>
               {detail.isLive ? 'Contenu diffusé en direct' : 'Vidéo à la demande'} de la
-              catégorie « {detail.category} »
+              catégorie « {categoryLabel(detail.category)} »
               {detail.speaker ? `, présenté par ${detail.speaker}` : ''}.{' '}
               {detail.status === 'published'
                 ? 'Publié et visible dans l’app mobile.'
@@ -495,7 +515,7 @@ export default function ContentPage() {
             <DetailSection title="Informations">
               <Field label="Intervenant">{detail.speaker || '—'}</Field>
               <Field label="Série">{detail.series || '—'}</Field>
-              <Field label="Catégorie">{detail.category}</Field>
+              <Field label="Catégorie">{categoryLabel(detail.category)}</Field>
               <Field label="Durée">{detail.duration || '—'}</Field>
             </DetailSection>
 

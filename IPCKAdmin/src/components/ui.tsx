@@ -95,6 +95,38 @@ export function roleLabel(role: string): string {
   return ROLE_MAP[role]?.label ?? role;
 }
 
+/* ── Catégories de contenu : libellé FR (miroir de l'enum backend) ── */
+const CATEGORY_LABEL: Record<string, string> = {
+  sermon: 'Sermon',
+  podcast: 'Podcast',
+  teaching: 'Enseignement',
+  worship: 'Louange',
+  testimony: 'Témoignage',
+  other: 'Autre',
+};
+export function categoryLabel(category: string): string {
+  return CATEGORY_LABEL[category] ?? category;
+}
+export function CategoryBadge({ category }: { category: string }) {
+  return <Tag tone="gray">{categoryLabel(category)}</Tag>;
+}
+
+/* ── Thumb — vignette de contenu (image) ou placeholder à icône ── */
+export function Thumb({
+  src,
+  icon,
+  alt = '',
+}: {
+  src?: string | null;
+  icon?: ReactNode;
+  alt?: string;
+}) {
+  if (src) {
+    return <span className="cds-thumb" style={{ backgroundImage: `url(${src})` }} role="img" aria-label={alt} />;
+  }
+  return <span className="cds-thumb cds-thumb--empty">{icon}</span>;
+}
+
 /* ── Meter — barre de progression vs cible (engagement, capacité…) ── */
 export function Meter({
   pct,

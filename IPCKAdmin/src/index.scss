@@ -753,6 +753,49 @@
 .cds-devo-title { font: 600 0.9375rem/1.25rem var(--font-sans); color: var(--text-01); }
 .cds-devo-author { font: 400 0.75rem/1rem var(--font-sans); color: var(--text-05); margin-top: 2px; }
 
+/* ── Vignette de contenu (bibliothèque) ── */
+.cds-thumb {
+  width: 3.5rem; height: 2.25rem; flex-shrink: 0;
+  background: var(--ui-01) center/cover no-repeat;
+  border: 1px solid var(--ui-03); display: inline-block;
+}
+.cds-thumb--empty {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-03);
+}
+
+/* Ligne titre + vignette de la bibliothèque */
+.cds-media-cell { display: flex; align-items: center; gap: var(--spacing-04); }
+.cds-media-cell__body { min-width: 0; }
+.cds-media-cell__title {
+  display: flex; align-items: center; gap: var(--spacing-03);
+  font: 600 0.875rem/1.125rem var(--font-sans); color: var(--text-01);
+}
+.cds-media-cell__sub { font: 400 0.75rem/1rem var(--font-sans); color: var(--text-05); margin-top: 2px; }
+
+/* ── En-tête de session live (panneau Direct) ── */
+.cds-live-head {
+  display: flex; align-items: center; gap: var(--spacing-04);
+  padding: var(--spacing-05);
+}
+.cds-live-head__pulse {
+  width: 0.625rem; height: 0.625rem; border-radius: 50%; flex-shrink: 0;
+  background: var(--red-60); position: relative;
+}
+.cds-live-head--on .cds-live-head__pulse::after {
+  content: ''; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid var(--red-60); opacity: 0.6;
+  animation: cds-ping 1.4s cubic-bezier(0,0,0.2,1) infinite;
+}
+.cds-live-head__pulse--off { background: var(--gray-40); }
+@keyframes cds-ping { 75%, 100% { transform: scale(2); opacity: 0; } }
+.cds-live-head__title { font: 600 1rem/1.25rem var(--font-sans); color: var(--text-01); }
+.cds-live-head__meta { font: 400 0.8125rem/1.125rem var(--font-sans); color: var(--text-05); margin-top: 2px; }
+.cds-live-head__state {
+  margin-left: auto; font: 600 0.6875rem/1 var(--font-sans); letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--text-03);
+}
+
 /* ── Formulaire structuré en sections (modal) ── */
 .cds-form { display: flex; flex-direction: column; gap: var(--spacing-06); }
 .cds-form__section { display: flex; flex-direction: column; gap: var(--spacing-04); }
