@@ -291,8 +291,8 @@ export default function Devotions() {
             <div className="cds-form__row cds-form__row--2">
               <TextInput
                 id="date"
-                labelText="Date affichée"
-                placeholder="ex. 2026-06-01"
+                type="date"
+                labelText="Date de la dévotion"
                 value={form.date}
                 invalid={!form.date.trim() && form.title.length > 0}
                 invalidText="La date est obligatoire."
