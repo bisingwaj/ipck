@@ -102,6 +102,9 @@
   /* ── Type ── */
   --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "IBM Plex Mono", "SF Mono", Menlo, monospace;
+  /* Serif éditorial — réservé au contenu spirituel (versets, méditation),
+     cohérent avec l'app mobile membres. À ne PAS utiliser pour l'UI/données. */
+  --font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
 }
 
 /* ── Type scale: Productive ── */
@@ -639,3 +642,78 @@
   font: 400 0.75rem/1.125rem var(--font-sans); color: var(--text-03);
   margin-top: 2px;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   Éditorial — contenu spirituel (versets, méditation). Serif IBM Plex.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Référence de verset en serif dans les tables/détails */
+.cds-verse-ref {
+  font: 500 0.9375rem/1.25rem var(--font-serif);
+  color: var(--text-01); letter-spacing: 0;
+}
+.cds-verse-ref--sm { font-size: 0.875rem; }
+
+/* Aperçu de verset (encadré éditorial vivant dans le formulaire) */
+.cds-verse-preview {
+  background: var(--ui-01);
+  border-left: 3px solid var(--blue-60);
+  padding: var(--spacing-05) var(--spacing-05) var(--spacing-05) var(--spacing-06);
+  display: flex; flex-direction: column; gap: var(--spacing-03);
+}
+.cds-verse-preview__eyebrow {
+  font: 600 0.625rem/1 var(--font-sans); letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-03);
+}
+.cds-verse-preview__text {
+  font: 400 1.0625rem/1.625rem var(--font-serif); color: var(--text-01);
+  font-style: italic;
+}
+.cds-verse-preview__ref {
+  font: 600 0.8125rem/1.125rem var(--font-serif); color: var(--text-02);
+}
+.cds-verse-preview__placeholder {
+  font: italic 400 0.9375rem/1.5rem var(--font-serif); color: var(--text-03);
+}
+
+/* Méditation longue en serif (détail) */
+.cds-prose {
+  font: 400 0.9375rem/1.625rem var(--font-serif); color: var(--text-01);
+  white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Formulaire structuré en sections (modal) ── */
+.cds-form { display: flex; flex-direction: column; gap: var(--spacing-06); }
+.cds-form__section { display: flex; flex-direction: column; gap: var(--spacing-04); }
+.cds-form__legend {
+  display: flex; align-items: baseline; gap: var(--spacing-03);
+  padding-bottom: var(--spacing-03); border-bottom: 1px solid var(--ui-03);
+}
+.cds-form__legend-step {
+  font: 600 0.6875rem/1 var(--font-mono); color: #fff;
+  background: var(--gray-100); width: 1.25rem; height: 1.25rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.cds-form__legend-title {
+  font: 600 0.875rem/1.125rem var(--font-sans); letter-spacing: 0.16px; color: var(--text-01);
+}
+.cds-form__legend-sub {
+  font: 400 0.75rem/1rem var(--font-sans); color: var(--text-03); margin-left: auto;
+}
+.cds-form__row {
+  display: grid; gap: var(--spacing-04);
+}
+.cds-form__row--2 { grid-template-columns: 1fr 1fr; }
+.cds-form__row--ref { grid-template-columns: 1fr 2fr; }
+
+/* Compteur discret (caractères, étapes détectées) */
+.cds-countline {
+  display: flex; justify-content: flex-end;
+  font: 400 0.6875rem/1 var(--font-sans); color: var(--text-03);
+  margin-top: -2px;
+}
+.cds-countline--warn { color: var(--yellow-30); }
+
+/* ── Modal élargi pour le contenu éditorial ── */
+.cds-modal-lg .cds--modal-container { max-width: 48rem; width: 90vw; }

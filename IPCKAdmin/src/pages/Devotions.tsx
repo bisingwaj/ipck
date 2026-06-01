@@ -121,6 +121,7 @@ export default function Devotions() {
 
   // Validation centralisée : conditionne le bouton ET explique tout blocage
   // (principe 6 : rien de silencieux). Ordre = ordre des champs dans le form.
+  const stepsCount = parseSteps(form.applySteps).length;
   const publishAtValid = !form.publishAt || !Number.isNaN(new Date(form.publishAt).getTime());
   const blocker: string | null =
     !form.date.trim()
@@ -215,7 +216,9 @@ export default function Devotions() {
                               </div>
                             )}
                           </td>
-                          <td className="text-mono">{d.verseRef}</td>
+                          <td>
+                            <span className="cds-verse-ref cds-verse-ref--sm">{d.verseRef}</span>
+                          </td>
                           <td>
                             <Tag tone={d.status === 'published' ? 'green' : 'yellow'}>{d.status}</Tag>
                           </td>
@@ -268,71 +271,145 @@ export default function Devotions() {
 
       <Modal
         open={open}
+        className="cds-modal-lg"
         modalHeading="Nouvelle dévotion"
+        modalLabel="Today · dévotion quotidienne"
         primaryButtonText={create.isPending ? 'Enregistrement…' : 'Enregistrer'}
         secondaryButtonText="Annuler"
         primaryButtonDisabled={!canSave || create.isPending}
         onRequestClose={() => setOpen(false)}
         onRequestSubmit={() => create.run(form)}
       >
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+        <div className="cds-form">
+          {/* 1 · Publication */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">1</span>
+              <span className="cds-form__legend-title">Publication</span>
+              <span className="cds-form__legend-sub">Quand et comment elle paraît</span>
+            </div>
+            <div className="cds-form__row cds-form__row--2">
+              <TextInput
+                id="date"
+                labelText="Date affichée"
+                placeholder="ex. 2026-06-01"
+                value={form.date}
+                invalid={!form.date.trim() && form.title.length > 0}
+                invalidText="La date est obligatoire."
+                onChange={(e) => set({ date: e.target.value })}
+              />
+              <Select
+                id="status"
+                labelText="Statut"
+                helperText={STATUS_HINT[form.status]}
+                value={form.status}
+                onChange={(e) => set({ status: e.target.value })}
+              >
+                {STATUSES.map((s) => (
+                  <SelectItem key={s} value={s} text={s} />
+                ))}
+              </Select>
+            </div>
+            {form.status === 'scheduled' && (
+              <TextInput
+                id="publishAt"
+                type="datetime-local"
+                labelText="Publication programmée"
+                value={form.publishAt}
+                invalid={!publishAtValid || !form.publishAt}
+                invalidText={
+                  !publishAtValid
+                    ? 'Date de publication invalide.'
+                    : 'Une dévotion programmée exige une date de publication.'
+                }
+                onChange={(e) => set({ publishAt: e.target.value })}
+              />
+            )}
+          </section>
+
+          {/* 2 · Écriture */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">2</span>
+              <span className="cds-form__legend-title">Écriture</span>
+              <span className="cds-form__legend-sub">Le verset du jour</span>
+            </div>
+            <div>
+              <TextInput
+                id="title"
+                labelText="Titre"
+                maxLength={200}
+                value={form.title}
+                onChange={(e) => set({ title: e.target.value })}
+              />
+              <div className={'cds-countline' + (form.title.length > 180 ? ' cds-countline--warn' : '')}>
+                {form.title.length}/200
+              </div>
+            </div>
+            <div className="cds-form__row cds-form__row--ref">
+              <TextInput id="verseRef" labelText="Référence" placeholder="ex. Jean 3:16" value={form.verseRef} onChange={(e) => set({ verseRef: e.target.value })} />
+              <TextInput id="verseText" labelText="Texte du verset" value={form.verseText} onChange={(e) => set({ verseText: e.target.value })} />
+            </div>
+
+            {/* Aperçu éditorial vivant */}
+            <div className="cds-verse-preview">
+              <span className="cds-verse-preview__eyebrow">Aperçu</span>
+              {form.verseText.trim() || form.verseRef.trim() ? (
+                <>
+                  {form.verseText.trim() && (
+                    <span className="cds-verse-preview__text">« {form.verseText.trim()} »</span>
+                  )}
+                  {form.verseRef.trim() && (
+                    <span className="cds-verse-preview__ref">— {form.verseRef.trim()}</span>
+                  )}
+                </>
+              ) : (
+                <span className="cds-verse-preview__placeholder">
+                  Le verset s'affichera ici, tel que les membres le verront.
+                </span>
+              )}
+            </div>
+          </section>
+
+          {/* 3 · Méditation & prière */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">3</span>
+              <span className="cds-form__legend-title">Méditation &amp; prière</span>
+            </div>
+            <TextArea id="body" labelText="Méditation" rows={5} value={form.body} onChange={(e) => set({ body: e.target.value })} />
+            <TextArea id="prayer" labelText="Prière" rows={3} value={form.prayer} onChange={(e) => set({ prayer: e.target.value })} />
+          </section>
+
+          {/* 4 · Application */}
+          <section className="cds-form__section">
+            <div className="cds-form__legend">
+              <span className="cds-form__legend-step">4</span>
+              <span className="cds-form__legend-title">Application</span>
+              <span className="cds-form__legend-sub">Mettre en pratique</span>
+            </div>
+            <TextInput id="applyTitle" labelText="Titre de l'application" value={form.applyTitle} onChange={(e) => set({ applyTitle: e.target.value })} />
+            <div>
+              <TextArea
+                id="applySteps"
+                labelText="Étapes — une par ligne"
+                placeholder={'Relire le verset à voix haute\nPrier pour une personne précise\nNoter une action concrète'}
+                rows={3}
+                value={form.applySteps}
+                onChange={(e) => set({ applySteps: e.target.value })}
+              />
+              <div className="cds-countline">
+                {stepsCount === 0 ? 'Au moins une étape requise' : `${stepsCount} étape(s) détectée(s)`}
+              </div>
+            </div>
             <TextInput
-              id="date"
-              labelText="Date affichée (ex. 2026-06-01)"
-              value={form.date}
-              invalid={!form.date.trim() && form.title.length > 0}
-              invalidText="La date est obligatoire."
-              onChange={(e) => set({ date: e.target.value })}
+              id="author"
+              labelText="Auteur (optionnel)"
+              placeholder="ex. Pasteur Joseph"
+              value={form.author}
+              onChange={(e) => set({ author: e.target.value })}
             />
-            <Select
-              id="status"
-              labelText="Statut"
-              helperText={STATUS_HINT[form.status]}
-              value={form.status}
-              onChange={(e) => set({ status: e.target.value })}
-            >
-              {STATUSES.map((s) => (
-                <SelectItem key={s} value={s} text={s} />
-              ))}
-            </Select>
-          </div>
-          {form.status === 'scheduled' && (
-            <TextInput
-              id="publishAt"
-              labelText="Publication programmée (AAAA-MM-JJTHH:MM)"
-              placeholder="2026-06-15T06:00"
-              value={form.publishAt}
-              invalid={!publishAtValid || (form.status === 'scheduled' && !form.publishAt)}
-              invalidText={
-                !publishAtValid
-                  ? 'Date de publication invalide.'
-                  : 'Une dévotion programmée exige une date de publication.'
-              }
-              onChange={(e) => set({ publishAt: e.target.value })}
-            />
-          )}
-          <TextInput id="title" labelText="Titre" value={form.title} onChange={(e) => set({ title: e.target.value })} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
-            <TextInput id="verseRef" labelText="Référence (ex. Jean 3:16)" value={form.verseRef} onChange={(e) => set({ verseRef: e.target.value })} />
-            <TextInput id="verseText" labelText="Texte du verset" value={form.verseText} onChange={(e) => set({ verseText: e.target.value })} />
-          </div>
-          <TextArea id="body" labelText="Méditation" rows={4} value={form.body} onChange={(e) => set({ body: e.target.value })} />
-          <TextArea id="prayer" labelText="Prière" rows={2} value={form.prayer} onChange={(e) => set({ prayer: e.target.value })} />
-          <TextInput id="applyTitle" labelText="Titre de l'application" value={form.applyTitle} onChange={(e) => set({ applyTitle: e.target.value })} />
-          <TextArea
-            id="applySteps"
-            labelText="Étapes d'application — une par ligne (au moins une)"
-            rows={3}
-            value={form.applySteps}
-            onChange={(e) => set({ applySteps: e.target.value })}
-          />
-          <TextInput
-            id="author"
-            labelText="Auteur (optionnel)"
-            value={form.author}
-            onChange={(e) => set({ author: e.target.value })}
-          />
+          </section>
 
           {/* Principe 6 : pas de bouton désactivé sans explication. */}
           {blocker && (
@@ -369,7 +446,9 @@ export default function Devotions() {
 
             <DetailSection title="Informations">
               <Field label="Date">{detail.date}</Field>
-              <Field label="Verset clé">{detail.verseRef}</Field>
+              <Field label="Verset clé">
+                <span className="cds-verse-ref">{detail.verseRef}</span>
+              </Field>
               <Field label="Auteur">{detail.author || '—'}</Field>
               <Field label="Statut">
                 <Tag tone={detail.status === 'published' ? 'green' : 'yellow'}>{detail.status}</Tag>
