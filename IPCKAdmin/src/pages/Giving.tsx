@@ -266,7 +266,9 @@ export default function Giving() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
-        title={detail ? `Don ${detail.ref}` : 'Don'}
+        media={detail && <span className="cds-detail-icon"><Money size={22} /></span>}
+        eyebrow="Don"
+        title={detail ? money(detail.amount) : 'Don'}
         subtitle={detail && <StatusBadge status={detail.status} />}
       >
         {detail && (

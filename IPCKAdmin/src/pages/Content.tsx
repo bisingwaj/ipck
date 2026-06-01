@@ -458,6 +458,8 @@ export default function ContentPage() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
+        media={detail && <Thumb src={detail.thumbnailUrl} icon={categoryIcon(detail.category)} alt={detail.title} />}
+        eyebrow={detail ? categoryLabel(detail.category) : 'Contenu'}
         title={detail?.title ?? 'Contenu'}
         subtitle={
           detail && (

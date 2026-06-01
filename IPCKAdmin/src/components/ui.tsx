@@ -11,6 +11,7 @@ import {
   SendAlt,
   Activity,
   ChevronRight,
+  User,
 } from '@carbon/icons-react';
 
 /* ───────────────────────────────────────────────────────────────
@@ -127,13 +128,14 @@ export function Avatar({
   color?: string | null;
   size?: number;
 }) {
-  const initials =
-    name
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase() ?? '')
-      .join('') || '?';
+  // N'extrait que des LETTRES (ignore +, chiffres d'un téléphone, ponctuation).
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .map((w) => w.match(/\p{L}/u)?.[0]?.toUpperCase() ?? '')
+    .filter(Boolean)
+    .slice(0, 2)
+    .join('');
   return (
     <span
       className="cds-avatar2"
@@ -145,7 +147,7 @@ export function Avatar({
       }}
       aria-hidden
     >
-      {initials}
+      {initials || <User size={size * 0.55} />}
     </span>
   );
 }

@@ -17,14 +17,27 @@ interface DetailPanelProps {
   open: boolean;
   onClose: () => void;
   title: ReactNode;
-  /** Éléments contextuels en en-tête (ex. badges de statut). */
+  /** Visuel d'en-tête (avatar, vignette, pastille de date) — uniforme partout. */
+  media?: ReactNode;
+  /** Suréticule discret au-dessus du titre (ex. type d'objet). */
+  eyebrow?: ReactNode;
+  /** Éléments contextuels sous le titre (ex. badges de statut). */
   subtitle?: ReactNode;
   /** Pied de panneau : boutons d'action (déjà câblés sur useAction). */
   footer?: ReactNode;
   children: ReactNode;
 }
 
-export function DetailPanel({ open, onClose, title, subtitle, footer, children }: DetailPanelProps) {
+export function DetailPanel({
+  open,
+  onClose,
+  title,
+  media,
+  eyebrow,
+  subtitle,
+  footer,
+  children,
+}: DetailPanelProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -40,7 +53,9 @@ export function DetailPanel({ open, onClose, title, subtitle, footer, children }
     <div className="cds-detail-overlay" onClick={onClose}>
       <aside className="cds-detail" role="dialog" aria-modal="true" onClick={(e) => e.stopPropagation()}>
         <header className="cds-detail__head">
+          {media && <div className="cds-detail__media">{media}</div>}
           <div className="cds-detail__head-text">
+            {eyebrow && <div className="cds-detail__eyebrow">{eyebrow}</div>}
             <h3 className="cds-detail__title">{title}</h3>
             {subtitle && <div className="cds-detail__subtitle">{subtitle}</div>}
           </div>

@@ -346,7 +346,9 @@ export default function Care() {
       <DetailPanel
         open={!!prayer}
         onClose={() => setPrayer(null)}
-        title="Demande de prière"
+        media={prayer && <Avatar name={prayer.who} size={44} />}
+        eyebrow="Demande de prière"
+        title={prayer?.who ?? 'Demande de prière'}
         subtitle={
           prayer && (
             <>
@@ -417,10 +419,10 @@ export default function Care() {
       <DetailPanel
         open={!!appt}
         onClose={() => setAppt(null)}
+        media={appt && <Avatar name={memberName(appt)} size={44} />}
+        eyebrow="Rendez-vous"
         title={appt?.topic.label ?? 'Rendez-vous'}
-        subtitle={
-          appt && <StatusBadge status={appt.status} />
-        }
+        subtitle={appt && <StatusBadge status={appt.status} />}
         footer={
           appt &&
           mayManageAppts && (

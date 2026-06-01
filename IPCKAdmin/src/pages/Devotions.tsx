@@ -497,6 +497,8 @@ export default function Devotions() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
+        media={detail && <DatePill iso={detail.publishAt} />}
+        eyebrow="Dévotion quotidienne"
         title={detail?.title ?? 'Dévotion'}
         subtitle={detail && <StatusBadge status={detail.status} />}
       >

@@ -346,6 +346,8 @@ export default function Community() {
       <DetailPanel
         open={!!groupDetail}
         onClose={() => setGroupDetail(null)}
+        media={groupDetail && <Avatar name={groupDetail.name} color={groupDetail.color} size={44} />}
+        eyebrow="Groupe de maison"
         title={groupDetail?.name ?? 'Groupe'}
       >
         {groupDetail && (
@@ -373,6 +375,8 @@ export default function Community() {
       <DetailPanel
         open={!!eventDetail}
         onClose={() => setEventDetail(null)}
+        media={eventDetail && <EventDate iso={eventDetail.startsAt} />}
+        eyebrow="Événement"
         title={eventDetail?.name ?? 'Événement'}
       >
         {eventDetail && (

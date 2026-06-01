@@ -208,8 +208,19 @@ export default function Activity() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
-        title="Entrée d'activité"
-        subtitle={detail && <Tag tone={metaFor(detail.kind).tone}>{metaFor(detail.kind).label}</Tag>}
+        media={
+          detail &&
+          (() => {
+            const Icon = metaFor(detail.kind).icon;
+            return (
+              <span className={`cds-tl__dot cds-tl__dot--${metaFor(detail.kind).tone}`}>
+                <Icon size={20} />
+              </span>
+            );
+          })()
+        }
+        eyebrow={detail ? metaFor(detail.kind).label : 'Activité'}
+        title={detail?.actorLabel ?? "Entrée d'activité"}
       >
         {detail && (
           <>

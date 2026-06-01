@@ -177,16 +177,9 @@ export default function People() {
       <DetailPanel
         open={!!detail}
         onClose={() => setDetail(null)}
-        title={
-          detail ? (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--spacing-04)' }}>
-              <Avatar name={avatarSeed(detail)} size={28} />
-              {fullName(detail)}
-            </span>
-          ) : (
-            'Membre'
-          )
-        }
+        media={detail && <Avatar name={avatarSeed(detail)} size={44} />}
+        eyebrow="Membre"
+        title={detail ? fullName(detail) : 'Membre'}
         subtitle={detail && <RoleBadge role={detail.role} />}
       >
         {detail && (
