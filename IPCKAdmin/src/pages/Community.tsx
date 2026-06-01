@@ -357,6 +357,20 @@ export default function Community() {
     },
   });
 
+  const deleteGroup = useAction<Group>({
+    mutationFn: (g) => api.delete(`/groups/${g.id}`),
+    invalidate: [['groups']],
+    confirm: (g) => ({
+      title: 'Supprimer ce groupe ?',
+      message: `« ${g.name} » et tout son contenu (membres, conversation) seront définitivement supprimés. Cette action est irréversible.`,
+      confirmLabel: 'Supprimer le groupe',
+      danger: true,
+    }),
+    successTitle: 'Groupe supprimé',
+    errorTitle: 'La suppression a échoué',
+    onDone: () => setGroupDetail(null),
+  });
+
   // Combine date (YYYY-MM-DD) + heure (HH:MM) en ISO local, ou '' si incomplet.
   const eventStartsAt =
     event.date && event.time ? new Date(`${event.date}T${event.time}`) : null;
@@ -662,6 +676,19 @@ export default function Community() {
         media={groupDetail && <Avatar name={groupDetail.name} color={groupDetail.color} size={44} />}
         eyebrow="Groupe de maison"
         title={groupDetail?.name ?? 'Groupe'}
+        footer={
+          groupDetail &&
+          mayManage && (
+            <button
+              className="cds-btn cds-btn--danger cds-btn--md"
+              disabled={deleteGroup.isPending}
+              onClick={() => deleteGroup.run(groupDetail)}
+            >
+              Supprimer le groupe
+              <TrashCan size={16} />
+            </button>
+          )
+        }
       >
         {groupDetail && (
           <>

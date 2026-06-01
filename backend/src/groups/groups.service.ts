@@ -198,6 +198,12 @@ export class GroupsService {
     return paginate(data, total, query);
   }
 
+  /** Supprime un groupe et tout son contenu (memberships + messages en cascade). Staff. */
+  async remove(groupId: string) {
+    await this.ensureGroup(groupId);
+    await this.prisma.group.delete({ where: { id: groupId } });
+  }
+
   /** Supprime un message du groupe (staff / modération). */
   async deleteMessage(groupId: string, messageId: string) {
     await this.ensureGroup(groupId);

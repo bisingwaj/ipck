@@ -89,6 +89,14 @@ export class GroupsController {
     return this.groups.update(user.id, user.role, id, dto);
   }
 
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Supprime un groupe et son contenu (staff)' })
+  remove(@Param('id') id: string) {
+    return this.groups.remove(id);
+  }
+
   // ── Gestion des membres (staff) ──
   @Get(':id/members')
   @Roles('pastor')
