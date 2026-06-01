@@ -313,8 +313,8 @@ export default function Devotions() {
                       </tr>
                     </thead>
                     <tbody>
-                      {devoUpcoming.map((u, i) => (
-                        <tr key={i}>
+                      {devoUpcoming.map((u) => (
+                        <tr key={`${u.type}-${u.when}-${u.title}`}>
                           <td>
                             <DatePill iso={u.when} />
                           </td>

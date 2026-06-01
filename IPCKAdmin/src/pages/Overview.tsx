@@ -71,9 +71,11 @@ export default function Overview() {
                 {data.kpis.map((k) => {
                   const meta = KPI_META[k.id];
                   const Icon = meta?.icon;
+                  // Garde runtime : le backend peut renvoyer une valeur nulle.
+                  const num = k.value ?? 0;
                   const value = meta?.money
-                    ? `$${k.value.toLocaleString('en-US')}`
-                    : k.value.toLocaleString('fr-FR');
+                    ? `$${num.toLocaleString('en-US')}`
+                    : num.toLocaleString('fr-FR');
                   return (
                     <Tile
                       key={k.id}
@@ -105,17 +107,20 @@ export default function Overview() {
                       style={{ gridTemplateColumns: `repeat(${Math.min(metrics.length, 4)}, minmax(0, 1fr))` }}
                     >
                       {metrics.map((m) => {
-                        const onTarget = m.pct >= m.target;
+                        // Gardes runtime contre des métriques partielles.
+                        const pct = m.pct ?? 0;
+                        const target = m.target ?? 0;
+                        const onTarget = pct >= target;
                         return (
                           <Tile
                             key={m.label}
                             label={ENGAGEMENT_LABEL[m.label] ?? m.label}
-                            value={`${m.pct}%`}
-                            delta={m.pct - m.target}
+                            value={`${pct}%`}
+                            delta={pct - target}
                             good
-                            caption={`cible ${m.target}%`}
+                            caption={`cible ${target}%`}
                           >
-                            <Meter pct={m.pct} target={m.target} tone={onTarget ? 'green' : 'yellow'} />
+                            <Meter pct={pct} target={target} tone={onTarget ? 'green' : 'yellow'} />
                           </Tile>
                         );
                       })}

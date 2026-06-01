@@ -132,6 +132,7 @@ export default function Care() {
     }),
     successTitle: 'Réponse envoyée',
     errorTitle: "L'envoi a échoué",
+    onDone: () => setPrayer(null),
   });
 
   const setApptStatus = useAction<{ appt: Appointment; status: 'confirmed' | 'cancelled' }>({
