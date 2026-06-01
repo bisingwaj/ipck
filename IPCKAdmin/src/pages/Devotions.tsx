@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Modal, TextInput, TextArea, Select, SelectItem } from '@carbon/react';
+import {
+  Modal,
+  TextInput,
+  TextArea,
+  Select,
+  SelectItem,
+  DatePicker,
+  DatePickerInput,
+} from '@carbon/react';
 import { Add } from '@carbon/icons-react';
 import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
@@ -70,6 +78,14 @@ function parseSteps(raw: string): string[] {
     .split('\n')
     .map((s) => s.trim())
     .filter(Boolean);
+}
+
+/** Formate un Date local en `YYYY-MM-DD` (format attendu par le backend). */
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 export default function Devotions() {
@@ -289,15 +305,22 @@ export default function Devotions() {
               <span className="cds-form__legend-sub">Quand et comment elle paraît</span>
             </div>
             <div className="cds-form__row cds-form__row--2">
-              <TextInput
-                id="date"
-                type="date"
-                labelText="Date de la dévotion"
-                value={form.date}
-                invalid={!form.date.trim() && form.title.length > 0}
-                invalidText="La date est obligatoire."
-                onChange={(e) => set({ date: e.target.value })}
-              />
+              <DatePicker
+                datePickerType="single"
+                dateFormat="Y-m-d"
+                value={form.date || undefined}
+                onChange={(dates: Date[]) =>
+                  set({ date: dates[0] ? toISODate(dates[0]) : '' })
+                }
+              >
+                <DatePickerInput
+                  id="date"
+                  labelText="Date de la dévotion"
+                  placeholder="AAAA-MM-JJ"
+                  invalid={!form.date.trim() && form.title.length > 0}
+                  invalidText="La date est obligatoire."
+                />
+              </DatePicker>
               <Select
                 id="status"
                 labelText="Statut"

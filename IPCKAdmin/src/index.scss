@@ -717,3 +717,6 @@
 
 /* ── Modal élargi pour le contenu éditorial ── */
 .cds-modal-lg .cds--modal-container { max-width: 48rem; width: 90vw; }
+
+/* Le calendrier Flatpickr (DatePicker Carbon) doit flotter au-dessus du modal. */
+.flatpickr-calendar { z-index: 9999 !important; }
