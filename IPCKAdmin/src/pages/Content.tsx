@@ -39,6 +39,38 @@ interface Content {
 const CATEGORIES = ['sermon', 'podcast', 'teaching', 'worship', 'testimony', 'other'];
 const STATUSES = ['published', 'draft', 'scheduled'];
 
+// Explique chaque statut pour que l'admin sache l'effet réel (pas de piège).
+const STATUS_HINT: Record<string, string> = {
+  published: 'Visible immédiatement dans l’app mobile des membres.',
+  draft: 'Brouillon — invisible des membres tant qu’il n’est pas publié.',
+  scheduled: 'Programmé — invisible jusqu’à publication manuelle.',
+};
+
+/**
+ * Le lecteur mobile (expo-video) lit : une URL absolue http(s) (MP4/HLS),
+ * ou un chemin relatif auto-hébergé `/media/...`. On valide AVANT l'envoi
+ * pour ne pas créer un contenu illisible silencieusement (vérité = ce que
+ * le lecteur sait jouer).
+ */
+function validateVideoUrl(raw: string): string | null {
+  const url = raw.trim();
+  if (!url) return 'Le lien vidéo est obligatoire.';
+  const isAbsolute = /^https?:\/\/.+/i.test(url);
+  const isHosted = url.startsWith('/media/');
+  if (!isAbsolute && !isHosted) {
+    return 'Entrez une URL http(s) (MP4/HLS) ou un chemin auto-hébergé commençant par /media/.';
+  }
+  return null;
+}
+
+/** Valide une vignette optionnelle (URL d'image absolue, si fournie). */
+function validateThumbnail(raw?: string | null): string | null {
+  const url = (raw ?? '').trim();
+  if (!url) return null;
+  if (!/^https?:\/\/.+/i.test(url)) return 'La vignette doit être une URL http(s).';
+  return null;
+}
+
 type FormState = Partial<Content> & { title: string; videoUrl: string; category: string; status: string };
 
 const EMPTY: FormState = {
@@ -74,16 +106,18 @@ export default function ContentPage() {
 
   const save = useAction<FormState>({
     mutationFn: (body) => {
+      // On envoie des valeurs nettoyées (trim) — strictement les champs du DTO,
+      // les optionnels vides deviennent `undefined` (jamais de chaîne vide en DB).
       const payload = {
-        title: body.title,
-        videoUrl: body.videoUrl,
+        title: body.title.trim(),
+        videoUrl: body.videoUrl.trim(),
         category: body.category,
         status: body.status,
-        speaker: body.speaker || undefined,
-        series: body.series || undefined,
-        duration: body.duration || undefined,
-        description: body.description || undefined,
-        thumbnailUrl: body.thumbnailUrl || undefined,
+        speaker: body.speaker?.trim() || undefined,
+        series: body.series?.trim() || undefined,
+        duration: body.duration?.trim() || undefined,
+        description: body.description?.trim() || undefined,
+        thumbnailUrl: body.thumbnailUrl?.trim() || undefined,
         isLive: !!body.isLive,
         featured: !!body.featured,
       };
@@ -150,7 +184,13 @@ export default function ContentPage() {
   };
 
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
-  const canSave = !!form.title.trim() && !!form.videoUrl.trim();
+
+  // Validation centralisée : conditionne le bouton ET explique tout blocage.
+  const titleError = form.title.trim() ? null : 'Le titre est obligatoire.';
+  const videoError = validateVideoUrl(form.videoUrl);
+  const thumbError = validateThumbnail(form.thumbnailUrl);
+  const firstBlocker = titleError ?? videoError ?? thumbError;
+  const canSave = !firstBlocker;
 
   return (
     <>
@@ -314,13 +354,31 @@ export default function ContentPage() {
         onRequestSubmit={() => save.run(form)}
       >
         <div style={{ display: 'grid', gap: '1rem' }}>
-          <TextInput id="title" labelText="Titre" value={form.title} onChange={(e) => set({ title: e.target.value })} />
+          <TextInput
+            id="title"
+            labelText="Titre"
+            value={form.title}
+            invalid={!!titleError}
+            invalidText={titleError ?? undefined}
+            onChange={(e) => set({ title: e.target.value })}
+          />
           <TextInput
             id="videoUrl"
             labelText="Lien vidéo (MP4 / HLS .m3u8) ou chemin auto-hébergé"
             placeholder="/media/videos/sunday-service.mp4  ou  https://…/stream.m3u8"
             value={form.videoUrl}
+            invalid={!!videoError}
+            invalidText={videoError ?? undefined}
             onChange={(e) => set({ videoUrl: e.target.value })}
+          />
+          <TextInput
+            id="thumbnailUrl"
+            labelText="Vignette (URL d'image, optionnel)"
+            placeholder="https://…/cover.jpg"
+            value={form.thumbnailUrl ?? ''}
+            invalid={!!thumbError}
+            invalidText={thumbError ?? undefined}
+            onChange={(e) => set({ thumbnailUrl: e.target.value })}
           />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <Select id="category" labelText="Catégorie" value={form.category} onChange={(e) => set({ category: e.target.value })}>
@@ -328,7 +386,13 @@ export default function ContentPage() {
                 <SelectItem key={c} value={c} text={c} />
               ))}
             </Select>
-            <Select id="status" labelText="Statut" value={form.status} onChange={(e) => set({ status: e.target.value })}>
+            <Select
+              id="status"
+              labelText="Statut"
+              helperText={STATUS_HINT[form.status]}
+              value={form.status}
+              onChange={(e) => set({ status: e.target.value })}
+            >
               {STATUSES.map((s) => (
                 <SelectItem key={s} value={s} text={s} />
               ))}
@@ -344,6 +408,15 @@ export default function ContentPage() {
             <Toggle id="isLive" labelText="Type : en direct" labelA="Vidéo" labelB="Live" toggled={!!form.isLive} onToggle={(c: boolean) => set({ isLive: c })} />
             <Toggle id="featured" labelText="Mettre à la une" labelA="Non" labelB="Oui" toggled={!!form.featured} onToggle={(c: boolean) => set({ featured: c })} />
           </div>
+
+          {/* Principe 6 : on ne laisse jamais un bouton désactivé sans dire pourquoi. */}
+          {firstBlocker && (
+            <div className="cds-notification cds-notification--warn">
+              <div className="cds-notification__body">
+                Pour enregistrer : {firstBlocker}
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
