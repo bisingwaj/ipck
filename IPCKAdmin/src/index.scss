@@ -515,6 +515,24 @@
 .cds-memberlist__name { font: 600 0.875rem/1.125rem var(--font-sans); color: var(--text-01); }
 .cds-memberlist__meta { font-size: 0.75rem; color: var(--text-05); margin-top: 1px; }
 
+/* ── Conversation de groupe (modération) ── */
+.cds-chatlog { display: flex; flex-direction: column; gap: var(--spacing-04); }
+.cds-chatmsg {
+  display: flex; align-items: flex-start; gap: var(--spacing-04);
+  padding: var(--spacing-03); border-radius: 4px;
+}
+.cds-chatmsg:hover { background: var(--ui-01); }
+.cds-chatmsg__body { flex: 1; min-width: 0; }
+.cds-chatmsg__head {
+  display: flex; align-items: baseline; gap: var(--spacing-03);
+}
+.cds-chatmsg__who { font: 600 0.8125rem/1.125rem var(--font-sans); color: var(--text-01); }
+.cds-chatmsg__at { font: 400 0.6875rem/1 var(--font-sans); color: var(--text-05); }
+.cds-chatmsg__text {
+  font: 400 0.875rem/1.375rem var(--font-sans); color: var(--text-01);
+  margin-top: 2px; word-break: break-word; white-space: pre-wrap;
+}
+
 /* Streak (flamme + valeur) */
 .cds-streak {
   display: inline-flex; align-items: center; gap: 3px;

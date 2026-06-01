@@ -112,4 +112,20 @@ export class GroupsController {
   removeMember(@Param('id') id: string, @Param('userId') userId: string) {
     return this.groups.removeMember(id, userId);
   }
+
+  // ── Modération de la conversation (staff) ──
+  @Get(':id/admin/messages')
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Conversation du groupe pour modération (staff)' })
+  adminMessages(@Param('id') id: string, @Query() query: PaginationQueryDto) {
+    return this.groups.messagesForStaff(id, query);
+  }
+
+  @Delete(':id/messages/:messageId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Roles('pastor')
+  @ApiOperation({ summary: 'Supprime un message du groupe (staff)' })
+  deleteMessage(@Param('id') id: string, @Param('messageId') messageId: string) {
+    return this.groups.deleteMessage(id, messageId);
+  }
 }
