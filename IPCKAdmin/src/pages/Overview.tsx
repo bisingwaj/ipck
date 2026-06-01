@@ -18,13 +18,26 @@ interface EngagementMetric {
   target: number;
 }
 
-// Chaque KPI pointe vers la page qui le détaille (icône + navigation).
-const KPI_NAV: Record<string, { icon: typeof Money; to: string }> = {
-  members: { icon: UserMultiple, to: '/people' },
-  giving: { icon: Money, to: '/giving' },
-  viewers: { icon: VideoChat, to: '/content' },
-  prayers: { icon: Favorite, to: '/care' },
-  devo: { icon: Book, to: '/devotions' },
+// Référentiel des KPIs : libellé FR (le backend renvoie l'anglais), icône,
+// page de détail, et format (monétaire ou nombre). Source unique côté front.
+interface KpiMeta {
+  label: string;
+  icon: typeof Money;
+  to?: string;
+  money?: boolean;
+}
+const KPI_META: Record<string, KpiMeta> = {
+  members: { label: 'Membres actifs', icon: UserMultiple, to: '/people' },
+  giving: { label: 'Dons · ce mois-ci', icon: Money, to: '/giving', money: true },
+  viewers: { label: 'Direct · pic du jour', icon: VideoChat, to: '/content' },
+  prayers: { label: 'File de prières · en attente', icon: Favorite, to: '/care' },
+  devo: { label: 'Complétion dévotion', icon: Book, to: '/devotions' },
+};
+
+// Métriques d'engagement : traduction par label backend connu.
+const ENGAGEMENT_LABEL: Record<string, string> = {
+  'Devotional completion': 'Complétion dévotion',
+  'Members active 7d': 'Membres actifs (7 j)',
 };
 
 export default function Overview() {
@@ -56,17 +69,20 @@ export default function Overview() {
                 }}
               >
                 {data.kpis.map((k) => {
-                  const nav = KPI_NAV[k.id];
-                  const Icon = nav?.icon;
+                  const meta = KPI_META[k.id];
+                  const Icon = meta?.icon;
+                  const value = meta?.money
+                    ? `$${k.value.toLocaleString('en-US')}`
+                    : k.value.toLocaleString('fr-FR');
                   return (
                     <Tile
                       key={k.id}
-                      label={k.label}
-                      value={k.value.toLocaleString()}
+                      label={meta?.label ?? k.label}
+                      value={value}
                       live={k.live}
-                      caption={k.live ? 'en direct' : nav ? 'Voir le détail →' : undefined}
+                      caption={k.live ? 'en direct' : meta?.to ? 'Voir le détail →' : undefined}
                       icon={Icon ? <Icon size={16} /> : undefined}
-                      onClick={nav ? () => navigate(nav.to) : undefined}
+                      onClick={meta?.to ? () => navigate(meta.to!) : undefined}
                     />
                   );
                 })}
@@ -93,7 +109,7 @@ export default function Overview() {
                         return (
                           <Tile
                             key={m.label}
-                            label={m.label}
+                            label={ENGAGEMENT_LABEL[m.label] ?? m.label}
                             value={`${m.pct}%`}
                             delta={m.pct - m.target}
                             good
