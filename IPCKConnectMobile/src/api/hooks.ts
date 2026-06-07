@@ -103,7 +103,8 @@ export function usePastDevotionals(): typeof mockPast {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockPast : data ?? mockPast;
+  if (USE_MOCKS) return mockPast;
+  return data ?? [];
 }
 
 export function useSermons(): Sermon[] {
@@ -112,8 +113,8 @@ export function useSermons(): Sermon[] {
     queryFn: async () => (await api.get('/sermons', { params: { pageSize: 30 } })).data.data as Sermon[],
     ...opts,
   });
-  const list = USE_MOCKS ? mockSermons : data ?? mockSermons;
-  return list.length ? list : mockSermons;
+  if (USE_MOCKS) return mockSermons;
+  return data ?? [];
 }
 
 // ───────────────────────── Content vidéo (dynamique) ─────────────────────────
@@ -121,8 +122,8 @@ export function useSermons(): Sermon[] {
 /** Tous les contenus publiés (groupés par catégorie côté écran). */
 export function useContent(): Content[] {
   const { data } = useQuery({ queryKey: ['content'], queryFn: qfContent, ...opts });
-  const list = USE_MOCKS ? mockContents : data ?? mockContents;
-  return list.length ? list : mockContents;
+  if (USE_MOCKS) return mockContents;
+  return data ?? [];
 }
 
 /** Contenu en direct courant (isLive), ou null. */
@@ -149,7 +150,8 @@ export function useMyGroups(): Group[] {
     queryFn: async () => (await api.get('/groups', { params: { mine: true } })).data as Group[],
     ...opts,
   });
-  return USE_MOCKS ? mockMyGroups : data ?? mockMyGroups;
+  if (USE_MOCKS) return mockMyGroups;
+  return data ?? [];
 }
 
 export function useAllGroups(): Group[] {
@@ -158,8 +160,8 @@ export function useAllGroups(): Group[] {
     queryFn: async () => (await api.get('/groups')).data as Group[],
     ...opts,
   });
-  const list = USE_MOCKS ? mockAllGroups : data ?? mockAllGroups;
-  return list.length ? list : mockAllGroups;
+  if (USE_MOCKS) return mockAllGroups;
+  return data ?? [];
 }
 
 export function usePrayerWall(): Prayer[] {
@@ -181,7 +183,8 @@ export function usePrayerWall(): Prayer[] {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockPrayerWall : data ?? mockPrayerWall;
+  if (USE_MOCKS) return mockPrayerWall;
+  return data ?? [];
 }
 
 export function useEvents(): ChurchEvent[] {
@@ -190,19 +193,20 @@ export function useEvents(): ChurchEvent[] {
     queryFn: async () => (await api.get('/events')).data as ChurchEvent[],
     ...opts,
   });
-  return USE_MOCKS ? mockEvents : data ?? mockEvents;
+  if (USE_MOCKS) return mockEvents;
+  return data ?? [];
 }
 
 export function useFunds(): typeof mockFunds {
   const { data } = useQuery({ queryKey: ['funds'], queryFn: qfFunds, ...opts });
-  const list = USE_MOCKS ? mockFunds : data ?? mockFunds;
-  return list.length ? list : mockFunds;
+  if (USE_MOCKS) return mockFunds;
+  return data ?? [];
 }
 
 export function usePaymentMethods(): typeof mockPaymentMethods {
   const { data } = useQuery({ queryKey: ['payment-methods'], queryFn: qfPaymentMethods, ...opts });
-  const list = USE_MOCKS ? mockPaymentMethods : data ?? mockPaymentMethods;
-  return list.length ? list : mockPaymentMethods;
+  if (USE_MOCKS) return mockPaymentMethods;
+  return data ?? [];
 }
 
 export function useGiftHistory(): typeof mockGiftHistory {
@@ -240,7 +244,8 @@ export function useNotifications(): Notif[] {
     },
     ...opts,
   });
-  return USE_MOCKS ? mockNotifications : data ?? mockNotifications;
+  if (USE_MOCKS) return mockNotifications;
+  return data ?? [];
 }
 
 /** Session live courante + flux d'amens (Live screen). */
