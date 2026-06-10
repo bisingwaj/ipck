@@ -18,9 +18,20 @@ export class AppointmentsService {
     return this.prisma.appointmentTopic.findMany({ where: { enabled: true } });
   }
 
-  /** Créneaux disponibles sur l'horizon, hors créneaux déjà réservés. */
+  /** Créneaux disponibles sur l'horizon, hors créneaux déjà réservés. (Heure universelle UTC+1 pour Kinshasa) */
   async slots(from?: string, to?: string) {
-    const start = from ? new Date(from) : new Date();
+    // Kinshasa est à UTC+1. Pour éviter la dérive selon le fuseau du serveur (ex: Vercel en UTC),
+    // on base notre calcul de jours directement sur UTC.
+    const now = new Date();
+    const kinshasaNow = new Date(now.getTime() + 3600000); // UTC+1
+    
+    // start = minuit à Kinshasa
+    const start = from ? new Date(from) : new Date(Date.UTC(
+      kinshasaNow.getUTCFullYear(),
+      kinshasaNow.getUTCMonth(),
+      kinshasaNow.getUTCDate()
+    ));
+
     const end = to ? new Date(to) : new Date(start.getTime() + HORIZON_DAYS * 86_400_000);
 
     const booked = await this.prisma.appointment.findMany({
@@ -34,16 +45,18 @@ export class AppointmentsService {
 
     const days: { day: string; slots: { start: string; available: boolean }[] }[] = [];
     for (let d = 0; d < HORIZON_DAYS; d++) {
-      const day = new Date(start);
-      day.setDate(day.getDate() + d);
-      const dow = day.getDay();
+      const day = new Date(start.getTime() + d * 86_400_000);
+      const dow = day.getUTCDay();
       if (dow === 0) continue; // pas de RDV le dimanche
+      
       const slots = SLOT_HOURS.map((h) => {
-        const slot = new Date(day);
-        slot.setHours(h, 0, 0, 0);
+        // L'heure 'h' (ex: 10) est locale à Kinshasa (UTC+1). L'heure UTC est donc h - 1.
+        const slot = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), h - 1, 0, 0));
         return { start: slot.toISOString(), available: !bookedSet.has(slot.toISOString()) };
       });
-      days.push({ day: day.toISOString().slice(0, 10), slots });
+      
+      const dayStr = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}`;
+      days.push({ day: dayStr, slots });
     }
     return days;
   }
