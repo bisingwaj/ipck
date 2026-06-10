@@ -13,6 +13,7 @@ import { api } from '../api/client';
 import { PageHead, Panel, Tag, Empty } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
+import { t, dateLocale } from '../i18n';
 
 interface ActivityRow {
   id: string;
@@ -35,30 +36,34 @@ interface KindMeta {
   icon: typeof Money;
   desc: string;
 }
-const KIND: Record<string, KindMeta> = {
-  give: { label: 'Don', tone: 'green', icon: Money, desc: 'Un don a été effectué vers un fonds.' },
-  prayer: { label: 'Prière', tone: 'magenta', icon: Favorite, desc: 'Une demande de prière a été soumise.' },
-  appts: { label: 'Rendez-vous', tone: 'blue', icon: Calendar, desc: 'Un rendez-vous pastoral a été pris ou modifié.' },
-  events: { label: 'Événement', tone: 'teal', icon: Events, desc: 'Un membre a répondu à un événement (RSVP).' },
-  broadcast: { label: 'Diffusion', tone: 'purple', icon: Send, desc: 'Une notification a été diffusée aux membres.' },
-  live: { label: 'Direct', tone: 'yellow', icon: VideoChat, desc: 'Une session de culte en direct a changé d’état.' },
+// Icône/couleur par type ; libellé et description résolus via i18n.
+const KIND_VISUAL: Record<string, { tone: Tone; icon: typeof Money }> = {
+  give: { tone: 'green', icon: Money },
+  prayer: { tone: 'magenta', icon: Favorite },
+  appts: { tone: 'blue', icon: Calendar },
+  events: { tone: 'teal', icon: Events },
+  broadcast: { tone: 'purple', icon: Send },
+  live: { tone: 'yellow', icon: VideoChat },
 };
-const metaFor = (k: string): KindMeta =>
-  KIND[k] ?? { label: k, tone: 'gray', icon: ActivityIcon, desc: 'Action enregistrée dans le journal.' };
+const metaFor = (k: string): KindMeta => {
+  const v = KIND_VISUAL[k];
+  if (!v) return { label: k, tone: 'gray', icon: ActivityIcon, desc: t('kind.fallback.desc') };
+  return { label: t(`kind.${k}`), tone: v.tone, icon: v.icon, desc: t(`kind.${k}.desc`) };
+};
 
 /** Temps relatif court et humain ("à l'instant", "il y a 3 min", "hier"). */
 function relativeTime(iso: string): string {
   const then = new Date(iso).getTime();
   const diff = Math.max(0, Date.now() - then);
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "à l'instant";
-  if (min < 60) return `il y a ${min} min`;
+  if (min < 1) return t('activity.justNow');
+  if (min < 60) return t('activity.minAgo').replace('{n}', String(min));
   const h = Math.floor(min / 60);
-  if (h < 24) return `il y a ${h} h`;
+  if (h < 24) return t('activity.hAgo').replace('{n}', String(h));
   const d = Math.floor(h / 24);
-  if (d === 1) return 'hier';
-  if (d < 7) return `il y a ${d} j`;
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  if (d === 1) return t('activity.yesterday');
+  if (d < 7) return t('activity.dAgo').replace('{n}', String(d));
+  return new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short' });
 }
 
 /** Clé de jour lisible pour les en-têtes ("Aujourd'hui", "Hier", date). */
@@ -70,9 +75,9 @@ function dayLabel(iso: string): string {
     return c.getTime();
   };
   const diff = Math.round((startOf(new Date()) - startOf(d)) / 86_400_000);
-  if (diff === 0) return "Aujourd'hui";
-  if (diff === 1) return 'Hier';
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  if (diff === 0) return t('activity.today');
+  if (diff === 1) return t('activity.yesterdayCap');
+  return d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 }
 
 export default function Activity() {
@@ -89,19 +94,19 @@ export default function Activity() {
 
   return (
     <>
-      <PageHead title="Activité" subtitle="Journal des actions transverses de la plateforme" />
+      <PageHead title={t('activity.title')} subtitle={t('activity.subtitle')} />
       <div className="cds-tab-panel">
         <div className="cds-stack">
           <Panel
-            title="Flux d'activité"
-            sub={activity.data ? `${activity.data.length} entrées` : undefined}
+            title={t('activity.feed')}
+            sub={activity.data ? `${activity.data.length} ${t('activity.entries')}` : undefined}
             actions={<FreshnessBadge query={activity} />}
           >
             <QueryBoundary
               query={activity}
               isEmpty={(d) => d.length === 0}
-              empty={<Empty>Aucune activité enregistrée</Empty>}
-              loadingLabel="Chargement du journal…"
+              empty={<Empty>{t('activity.empty')}</Empty>}
+              loadingLabel={t('activity.loading')}
             >
               {(rows) => {
                 // Comptes par type présents (pour les chips de filtre).
@@ -129,7 +134,7 @@ export default function Activity() {
                         className={'cds-chip' + (filter === 'all' ? ' is-active' : '')}
                         onClick={() => setFilter('all')}
                       >
-                        Tout <span className="cds-chip__count">{rows.length}</span>
+                        {t('activity.all')} <span className="cds-chip__count">{rows.length}</span>
                       </button>
                       {presentKinds.map((k) => {
                         const m = metaFor(k);
@@ -178,7 +183,7 @@ export default function Activity() {
                                     <span className="cds-tl__kind">{m.label}</span>
                                     <span
                                       className="cds-tl__time"
-                                      title={new Date(a.createdAt).toLocaleString('fr-FR')}
+                                      title={new Date(a.createdAt).toLocaleString(dateLocale())}
                                     >
                                       {relativeTime(a.createdAt)}
                                     </span>
@@ -195,7 +200,7 @@ export default function Activity() {
                       </div>
                     ))}
 
-                    {visible.length === 0 && <Empty>Aucune entrée pour ce filtre.</Empty>}
+                    {visible.length === 0 && <Empty>{t('activity.emptyFilter')}</Empty>}
                   </>
                 );
               }}
@@ -219,14 +224,14 @@ export default function Activity() {
             );
           })()
         }
-        eyebrow={detail ? metaFor(detail.kind).label : 'Activité'}
-        title={detail?.actorLabel ?? "Entrée d'activité"}
+        eyebrow={detail ? metaFor(detail.kind).label : t('activity.eyebrow')}
+        title={detail?.actorLabel ?? t('activity.entry')}
       >
         {detail && (
           <>
             <DetailLead>
               <strong>{detail.actorLabel}</strong> —{' '}
-              {new Date(detail.createdAt).toLocaleString('fr-FR', {
+              {new Date(detail.createdAt).toLocaleString(dateLocale(), {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
@@ -236,17 +241,17 @@ export default function Activity() {
               . {metaFor(detail.kind).desc}
             </DetailLead>
 
-            <DetailSection title="Détail de l'action">
+            <DetailSection title={t('activity.actionDetail')}>
               <DetailText>{detail.description}</DetailText>
             </DetailSection>
 
-            <DetailSection title="Métadonnées">
-              <Field label="Type" hint={metaFor(detail.kind).desc}>
+            <DetailSection title={t('activity.metadata')}>
+              <Field label={t('activity.type')} hint={metaFor(detail.kind).desc}>
                 <Tag tone={metaFor(detail.kind).tone}>{metaFor(detail.kind).label}</Tag>
               </Field>
-              <Field label="Acteur">{detail.actorLabel}</Field>
-              <Field label="Quand">{relativeTime(detail.createdAt)}</Field>
-              <Field label="Horodatage">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+              <Field label={t('activity.actor')}>{detail.actorLabel}</Field>
+              <Field label={t('activity.when')}>{relativeTime(detail.createdAt)}</Field>
+              <Field label={t('activity.timestamp')}>{new Date(detail.createdAt).toLocaleString(dateLocale())}</Field>
             </DetailSection>
           </>
         )}

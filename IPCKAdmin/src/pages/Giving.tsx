@@ -7,6 +7,7 @@ import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
+import { t, dateLocale } from '../i18n';
 
 interface Summary {
   funds: { id: string; name: string; budget: number; ytd: number; accent?: string }[];
@@ -14,24 +15,15 @@ interface Summary {
   monthToDate: number;
 }
 
-// Canaux de paiement → libellé FR (le backend stocke le code brut).
-const CHANNEL_LABEL: Record<string, string> = {
-  wallet: 'Wallet Amen',
-  momo: 'Mobile money',
-  mpesa: 'M-Pesa',
-  airtel: 'Airtel Money',
-  orange: 'Orange Money',
-  afrimoney: 'Afrimoney',
-  card: 'Carte bancaire',
-  cash: 'Espèces',
-};
-const channelLabel = (c: string) => CHANNEL_LABEL[c] ?? c;
+// Canaux de paiement → libellé bilingue (le backend stocke le code brut).
+const CHANNEL_KEYS = new Set(['wallet', 'momo', 'mpesa', 'airtel', 'orange', 'afrimoney', 'card', 'cash']);
+const channelLabel = (c: string) => (CHANNEL_KEYS.has(c) ? t(`channel.${c}`) : c);
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
 
-/** Date courte FR lisible ("31 mai 2026") au lieu du format US 5/31/2026. */
+/** Date courte localisée ("31 mai 2026" / "May 31, 2026"). */
 const dateShort = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
 interface Donation {
   id: string;
@@ -44,11 +36,8 @@ interface Donation {
   createdAt: string;
 }
 
-const DON_STATUS_DESC: Record<string, string> = {
-  received: 'Paiement reçu et réconcilié — comptabilisé dans les totaux du fonds.',
-  pending: 'Paiement initié, en attente de confirmation du fournisseur.',
-  failed: 'Le paiement a échoué — aucun montant n’a été comptabilisé.',
-};
+const donStatusDesc = (s: string) =>
+  ['received', 'pending', 'failed'].includes(s) ? t(`giving.donStatus.${s}`) : '';
 
 export default function Giving() {
   const { can } = useAuth();
@@ -68,13 +57,12 @@ export default function Giving() {
   const exportCsv = useAction<void, { data: { csv: string } }>({
     mutationFn: () => api.get('/giving/admin/export'),
     confirm: () => ({
-      title: 'Exporter les dons en CSV ?',
-      message:
-        'Un fichier contenant les données financières (montants, donateurs non anonymes) sera téléchargé. Manipulez-le conformément à la confidentialité.',
-      confirmLabel: 'Exporter',
+      title: t('giving.confirmExportTitle'),
+      message: t('giving.confirmExportMsg'),
+      confirmLabel: t('giving.confirmExportLabel'),
     }),
-    successTitle: 'Export généré',
-    errorTitle: "L'export a échoué",
+    successTitle: t('giving.exportGenerated'),
+    errorTitle: t('giving.exportFailed'),
     onDone: (res) => {
       const csv = res?.data?.csv ?? '';
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -93,8 +81,8 @@ export default function Giving() {
   return (
     <>
       <PageHead
-        title="Dons"
-        subtitle="Suivi des fonds et des canaux · ledger réconcilié"
+        title={t('giving.title')}
+        subtitle={t('giving.subtitle')}
         actions={
           mayExport ? (
             <button
@@ -102,14 +90,14 @@ export default function Giving() {
               onClick={() => exportCsv.run()}
               disabled={exportCsv.isPending}
             >
-              {exportCsv.isPending ? 'Export…' : 'Exporter CSV'}
+              {exportCsv.isPending ? t('giving.exporting') : t('giving.export')}
               <Download size={16} />
             </button>
           ) : undefined
         }
       />
       <div className="cds-tab-panel">
-        <QueryBoundary query={summary} loadingLabel="Chargement des indicateurs…">
+        <QueryBoundary query={summary} loadingLabel={t('giving.loadingKpis')}>
           {(data) => {
             const ytdTotal = data.funds.reduce((s, f) => s + f.ytd, 0);
             const monthCount = data.channels.reduce((s, c) => s + c.count, 0);
@@ -119,21 +107,21 @@ export default function Giving() {
               <div className="cds-stack">
                 <div className="cds-grid" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
                   <Tile
-                    label="Mois en cours"
+                    label={t('giving.monthToDate')}
                     value={money(data.monthToDate)}
-                    caption={monthCount > 0 ? `${monthCount} don(s) reçu(s) ce mois-ci` : 'Aucun don ce mois-ci'}
+                    caption={monthCount > 0 ? `${monthCount} ${t('giving.donationsThisMonth')}` : t('giving.noDonationsMonth')}
                   />
                   <Tile
-                    label="YTD (tous fonds)"
+                    label={t('giving.ytdAllFunds')}
                     value={money(ytdTotal)}
-                    caption={`${ytdPct}% du budget annuel · ${data.funds.length} fonds`}
+                    caption={`${ytdPct}% ${t('giving.ofAnnualBudget')} · ${data.funds.length} ${t('giving.funds')}`}
                   >
                     <Meter pct={ytdPct} tone={ytdPct >= 100 ? 'green' : 'blue'} />
                   </Tile>
                 </div>
 
                 <div className="cds-split" style={{ gridTemplateColumns: '1fr 1fr' }}>
-                  <Panel title="Par fonds" sub="Progression YTD vs budget annuel">
+                  <Panel title={t('giving.byFund')} sub={t('giving.byFundSub')}>
                     {data.funds.length > 0 ? (
                       <div className="cds-fundlist">
                         {data.funds.map((f) => {
@@ -154,17 +142,17 @@ export default function Giving() {
                                 </span>
                               </div>
                               <Meter pct={pct} tone={pct >= 100 ? 'green' : pct >= 60 ? 'blue' : 'yellow'} />
-                              <div className="cds-fundrow__pct">{pct}% du budget</div>
+                              <div className="cds-fundrow__pct">{pct}% {t('giving.ofBudget')}</div>
                             </div>
                           );
                         })}
                       </div>
                     ) : (
-                      <Empty>Aucun fonds</Empty>
+                      <Empty>{t('giving.noFund')}</Empty>
                     )}
                   </Panel>
 
-                  <Panel title="Par canal" sub="Répartition du mois en cours">
+                  <Panel title={t('giving.byChannel')} sub={t('giving.byChannelSub')}>
                     {data.channels.length > 0 ? (
                       <div className="cds-fundlist">
                         {(() => {
@@ -177,43 +165,43 @@ export default function Giving() {
                                   <span className="cds-fundrow__name">{channelLabel(c.name)}</span>
                                   <span className="cds-fundrow__amt">
                                     {money(c.amt)}
-                                    <span className="cds-fundrow__budget"> · {c.count} don(s)</span>
+                                    <span className="cds-fundrow__budget"> · {c.count} {t('giving.donationsCount')}</span>
                                   </span>
                                 </div>
                                 <Meter pct={share} tone="blue" />
-                                <div className="cds-fundrow__pct">{share}% du total</div>
+                                <div className="cds-fundrow__pct">{share}% {t('giving.ofTotal')}</div>
                               </div>
                             );
                           });
                         })()}
                       </div>
                     ) : (
-                      <Empty icon={<Money size={20} />}>Aucun don ce mois-ci.</Empty>
+                      <Empty icon={<Money size={20} />}>{t('giving.noDonationsMonthDot')}</Empty>
                     )}
                   </Panel>
                 </div>
 
                 <Panel
-                  title="Dons récents"
-                  sub={donations.data ? `${donations.data.length} derniers mouvements` : undefined}
+                  title={t('giving.recent')}
+                  sub={donations.data ? `${donations.data.length} ${t('giving.lastMovements')}` : undefined}
                   actions={<FreshnessBadge query={donations} />}
                 >
                   <QueryBoundary
                     query={donations}
                     isEmpty={(d) => d.length === 0}
-                    empty={<Empty icon={<Money size={20} />}>Aucun don enregistré pour l'instant.</Empty>}
-                    loadingLabel="Chargement du ledger…"
+                    empty={<Empty icon={<Money size={20} />}>{t('giving.emptyLedger')}</Empty>}
+                    loadingLabel={t('giving.loadingLedger')}
                   >
                     {(rows) => (
                       <table className="cds-data-table cds-data-table--compact cds-data-table--zebra">
                         <thead>
                           <tr>
-                            <th>Référence</th>
-                            <th>Date</th>
-                            <th>Fonds</th>
-                            <th>Canal</th>
-                            <th className="num">Montant</th>
-                            <th>Statut</th>
+                            <th>{t('giving.colRef')}</th>
+                            <th>{t('giving.colDate')}</th>
+                            <th>{t('giving.colFund')}</th>
+                            <th>{t('giving.colChannel')}</th>
+                            <th className="num">{t('giving.colAmount')}</th>
+                            <th>{t('giving.colStatus')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -267,40 +255,40 @@ export default function Giving() {
         open={!!detail}
         onClose={() => setDetail(null)}
         media={detail && <span className="cds-detail-icon"><Money size={22} /></span>}
-        eyebrow="Don"
-        title={detail ? money(detail.amount) : 'Don'}
+        eyebrow={t('giving.eyebrow')}
+        title={detail ? money(detail.amount) : t('giving.eyebrow')}
         subtitle={detail && <StatusBadge status={detail.status} />}
       >
         {detail && (
           <>
             <DetailLead accent={detail.status === 'failed'}>
-              Don de <strong>{money(detail.amount)}</strong> vers le fonds «{' '}
-              {fundName(detail.fundId, summary.data?.funds ?? [])} », via{' '}
+              {t('giving.donationOf')} <strong>{money(detail.amount)}</strong> {t('giving.towardFund')}{' '}
+              {fundName(detail.fundId, summary.data?.funds ?? [])} {t('giving.fundClose')}, {t('giving.via')}{' '}
               {channelLabel(detail.method)}
-              {detail.anonymous ? ', à titre anonyme' : ''}.{' '}
-              {DON_STATUS_DESC[detail.status] ?? ''}
+              {detail.anonymous ? t('giving.anonymously') : ''}.{' '}
+              {donStatusDesc(detail.status)}
             </DetailLead>
 
-            <DetailSection title="Transaction">
-              <Field label="Référence">
+            <DetailSection title={t('giving.transaction')}>
+              <Field label={t('giving.colRef')}>
                 <span className="text-mono">{detail.ref}</span>
               </Field>
-              <Field label="Montant">{money(detail.amount)}</Field>
-              <Field label="Fonds">{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
-              <Field label="Canal de paiement">{channelLabel(detail.method)}</Field>
-              <Field label="Statut" hint={DON_STATUS_DESC[detail.status]}>
+              <Field label={t('giving.colAmount')}>{money(detail.amount)}</Field>
+              <Field label={t('giving.colFund')}>{fundName(detail.fundId, summary.data?.funds ?? [])}</Field>
+              <Field label={t('giving.paymentChannel')}>{channelLabel(detail.method)}</Field>
+              <Field label={t('giving.colStatus')} hint={donStatusDesc(detail.status)}>
                 <StatusBadge status={detail.status} />
               </Field>
             </DetailSection>
 
-            <DetailSection title="Donateur & date">
+            <DetailSection title={t('giving.donorAndDate')}>
               <Field
-                label="Donateur"
-                hint={detail.anonymous ? 'Le don a été fait de manière anonyme.' : undefined}
+                label={t('giving.donor')}
+                hint={detail.anonymous ? t('giving.donorAnonHint') : undefined}
               >
-                {detail.anonymous ? 'Anonyme' : 'Membre'}
+                {detail.anonymous ? t('giving.anonymous') : t('people.member')}
               </Field>
-              <Field label="Date">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+              <Field label={t('giving.colDate')}>{new Date(detail.createdAt).toLocaleString(dateLocale())}</Field>
             </DetailSection>
           </>
         )}

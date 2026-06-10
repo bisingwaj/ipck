@@ -5,10 +5,11 @@ import { api } from '../api/client';
 import { PageHead, Panel } from '../components/ui';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
+import { t } from '../i18n';
 
 const AUDIENCES = [
-  { value: 'all', text: 'Tous les membres', desc: 'Tous les comptes de la communauté.' },
-  { value: 'devo-subscribers', text: 'Abonnés dévotion', desc: 'Membres qui lisent la dévotion quotidienne.' },
+  { value: 'all', textKey: 'comms.audienceAll', descKey: 'comms.audienceAllDesc' },
+  { value: 'devo-subscribers', textKey: 'comms.audienceDevo', descKey: 'comms.audienceDevoDesc' },
 ];
 
 const TITLE_MAX = 120;
@@ -34,17 +35,16 @@ export default function Communications() {
         body: form.body.trim(),
       }),
     confirm: () => ({
-      title: 'Diffuser cette notification ?',
-      message:
-        "Le message sera envoyé en push et apparaîtra dans l'onglet Today de tous les membres ciblés. Cette action est irréversible.",
-      confirmLabel: 'Diffuser maintenant',
+      title: t('comms.confirmTitle'),
+      message: t('comms.confirmMsg'),
+      confirmLabel: t('comms.confirmLabel'),
     }),
-    successTitle: 'Notification diffusée',
+    successTitle: t('comms.sentTitle'),
     successSubtitle: (res) => {
       const r = res?.data;
-      return r ? `${r.recipients} membre(s) notifié(s) · ${r.pushed} push envoyé(s).` : undefined;
+      return r ? `${r.recipients} ${t('comms.notified')} ${r.pushed} ${t('comms.pushSent')}` : undefined;
     },
-    errorTitle: 'La diffusion a échoué',
+    errorTitle: t('comms.sendFailed'),
     onDone: () => setForm((f) => ({ ...f, title: '', body: '' })),
   });
 
@@ -52,22 +52,17 @@ export default function Communications() {
   const title = form.title.trim();
   const body = form.body.trim();
   const canSend = !!title && !!body;
-  const audienceLabel = AUDIENCES.find((a) => a.value === form.audience)?.text ?? form.audience;
+  const audienceMeta = AUDIENCES.find((a) => a.value === form.audience);
+  const audienceLabel = audienceMeta ? t(audienceMeta.textKey) : form.audience;
 
   return (
     <>
-      <PageHead
-        title="Communications"
-        subtitle="Diffuser une notification push aux membres de l'Église"
-      />
+      <PageHead title={t('comms.title')} subtitle={t('comms.subtitle')} />
       <div className="cds-tab-panel">
         <div className="cds-stack">
           {!mayBroadcast && (
             <div className="cds-notification cds-notification--warn">
-              <div className="cds-notification__body">
-                Vous n'avez pas les droits pour diffuser une notification. Réservé au staff
-                (pasteur/administrateur).
-              </div>
+              <div className="cds-notification__body">{t('comms.noRights')}</div>
             </div>
           )}
 
@@ -77,37 +72,34 @@ export default function Communications() {
               <Notification size={20} />
             </span>
             <div style={{ flex: 1 }}>
-              <div className="cds-notification__title">Diffusion en temps réel</div>
-              <div className="cds-notification__body">
-                Le message part en notification push et s'affiche dans l'onglet Today. L'envoi est
-                immédiat et irréversible — relisez l'aperçu avant de diffuser.
-              </div>
+              <div className="cds-notification__title">{t('comms.realtimeTitle')}</div>
+              <div className="cds-notification__body">{t('comms.realtimeBody')}</div>
             </div>
           </div>
 
-          <Panel title="Nouvelle diffusion" sub="Composez à gauche, prévisualisez à droite.">
+          <Panel title={t('comms.newBroadcast')} sub={t('comms.newBroadcastSub')}>
             <div className="cds-broadcast">
               {/* ── Composer ── */}
               <div className="cds-broadcast__form">
                 <div className="cds-form" style={{ gap: 'var(--spacing-05)' }}>
                   <Select
                     id="audience"
-                    labelText="Audience"
-                    helperText={AUDIENCES.find((a) => a.value === form.audience)?.desc}
+                    labelText={t('comms.audience')}
+                    helperText={audienceMeta ? t(audienceMeta.descKey) : undefined}
                     value={form.audience}
                     disabled={!mayBroadcast}
                     onChange={(e) => set({ audience: e.target.value })}
                   >
                     {AUDIENCES.map((a) => (
-                      <SelectItem key={a.value} value={a.value} text={a.text} />
+                      <SelectItem key={a.value} value={a.value} text={t(a.textKey)} />
                     ))}
                   </Select>
 
                   <div>
                     <TextInput
                       id="title"
-                      labelText="Titre"
-                      placeholder="Ex. Culte de dimanche · 9h"
+                      labelText={t('comms.titleLabel')}
+                      placeholder={t('comms.titlePlaceholder')}
                       maxLength={TITLE_MAX}
                       disabled={!mayBroadcast}
                       value={form.title}
@@ -121,8 +113,8 @@ export default function Communications() {
                   <div>
                     <TextArea
                       id="body"
-                      labelText="Message"
-                      placeholder="Le contenu de la notification, clair et concis."
+                      labelText={t('comms.message')}
+                      placeholder={t('comms.messagePlaceholder')}
                       rows={5}
                       maxLength={BODY_MAX}
                       disabled={!mayBroadcast}
@@ -138,7 +130,7 @@ export default function Communications() {
 
               {/* ── Aperçu push (téléphone) ── */}
               <div className="cds-broadcast__preview">
-                <span className="cds-broadcast__preview-eyebrow">Aperçu sur mobile</span>
+                <span className="cds-broadcast__preview-eyebrow">{t('comms.previewMobile')}</span>
                 <div className="cds-phone">
                   <div className="cds-phone__status">
                     <span>9:41</span>
@@ -152,13 +144,13 @@ export default function Communications() {
                     <div className="cds-push__content">
                       <div className="cds-push__head">
                         <span className="cds-push__app">IPCK Connect</span>
-                        <span className="cds-push__time">maintenant</span>
+                        <span className="cds-push__time">{t('comms.pushNow')}</span>
                       </div>
                       <div className={'cds-push__title' + (title ? '' : ' cds-push__title--empty')}>
-                        {title || 'Titre de la notification'}
+                        {title || t('comms.pushTitlePlaceholder')}
                       </div>
                       <div className={'cds-push__body' + (body ? '' : ' cds-push__body--empty')}>
-                        {body || 'Le message s’affichera ici, tel que les membres le verront.'}
+                        {body || t('comms.pushBodyPlaceholder')}
                       </div>
                     </div>
                   </div>
@@ -168,15 +160,15 @@ export default function Communications() {
               {/* ── Pied : impact + action ── */}
               <div className="cds-broadcast__footer">
                 <div className="cds-broadcast__footer-meta">
-                  Cible : <strong>{audienceLabel}</strong>
-                  {!canSend && ' · titre et message requis'}
+                  {t('comms.target')} <strong>{audienceLabel}</strong>
+                  {!canSend && t('comms.titleBodyRequired')}
                 </div>
                 <button
                   className="cds-btn cds-btn--md"
                   onClick={() => broadcast.run()}
                   disabled={!mayBroadcast || !canSend || broadcast.isPending}
                 >
-                  {broadcast.isPending ? 'Envoi…' : 'Diffuser'}
+                  {broadcast.isPending ? t('comms.sending') : t('comms.broadcast')}
                   <SendAlt size={16} />
                 </button>
               </div>

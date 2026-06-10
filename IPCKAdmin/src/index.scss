@@ -181,6 +181,18 @@
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--blue-60); border: 1.5px solid var(--header-bg);
 }
+
+/* ── Bascule de langue FR / EN ── */
+.cds-langtoggle {
+  width: auto; padding: 0 0.875rem; gap: 0.25rem;
+  font: 600 0.75rem/1 var(--font-sans); letter-spacing: 0.32px;
+}
+.cds-langtoggle__opt { color: var(--gray-40); transition: color 0.12s ease; }
+.cds-langtoggle__opt.is-on { color: #fff; }
+.cds-langtoggle__sep { color: var(--header-border); }
+.cds-langtoggle:hover .cds-langtoggle__opt { color: var(--gray-20); }
+.cds-langtoggle:hover .cds-langtoggle__opt.is-on { color: #fff; }
+
 .cds-header__user {
   display: flex; align-items: center; gap: 0.5rem;
   padding: 0 1rem; height: 100%;
@@ -597,6 +609,15 @@
   padding: var(--spacing-07);
   display: flex; flex-direction: column; gap: var(--spacing-05);
 }
+.cds-login__topbar { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.cds-langtoggle--login {
+  height: 28px; border: 1px solid var(--ui-03); border-left: 1px solid var(--ui-03);
+  background: var(--ui-01); cursor: pointer;
+}
+.cds-langtoggle--login .cds-langtoggle__opt { color: var(--text-05); }
+.cds-langtoggle--login .cds-langtoggle__opt.is-on { color: var(--text-01); }
+.cds-langtoggle--login .cds-langtoggle__sep { color: var(--ui-03); }
+.cds-langtoggle--login:hover { background: var(--ui-03); }
 .cds-login__brand { font: 600 0.875rem/1 var(--font-sans); letter-spacing: 0.16px; color: var(--text-02); }
 .cds-login__brand em { font-style: normal; font-weight: 400; color: var(--text-05); margin-left: 0.25rem; }
 .cds-login__title { font: 400 1.75rem/2.25rem var(--font-sans); margin: 0; color: var(--text-01); }
