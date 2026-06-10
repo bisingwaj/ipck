@@ -8,6 +8,7 @@ import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field, DetailText } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
+import { t, dateLocale } from '../i18n';
 
 interface LiveSession {
   id: string;
@@ -40,11 +41,8 @@ const CATEGORIES = ['sermon', 'podcast', 'teaching', 'worship', 'testimony', 'ot
 const STATUSES = ['published', 'draft', 'scheduled'];
 
 // Explique chaque statut pour que l'admin sache l'effet réel (pas de piège).
-const STATUS_HINT: Record<string, string> = {
-  published: 'Visible immédiatement dans l’app mobile des membres.',
-  draft: 'Brouillon — invisible des membres tant qu’il n’est pas publié.',
-  scheduled: 'Programmé — invisible jusqu’à publication manuelle.',
-};
+const statusHint = (s: string) =>
+  ['published', 'draft', 'scheduled'].includes(s) ? t(`content.statusHint.${s}`) : undefined;
 
 /** Icône de secours quand un contenu n'a pas de vignette (typée par catégorie). */
 function categoryIcon(category: string) {
@@ -61,11 +59,11 @@ function categoryIcon(category: string) {
  */
 function validateVideoUrl(raw: string): string | null {
   const url = raw.trim();
-  if (!url) return 'Le lien vidéo est obligatoire.';
+  if (!url) return t('content.errVideoRequired');
   const isAbsolute = /^https?:\/\/.+/i.test(url);
   const isHosted = url.startsWith('/media/');
   if (!isAbsolute && !isHosted) {
-    return 'Entrez une URL http(s) (MP4/HLS) ou un chemin auto-hébergé commençant par /media/.';
+    return t('content.errVideoFormat');
   }
   return null;
 }
@@ -74,7 +72,7 @@ function validateVideoUrl(raw: string): string | null {
 function validateThumbnail(raw?: string | null): string | null {
   const url = (raw ?? '').trim();
   if (!url) return null;
-  if (!/^https?:\/\/.+/i.test(url)) return 'La vignette doit être une URL http(s).';
+  if (!/^https?:\/\/.+/i.test(url)) return t('content.errThumb');
   return null;
 }
 
@@ -131,8 +129,8 @@ export default function ContentPage() {
       return body.id ? api.patch(`/content/${body.id}`, payload) : api.post('/content', payload);
     },
     invalidate: [['admin-content'], ['live-current']],
-    successTitle: (_d, body) => (body.id ? 'Contenu mis à jour' : 'Contenu créé'),
-    errorTitle: "L'enregistrement a échoué",
+    successTitle: (_d, body) => (body.id ? t('content.updated') : t('content.created')),
+    errorTitle: t('content.saveFailed'),
     onDone: () => {
       setOpen(false);
       setForm(EMPTY);
@@ -143,28 +141,28 @@ export default function ContentPage() {
     mutationFn: ({ c, isLive }) => api.patch(`/content/${c.id}`, { isLive }),
     invalidate: [['admin-content'], ['live-current']],
     confirm: ({ c, isLive }) => ({
-      title: isLive ? 'Passer ce contenu en direct ?' : 'Arrêter le direct ?',
+      title: isLive ? t('content.confirmGoLiveTitle') : t('content.confirmStopLiveTitle'),
       message: isLive
-        ? `« ${c.title} » sera signalé EN DIRECT dans l'app mobile des membres.`
-        : `« ${c.title} » ne sera plus signalé en direct.`,
-      confirmLabel: isLive ? 'Passer en direct' : 'Arrêter',
+        ? t('content.confirmGoLiveMsg').replace('{title}', c.title)
+        : t('content.confirmStopLiveMsg').replace('{title}', c.title),
+      confirmLabel: isLive ? t('content.goLive') : t('content.stop'),
       danger: !isLive,
     }),
-    successTitle: (_d, { isLive }) => (isLive ? 'Direct activé' : 'Direct arrêté'),
-    errorTitle: 'Le changement a échoué',
+    successTitle: (_d, { isLive }) => (isLive ? t('content.liveOn') : t('content.liveOff')),
+    errorTitle: t('content.toggleFailed'),
   });
 
   const remove = useAction<Content>({
     mutationFn: (c) => api.delete(`/content/${c.id}`),
     invalidate: [['admin-content'], ['live-current']],
     confirm: (c) => ({
-      title: 'Supprimer ce contenu ?',
-      message: `« ${c.title} » sera définitivement retiré de l'app. Cette action est irréversible.`,
-      confirmLabel: 'Supprimer',
+      title: t('content.confirmDeleteTitle'),
+      message: t('content.confirmDeleteMsg').replace('{title}', c.title),
+      confirmLabel: t('content.delete'),
       danger: true,
     }),
-    successTitle: 'Contenu supprimé',
-    errorTitle: 'La suppression a échoué',
+    successTitle: t('content.deleted'),
+    errorTitle: t('content.deleteFailed'),
     onDone: () => setDetail(null),
   });
 
@@ -193,7 +191,7 @@ export default function ContentPage() {
   const set = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
 
   // Validation centralisée : conditionne le bouton ET explique tout blocage.
-  const titleError = form.title.trim() ? null : 'Le titre est obligatoire.';
+  const titleError = form.title.trim() ? null : t('content.errTitleRequired');
   const videoError = validateVideoUrl(form.videoUrl);
   const thumbError = validateThumbnail(form.thumbnailUrl);
   const firstBlocker = titleError ?? videoError ?? thumbError;
@@ -202,12 +200,12 @@ export default function ContentPage() {
   return (
     <>
       <PageHead
-        title="Contenus"
-        subtitle="Vidéos, sermons & directs · l'app se met à jour automatiquement"
+        title={t('content.title')}
+        subtitle={t('content.subtitle')}
         actions={
           mayManage ? (
             <button className="cds-btn cds-btn--md" onClick={openCreate}>
-              Nouveau contenu
+              {t('content.new')}
               <Add size={16} />
             </button>
           ) : undefined
@@ -216,12 +214,12 @@ export default function ContentPage() {
       <div className="cds-tab-panel">
         <div className="cds-stack">
           {/* Direct en cours */}
-          <Panel title="Direct" sub="Session de culte en temps réel" actions={<FreshnessBadge query={live} />}>
+          <Panel title={t('content.live')} sub={t('content.liveSub')} actions={<FreshnessBadge query={live} />}>
             <QueryBoundary
               query={live}
               isEmpty={(d) => d === null}
-              empty={<Empty>Aucune session live. Activez « En direct » sur un contenu ci-dessous.</Empty>}
-              loadingLabel="Chargement du direct…"
+              empty={<Empty>{t('content.liveEmpty')}</Empty>}
+              loadingLabel={t('content.loadingLive')}
             >
               {(session) => {
                 if (!session) return null;
@@ -240,9 +238,9 @@ export default function ContentPage() {
                         </div>
                       </div>
                       {isOn ? (
-                        <Tag tone="red">EN DIRECT</Tag>
+                        <Tag tone="red">{t('content.onAir')}</Tag>
                       ) : (
-                        <span className="cds-live-head__state">Hors ligne</span>
+                        <span className="cds-live-head__state">{t('content.offline')}</span>
                       )}
                     </div>
 
@@ -251,9 +249,9 @@ export default function ContentPage() {
                       className="cds-grid"
                       style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
                     >
-                      <Tile label="Spectateurs" value={session.viewersLive.toLocaleString()} live={isOn} />
-                      <Tile label="Pic d'audience" value={session.viewersPeak.toLocaleString()} />
-                      <Tile label="Amens" value={session.amenCount.toLocaleString()} />
+                      <Tile label={t('content.viewers')} value={session.viewersLive.toLocaleString()} live={isOn} />
+                      <Tile label={t('content.peak')} value={session.viewersPeak.toLocaleString()} />
+                      <Tile label={t('content.amens')} value={session.amenCount.toLocaleString()} />
                     </div>
                   </>
                 );
@@ -262,8 +260,8 @@ export default function ContentPage() {
           </Panel>
 
           <Panel
-            title="Bibliothèque"
-            sub="Collez un lien MP4 / flux HLS (.m3u8) ou un chemin auto-hébergé, choisissez la catégorie et activez le direct."
+            title={t('content.library')}
+            sub={t('content.librarySub')}
             actions={<FreshnessBadge query={list} />}
           >
             <QueryBoundary
@@ -275,26 +273,26 @@ export default function ContentPage() {
                   action={
                     mayManage ? (
                       <button className="cds-btn cds-btn--md" onClick={openCreate}>
-                        Nouveau contenu
+                        {t('content.new')}
                         <Add size={16} />
                       </button>
                     ) : undefined
                   }
                 >
-                  Aucun contenu dans la bibliothèque.
+                  {t('content.emptyLibrary')}
                 </Empty>
               }
-              loadingLabel="Chargement de la bibliothèque…"
+              loadingLabel={t('content.loadingLibrary')}
             >
               {(rows) => (
                 <table className="cds-data-table cds-data-table--compact">
                   <thead>
                     <tr>
-                      <th>Titre</th>
-                      <th>Catégorie</th>
-                      <th>Statut</th>
-                      <th>En direct</th>
-                      {mayManage && <th className="num">Actions</th>}
+                      <th>{t('content.colTitle')}</th>
+                      <th>{t('content.colCategory')}</th>
+                      <th>{t('content.colStatus')}</th>
+                      <th>{t('content.colLive')}</th>
+                      {mayManage && <th className="num">{t('content.colActions')}</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -317,7 +315,7 @@ export default function ContentPage() {
                             <div className="cds-media-cell__body">
                               <div className="cds-media-cell__title">
                                 {c.title}
-                                {c.featured && <Tag tone="purple">À la une</Tag>}
+                                {c.featured && <Tag tone="purple">{t('content.featured')}</Tag>}
                               </div>
                               {(c.speaker || c.series) && (
                                 <div className="cds-media-cell__sub">
@@ -338,9 +336,9 @@ export default function ContentPage() {
                             id={`live-${c.id}`}
                             size="sm"
                             hideLabel
-                            labelText="En direct"
-                            labelA="Non"
-                            labelB="Live"
+                            labelText={t('content.colLive')}
+                            labelA={t('content.no')}
+                            labelB={t('content.liveShort')}
                             toggled={c.isLive}
                             disabled={!mayManage || toggleLive.isPending}
                             onToggle={(checked: boolean) => toggleLive.run({ c, isLive: checked })}
@@ -351,14 +349,14 @@ export default function ContentPage() {
                             <div style={{ display: 'inline-flex', gap: 4 }}>
                               <button
                                 className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
-                                title="Éditer"
+                                title={t('content.edit')}
                                 onClick={() => openEdit(c)}
                               >
                                 <Edit size={16} />
                               </button>
                               <button
                                 className="cds-btn cds-btn--ghost cds-btn--sm cds-btn--icon-only"
-                                title="Supprimer"
+                                title={t('content.delete')}
                                 style={{ color: 'var(--red-60)' }}
                                 disabled={remove.isPending}
                                 onClick={() => remove.run(c)}
@@ -381,10 +379,10 @@ export default function ContentPage() {
       <Modal
         open={open}
         className="cds-modal-lg"
-        modalHeading={editingId ? 'Modifier le contenu' : 'Nouveau contenu'}
-        modalLabel="Watch · bibliothèque vidéo"
-        primaryButtonText={save.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        secondaryButtonText="Annuler"
+        modalHeading={editingId ? t('content.editHeading') : t('content.newHeading')}
+        modalLabel={t('content.modalLabel')}
+        primaryButtonText={save.isPending ? t('content.saving') : t('content.save')}
+        secondaryButtonText={t('content.cancel')}
         primaryButtonDisabled={!canSave || save.isPending}
         onRequestClose={() => setOpen(false)}
         onRequestSubmit={() => save.run(form)}
@@ -394,34 +392,34 @@ export default function ContentPage() {
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">1</span>
-              <span className="cds-form__legend-title">Identité</span>
+              <span className="cds-form__legend-title">{t('content.identity')}</span>
             </div>
             <TextInput
               id="title"
-              labelText="Titre"
+              labelText={t('content.fieldTitle')}
               value={form.title}
               invalid={!!titleError}
               invalidText={titleError ?? undefined}
               onChange={(e) => set({ title: e.target.value })}
             />
             <div className="cds-form__row cds-form__row--2">
-              <TextInput id="speaker" labelText="Intervenant" value={form.speaker ?? ''} onChange={(e) => set({ speaker: e.target.value })} />
-              <TextInput id="series" labelText="Série" value={form.series ?? ''} onChange={(e) => set({ series: e.target.value })} />
+              <TextInput id="speaker" labelText={t('content.speaker')} value={form.speaker ?? ''} onChange={(e) => set({ speaker: e.target.value })} />
+              <TextInput id="series" labelText={t('content.series')} value={form.series ?? ''} onChange={(e) => set({ series: e.target.value })} />
             </div>
-            <TextArea id="description" labelText="Description" rows={3} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
+            <TextArea id="description" labelText={t('content.description')} rows={3} value={form.description ?? ''} onChange={(e) => set({ description: e.target.value })} />
           </section>
 
           {/* 2 · Média */}
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">2</span>
-              <span className="cds-form__legend-title">Média</span>
-              <span className="cds-form__legend-sub">Lien lu par l'app mobile</span>
+              <span className="cds-form__legend-title">{t('content.media')}</span>
+              <span className="cds-form__legend-sub">{t('content.mediaSub')}</span>
             </div>
             <TextInput
               id="videoUrl"
-              labelText="Lien vidéo (MP4 / HLS .m3u8) ou chemin auto-hébergé"
-              placeholder="/media/videos/sunday-service.mp4  ou  https://…/stream.m3u8"
+              labelText={t('content.videoLink')}
+              placeholder={t('content.videoLinkPlaceholder')}
               value={form.videoUrl}
               invalid={!!videoError}
               invalidText={videoError ?? undefined}
@@ -430,14 +428,14 @@ export default function ContentPage() {
             <div className="cds-form__row cds-form__row--2">
               <TextInput
                 id="thumbnailUrl"
-                labelText="Vignette (URL d'image, optionnel)"
+                labelText={t('content.thumbnail')}
                 placeholder="https://…/cover.jpg"
                 value={form.thumbnailUrl ?? ''}
                 invalid={!!thumbError}
                 invalidText={thumbError ?? undefined}
                 onChange={(e) => set({ thumbnailUrl: e.target.value })}
               />
-              <TextInput id="duration" labelText="Durée (ex. 38 min)" value={form.duration ?? ''} onChange={(e) => set({ duration: e.target.value })} />
+              <TextInput id="duration" labelText={t('content.duration')} value={form.duration ?? ''} onChange={(e) => set({ duration: e.target.value })} />
             </div>
           </section>
 
@@ -445,18 +443,18 @@ export default function ContentPage() {
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">3</span>
-              <span className="cds-form__legend-title">Classement &amp; diffusion</span>
+              <span className="cds-form__legend-title">{t('content.classifyBroadcast')}</span>
             </div>
             <div className="cds-form__row cds-form__row--2">
-              <Select id="category" labelText="Catégorie" value={form.category} onChange={(e) => set({ category: e.target.value })}>
+              <Select id="category" labelText={t('content.category')} value={form.category} onChange={(e) => set({ category: e.target.value })}>
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c} value={c} text={categoryLabel(c)} />
                 ))}
               </Select>
               <Select
                 id="status"
-                labelText="Statut"
-                helperText={STATUS_HINT[form.status]}
+                labelText={t('content.status')}
+                helperText={statusHint(form.status)}
                 value={form.status}
                 onChange={(e) => set({ status: e.target.value })}
               >
@@ -466,23 +464,23 @@ export default function ContentPage() {
               </Select>
             </div>
             <div style={{ display: 'flex', gap: '2rem' }}>
-              <Toggle id="isLive" labelText="Type" labelA="Vidéo" labelB="En direct" toggled={!!form.isLive} onToggle={(c: boolean) => set({ isLive: c })} />
-              <Toggle id="featured" labelText="Mettre à la une" labelA="Non" labelB="Oui" toggled={!!form.featured} onToggle={(c: boolean) => set({ featured: c })} />
+              <Toggle id="isLive" labelText={t('content.type')} labelA={t('content.typeVideo')} labelB={t('content.typeLive')} toggled={!!form.isLive} onToggle={(c: boolean) => set({ isLive: c })} />
+              <Toggle id="featured" labelText={t('content.setFeatured')} labelA={t('content.no')} labelB={t('content.yes')} toggled={!!form.featured} onToggle={(c: boolean) => set({ featured: c })} />
             </div>
           </section>
 
           {/* Aperçu de la carte (comme dans l'app) */}
           <section className="cds-form__section">
             <div className="cds-form__legend">
-              <span className="cds-form__legend-title" style={{ color: 'var(--text-03)' }}>Aperçu</span>
+              <span className="cds-form__legend-title" style={{ color: 'var(--text-03)' }}>{t('content.preview')}</span>
             </div>
             <div className="cds-content-preview">
               <Thumb src={form.thumbnailUrl} icon={categoryIcon(form.category)} alt={form.title} />
               <div className="cds-content-preview__body">
                 <div className="cds-content-preview__title">
-                  {form.title.trim() || 'Titre du contenu'}
-                  {form.featured && <Tag tone="purple">À la une</Tag>}
-                  {form.isLive && <Tag tone="red">EN DIRECT</Tag>}
+                  {form.title.trim() || t('content.previewTitle')}
+                  {form.featured && <Tag tone="purple">{t('content.featured')}</Tag>}
+                  {form.isLive && <Tag tone="red">{t('content.onAir')}</Tag>}
                 </div>
                 {(form.speaker || form.series) && (
                   <div className="cds-content-preview__sub">
@@ -501,7 +499,7 @@ export default function ContentPage() {
           {/* Principe 6 : on ne laisse jamais un bouton désactivé sans dire pourquoi. */}
           {firstBlocker && (
             <div className="cds-notification cds-notification--warn">
-              <div className="cds-notification__body">Pour enregistrer : {firstBlocker}</div>
+              <div className="cds-notification__body">{t('content.toSave')} {firstBlocker}</div>
             </div>
           )}
         </div>
@@ -512,15 +510,15 @@ export default function ContentPage() {
         open={!!detail}
         onClose={() => setDetail(null)}
         media={detail && <Thumb src={detail.thumbnailUrl} icon={categoryIcon(detail.category)} alt={detail.title} />}
-        eyebrow={detail ? categoryLabel(detail.category) : 'Contenu'}
-        title={detail?.title ?? 'Contenu'}
+        eyebrow={detail ? categoryLabel(detail.category) : t('content.eyebrow')}
+        title={detail?.title ?? t('content.eyebrow')}
         subtitle={
           detail && (
             <>
               <CategoryBadge category={detail.category} />
               <StatusBadge status={detail.status} />
-              {detail.isLive && <Tag tone="red">EN DIRECT</Tag>}
-              {detail.featured && <Tag tone="purple">À la une</Tag>}
+              {detail.isLive && <Tag tone="red">{t('content.onAir')}</Tag>}
+              {detail.featured && <Tag tone="purple">{t('content.featured')}</Tag>}
             </>
           )
         }
@@ -533,7 +531,7 @@ export default function ContentPage() {
                 disabled={remove.isPending}
                 onClick={() => remove.run(detail)}
               >
-                Supprimer
+                {t('content.delete')}
                 <TrashCan size={16} />
               </button>
               <button
@@ -543,7 +541,7 @@ export default function ContentPage() {
                   setDetail(null);
                 }}
               >
-                Éditer
+                {t('content.edit')}
                 <Edit size={16} />
               </button>
             </>
@@ -553,37 +551,37 @@ export default function ContentPage() {
         {detail && (
           <>
             <DetailLead>
-              {detail.isLive ? 'Contenu diffusé en direct' : 'Vidéo à la demande'} de la
-              catégorie « {categoryLabel(detail.category)} »
-              {detail.speaker ? `, présenté par ${detail.speaker}` : ''}.{' '}
+              {detail.isLive ? t('content.liveContent') : t('content.vod')} {t('content.ofCategory')}{' '}
+              {categoryLabel(detail.category)} {t('content.categoryClose')}
+              {detail.speaker ? `${t('content.presentedBy')} ${detail.speaker}` : ''}.{' '}
               {detail.status === 'published'
-                ? 'Publié et visible dans l’app mobile.'
+                ? t('content.publishedVisible')
                 : detail.status === 'scheduled'
-                  ? 'Programmé — pas encore visible.'
-                  : 'Brouillon — non visible des membres.'}
+                  ? t('content.scheduledNotYet')
+                  : t('content.draftHidden')}
             </DetailLead>
 
-            <DetailSection title="Description">
+            <DetailSection title={t('content.description')}>
               <DetailText>{detail.description ?? ''}</DetailText>
             </DetailSection>
 
-            <DetailSection title="Informations">
-              <Field label="Intervenant">{detail.speaker || '—'}</Field>
-              <Field label="Série">{detail.series || '—'}</Field>
-              <Field label="Catégorie">{categoryLabel(detail.category)}</Field>
-              <Field label="Durée">{detail.duration || '—'}</Field>
+            <DetailSection title={t('content.info')}>
+              <Field label={t('content.speaker')}>{detail.speaker || '—'}</Field>
+              <Field label={t('content.series')}>{detail.series || '—'}</Field>
+              <Field label={t('content.category')}>{categoryLabel(detail.category)}</Field>
+              <Field label={t('content.duration')}>{detail.duration || '—'}</Field>
             </DetailSection>
 
-            <DetailSection title="Diffusion">
-              <Field label="Statut">
+            <DetailSection title={t('content.broadcast')}>
+              <Field label={t('content.status')}>
                 <StatusBadge status={detail.status} />
               </Field>
-              <Field label="En direct" hint={detail.isLive ? 'Signalé EN DIRECT dans l’app.' : undefined}>
-                {detail.isLive ? 'Oui' : 'Non'}
+              <Field label={t('content.colLive')} hint={detail.isLive ? t('content.liveFlagHint') : undefined}>
+                {detail.isLive ? t('content.yes') : t('content.no')}
               </Field>
-              <Field label="À la une">{detail.featured ? 'Oui' : 'Non'}</Field>
-              <Field label="Publié le">{new Date(detail.publishAt).toLocaleString('fr-FR')}</Field>
-              <Field label="Lien vidéo">
+              <Field label={t('content.featured')}>{detail.featured ? t('content.yes') : t('content.no')}</Field>
+              <Field label={t('content.publishedOn')}>{new Date(detail.publishAt).toLocaleString(dateLocale())}</Field>
+              <Field label={t('content.videoLinkField')}>
                 <span className="text-mono" style={{ wordBreak: 'break-all' }}>
                   {detail.videoUrl}
                 </span>

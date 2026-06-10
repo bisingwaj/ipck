@@ -33,6 +33,9 @@ export const CAPABILITIES = {
   'appointments.manage': 'pastor',
   'content.manage': 'pastor',
   'devotionals.manage': 'pastor',
+  // Modération communauté : le dashboard reste staff (pastor/admin). Côté backend,
+  // ces routes acceptent aussi le LEADER du groupe concerné (vérif par-groupe in-service,
+  // exercée via l'app mobile) — sans incidence sur le dashboard, toujours pastor ici.
   'community.manage': 'pastor',
   'broadcast.send': 'pastor',
   'people.view': 'pastor',

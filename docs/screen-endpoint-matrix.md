@@ -85,7 +85,7 @@
 | Care — rendez-vous | `GET /appointments`, `PATCH /appointments/:id` |
 | Giving (analytics) | `GET /giving/admin/summary`, `GET /giving/admin/donations`, `GET /giving/admin/export` |
 | People | `GET /users`, `GET /users/new`, `GET /admin/engagement` |
-| Community — groupes | `GET /groups`, `POST /groups`, `DELETE /groups/:id`, `GET /groups/:id/members`, `POST /groups/:id/members`, `DELETE /groups/:id/members/:userId` |
+| Community — groupes | `GET /groups`, `POST /groups`, `GET /groups/:id/members`, `POST /groups/:id/members`, `DELETE /groups/:id/members/:userId` |
 | Community — conversation | `GET /groups/:id/admin/messages`, `DELETE /groups/:id/messages/:messageId` |
 | Community — événements | `GET /events`, `POST /events` |
 | Content | `GET /admin/content/upcoming`, `POST /devotionals`, `PATCH /devotionals/:id`, `POST /sermons`, `PATCH /sermons/:id` |

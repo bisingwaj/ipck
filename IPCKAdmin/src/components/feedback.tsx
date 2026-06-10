@@ -7,6 +7,7 @@ import {
   ReactNode,
 } from 'react';
 import { CheckmarkFilled, ErrorFilled, InformationFilled, WarningFilled, Close } from '@carbon/icons-react';
+import { t as tr } from '../i18n';
 
 /**
  * Principe 6 (rien de silencieux) & 3 (retour obligatoire) :
@@ -102,7 +103,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
               </div>
               <button
                 className="cds-toast__close"
-                aria-label="Fermer"
+                aria-label={tr('toast.close')}
                 onClick={() => dismiss(t.id)}
               >
                 <Close size={16} />
@@ -120,7 +121,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
             <p className="cds-confirm__message">{confirmState.message}</p>
             <div className="cds-confirm__actions">
               <button className="cds-btn cds-btn--ghost cds-btn--md" onClick={() => closeConfirm(false)}>
-                {confirmState.cancelLabel ?? 'Annuler'}
+                {confirmState.cancelLabel ?? tr('confirm.cancel')}
               </button>
               <button
                 className={
@@ -128,7 +129,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
                 }
                 onClick={() => closeConfirm(true)}
               >
-                {confirmState.confirmLabel ?? 'Confirmer'}
+                {confirmState.confirmLabel ?? tr('confirm.confirm')}
               </button>
             </div>
           </div>

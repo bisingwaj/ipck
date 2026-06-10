@@ -11,11 +11,12 @@ import {
 } from '@carbon/react';
 import { Add, Book, Calendar } from '@carbon/icons-react';
 import { api } from '../api/client';
-import { PageHead, Panel, Empty, StatusBadge } from '../components/ui';
+import { PageHead, Panel, Empty, StatusBadge, statusLabel } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
 import { useAction } from '../api/useAction';
 import { useAuth } from '../auth/AuthContext';
+import { t, dateLocale } from '../i18n';
 
 interface Devotional {
   id: string;
@@ -38,11 +39,8 @@ interface Upcoming {
 const STATUSES = ['published', 'draft', 'scheduled'];
 
 // Effet réel de chaque statut, pour ne pas piéger l'admin.
-const STATUS_HINT: Record<string, string> = {
-  published: 'Visible par les membres selon la date de publication.',
-  draft: 'Brouillon — invisible des membres tant qu’il n’est pas publié.',
-  scheduled: 'Programmé — nécessite une date/heure de publication ci-dessous.',
-};
+const statusHint = (s: string) =>
+  ['published', 'draft', 'scheduled'].includes(s) ? t(`devo.statusHint.${s}`) : undefined;
 
 interface FormState {
   date: string;
@@ -106,11 +104,11 @@ function DatePill({ iso }: { iso: string }) {
   return (
     <span
       className={'cds-datepill' + (isToday ? ' cds-datepill--today' : '')}
-      title={d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+      title={d.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
     >
       <span className="cds-datepill__day">{d.getDate()}</span>
       <span className="cds-datepill__mon">
-        {d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')}
+        {d.toLocaleDateString(dateLocale(), { month: 'short' }).replace('.', '')}
       </span>
     </span>
   );
@@ -152,9 +150,9 @@ export default function Devotions() {
       }),
     invalidate: [['devotionals'], ['content-upcoming']],
     successTitle: (_d, body) =>
-      body.status === 'published' ? 'Dévotion publiée' : 'Dévotion enregistrée',
+      body.status === 'published' ? t('devo.published.toast') : t('devo.saved'),
     successSubtitle: (_d, body) => body.title.trim(),
-    errorTitle: "L'enregistrement a échoué",
+    errorTitle: t('devo.saveFailed'),
     onDone: () => {
       setOpen(false);
       setForm(EMPTY);
@@ -169,25 +167,25 @@ export default function Devotions() {
   const publishAtValid = !form.publishAt || !Number.isNaN(new Date(form.publishAt).getTime());
   const blocker: string | null =
     !form.date.trim()
-      ? 'La date est obligatoire (ex. 2026-06-01).'
+      ? t('devo.errDate')
       : !form.title.trim()
-        ? 'Le titre est obligatoire.'
+        ? t('devo.errTitle')
         : !form.verseRef.trim()
-          ? 'La référence du verset est obligatoire.'
+          ? t('devo.errVerseRef')
           : !form.verseText.trim()
-            ? 'Le texte du verset est obligatoire.'
+            ? t('devo.errVerseText')
             : !form.body.trim()
-              ? 'La méditation est obligatoire.'
+              ? t('devo.errBody')
               : !form.prayer.trim()
-                ? 'La prière est obligatoire.'
+                ? t('devo.errPrayer')
                 : !form.applyTitle.trim()
-                  ? "Le titre de l'application est obligatoire."
+                  ? t('devo.errApplyTitle')
                   : parseSteps(form.applySteps).length === 0
-                    ? "Ajoutez au moins une étape d'application (une par ligne)."
+                    ? t('devo.errSteps')
                     : form.status === 'scheduled' && !form.publishAt
-                      ? 'Un statut « programmé » exige une date/heure de publication.'
+                      ? t('devo.errScheduledNeedsDate')
                       : !publishAtValid
-                        ? 'La date de publication est invalide.'
+                        ? t('devo.errPublishInvalid')
                         : null;
   const canSave = !blocker;
 
@@ -196,8 +194,8 @@ export default function Devotions() {
   return (
     <>
       <PageHead
-        title="Dévotions"
-        subtitle="Dévotion quotidienne · verset, méditation, prière & application"
+        title={t('devo.title')}
+        subtitle={t('devo.subtitle')}
         actions={
           mayManage ? (
             <button
@@ -207,7 +205,7 @@ export default function Devotions() {
                 setOpen(true);
               }}
             >
-              Nouvelle dévotion
+              {t('devo.new')}
               <Add size={16} />
             </button>
           ) : undefined
@@ -217,8 +215,8 @@ export default function Devotions() {
         <div className="cds-stack">
           <div className="cds-split" style={{ gridTemplateColumns: '1.6fr 1fr' }}>
             <Panel
-              title="Publiées"
-              sub={list.data ? `${list.data.length} dévotions` : undefined}
+              title={t('devo.published')}
+              sub={list.data ? `${list.data.length} ${t('devo.devotionals')}` : undefined}
               actions={<FreshnessBadge query={list} />}
             >
               <QueryBoundary
@@ -236,25 +234,25 @@ export default function Devotions() {
                             setOpen(true);
                           }}
                         >
-                          Nouvelle dévotion
+                          {t('devo.new')}
                           <Add size={16} />
                         </button>
                       ) : undefined
                     }
                   >
-                    Aucune dévotion publiée pour le moment.
+                    {t('devo.emptyPublished')}
                   </Empty>
                 }
-                loadingLabel="Chargement des dévotions…"
+                loadingLabel={t('devo.loading')}
               >
                 {(rows) => (
                   <table className="cds-data-table">
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Dévotion</th>
-                        <th>Verset</th>
-                        <th>Statut</th>
+                        <th>{t('devo.colDate')}</th>
+                        <th>{t('devo.colDevotional')}</th>
+                        <th>{t('devo.colVerse')}</th>
+                        <th>{t('devo.colStatus')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -293,23 +291,23 @@ export default function Devotions() {
             </Panel>
 
             <Panel
-              title="À venir"
-              sub={`${devoUpcoming.length} planifiées`}
+              title={t('devo.upcoming')}
+              sub={`${devoUpcoming.length} ${t('devo.scheduled')}`}
               actions={<FreshnessBadge query={upcoming} />}
             >
               <QueryBoundary
                 query={upcoming}
                 isEmpty={() => devoUpcoming.length === 0}
-                empty={<Empty icon={<Calendar size={20} />}>Aucune dévotion programmée.</Empty>}
-                loadingLabel="Chargement du planning…"
+                empty={<Empty icon={<Calendar size={20} />}>{t('devo.emptyUpcoming')}</Empty>}
+                loadingLabel={t('devo.loadingPlanning')}
               >
                 {() => (
                   <table className="cds-data-table">
                     <thead>
                       <tr>
-                        <th>Quand</th>
-                        <th>Titre</th>
-                        <th>Statut</th>
+                        <th>{t('devo.colWhen')}</th>
+                        <th>{t('devo.colTitle')}</th>
+                        <th>{t('devo.colStatus')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -338,10 +336,10 @@ export default function Devotions() {
       <Modal
         open={open}
         className="cds-modal-lg"
-        modalHeading="Nouvelle dévotion"
-        modalLabel="Today · dévotion quotidienne"
-        primaryButtonText={create.isPending ? 'Enregistrement…' : 'Enregistrer'}
-        secondaryButtonText="Annuler"
+        modalHeading={t('devo.modalHeading')}
+        modalLabel={t('devo.modalLabel')}
+        primaryButtonText={create.isPending ? t('devo.saving') : t('devo.save')}
+        secondaryButtonText={t('devo.cancel')}
         primaryButtonDisabled={!canSave || create.isPending}
         onRequestClose={() => setOpen(false)}
         onRequestSubmit={() => create.run(form)}
@@ -351,8 +349,8 @@ export default function Devotions() {
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">1</span>
-              <span className="cds-form__legend-title">Publication</span>
-              <span className="cds-form__legend-sub">Quand et comment elle paraît</span>
+              <span className="cds-form__legend-title">{t('devo.publication')}</span>
+              <span className="cds-form__legend-sub">{t('devo.publicationSub')}</span>
             </div>
             <div className="cds-form__row cds-form__row--2">
               <DatePicker
@@ -365,21 +363,21 @@ export default function Devotions() {
               >
                 <DatePickerInput
                   id="date"
-                  labelText="Date de la dévotion"
+                  labelText={t('devo.devoDate')}
                   placeholder="AAAA-MM-JJ"
                   invalid={!form.date.trim() && form.title.length > 0}
-                  invalidText="La date est obligatoire."
+                  invalidText={t('devo.errDateShort')}
                 />
               </DatePicker>
               <Select
                 id="status"
-                labelText="Statut"
-                helperText={STATUS_HINT[form.status]}
+                labelText={t('devo.status')}
+                helperText={statusHint(form.status)}
                 value={form.status}
                 onChange={(e) => set({ status: e.target.value })}
               >
                 {STATUSES.map((s) => (
-                  <SelectItem key={s} value={s} text={s} />
+                  <SelectItem key={s} value={s} text={statusLabel(s)} />
                 ))}
               </Select>
             </div>
@@ -387,13 +385,11 @@ export default function Devotions() {
               <TextInput
                 id="publishAt"
                 type="datetime-local"
-                labelText="Publication programmée"
+                labelText={t('devo.scheduledPublish')}
                 value={form.publishAt}
                 invalid={!publishAtValid || !form.publishAt}
                 invalidText={
-                  !publishAtValid
-                    ? 'Date de publication invalide.'
-                    : 'Une dévotion programmée exige une date de publication.'
+                  !publishAtValid ? t('devo.invalidPublishDate') : t('devo.scheduledNeedsDate')
                 }
                 onChange={(e) => set({ publishAt: e.target.value })}
               />
@@ -404,13 +400,13 @@ export default function Devotions() {
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">2</span>
-              <span className="cds-form__legend-title">Écriture</span>
-              <span className="cds-form__legend-sub">Le verset du jour</span>
+              <span className="cds-form__legend-title">{t('devo.scripture')}</span>
+              <span className="cds-form__legend-sub">{t('devo.scriptureSub')}</span>
             </div>
             <div>
               <TextInput
                 id="title"
-                labelText="Titre"
+                labelText={t('devo.fieldTitle')}
                 maxLength={200}
                 value={form.title}
                 onChange={(e) => set({ title: e.target.value })}
@@ -420,13 +416,13 @@ export default function Devotions() {
               </div>
             </div>
             <div className="cds-form__row cds-form__row--ref">
-              <TextInput id="verseRef" labelText="Référence" placeholder="ex. Jean 3:16" value={form.verseRef} onChange={(e) => set({ verseRef: e.target.value })} />
-              <TextInput id="verseText" labelText="Texte du verset" value={form.verseText} onChange={(e) => set({ verseText: e.target.value })} />
+              <TextInput id="verseRef" labelText={t('devo.reference')} placeholder={t('devo.referencePlaceholder')} value={form.verseRef} onChange={(e) => set({ verseRef: e.target.value })} />
+              <TextInput id="verseText" labelText={t('devo.verseText')} value={form.verseText} onChange={(e) => set({ verseText: e.target.value })} />
             </div>
 
             {/* Aperçu éditorial vivant */}
             <div className="cds-verse-preview">
-              <span className="cds-verse-preview__eyebrow">Aperçu</span>
+              <span className="cds-verse-preview__eyebrow">{t('devo.preview')}</span>
               {form.verseText.trim() || form.verseRef.trim() ? (
                 <>
                   {form.verseText.trim() && (
@@ -437,9 +433,7 @@ export default function Devotions() {
                   )}
                 </>
               ) : (
-                <span className="cds-verse-preview__placeholder">
-                  Le verset s'affichera ici, tel que les membres le verront.
-                </span>
+                <span className="cds-verse-preview__placeholder">{t('devo.versePlaceholder')}</span>
               )}
             </div>
           </section>
@@ -448,37 +442,37 @@ export default function Devotions() {
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">3</span>
-              <span className="cds-form__legend-title">Méditation &amp; prière</span>
+              <span className="cds-form__legend-title">{t('devo.meditationPrayer')}</span>
             </div>
-            <TextArea id="body" labelText="Méditation" rows={5} value={form.body} onChange={(e) => set({ body: e.target.value })} />
-            <TextArea id="prayer" labelText="Prière" rows={3} value={form.prayer} onChange={(e) => set({ prayer: e.target.value })} />
+            <TextArea id="body" labelText={t('devo.meditation')} rows={5} value={form.body} onChange={(e) => set({ body: e.target.value })} />
+            <TextArea id="prayer" labelText={t('devo.prayer')} rows={3} value={form.prayer} onChange={(e) => set({ prayer: e.target.value })} />
           </section>
 
           {/* 4 · Application */}
           <section className="cds-form__section">
             <div className="cds-form__legend">
               <span className="cds-form__legend-step">4</span>
-              <span className="cds-form__legend-title">Application</span>
-              <span className="cds-form__legend-sub">Mettre en pratique</span>
+              <span className="cds-form__legend-title">{t('devo.application')}</span>
+              <span className="cds-form__legend-sub">{t('devo.applicationSub')}</span>
             </div>
-            <TextInput id="applyTitle" labelText="Titre de l'application" value={form.applyTitle} onChange={(e) => set({ applyTitle: e.target.value })} />
+            <TextInput id="applyTitle" labelText={t('devo.applyTitle')} value={form.applyTitle} onChange={(e) => set({ applyTitle: e.target.value })} />
             <div>
               <TextArea
                 id="applySteps"
-                labelText="Étapes — une par ligne"
-                placeholder={'Relire le verset à voix haute\nPrier pour une personne précise\nNoter une action concrète'}
+                labelText={t('devo.steps')}
+                placeholder={t('devo.stepsPlaceholder')}
                 rows={3}
                 value={form.applySteps}
                 onChange={(e) => set({ applySteps: e.target.value })}
               />
               <div className="cds-countline">
-                {stepsCount === 0 ? 'Au moins une étape requise' : `${stepsCount} étape(s) détectée(s)`}
+                {stepsCount === 0 ? t('devo.minStep') : `${stepsCount} ${t('devo.stepsDetected')}`}
               </div>
             </div>
             <TextInput
               id="author"
-              labelText="Auteur (optionnel)"
-              placeholder="ex. Pasteur Joseph"
+              labelText={t('devo.author')}
+              placeholder={t('devo.authorPlaceholder')}
               value={form.author}
               onChange={(e) => set({ author: e.target.value })}
             />
@@ -487,7 +481,7 @@ export default function Devotions() {
           {/* Principe 6 : pas de bouton désactivé sans explication. */}
           {blocker && (
             <div className="cds-notification cds-notification--warn">
-              <div className="cds-notification__body">Pour enregistrer : {blocker}</div>
+              <div className="cds-notification__body">{t('devo.toSave')} {blocker}</div>
             </div>
           )}
         </div>
@@ -498,33 +492,33 @@ export default function Devotions() {
         open={!!detail}
         onClose={() => setDetail(null)}
         media={detail && <DatePill iso={detail.publishAt} />}
-        eyebrow="Dévotion quotidienne"
-        title={detail?.title ?? 'Dévotion'}
+        eyebrow={t('devo.eyebrow')}
+        title={detail?.title ?? t('devo.fallbackTitle')}
         subtitle={detail && <StatusBadge status={detail.status} />}
       >
         {detail && (
           <>
             <DetailLead>
-              Dévotion du <strong>{detail.date}</strong>, ancrée sur{' '}
+              {t('devo.devotionalOf')} <strong>{detail.date}</strong>, {t('devo.anchoredOn')}{' '}
               <strong>{detail.verseRef}</strong>
-              {detail.author ? `, rédigée par ${detail.author}` : ''}.{' '}
+              {detail.author ? `${t('devo.writtenBy')} ${detail.author}` : ''}.{' '}
               {detail.status === 'published'
-                ? 'Publiée et lisible par les membres.'
+                ? t('devo.publishedReadable')
                 : detail.status === 'scheduled'
-                  ? 'Programmée — pas encore visible.'
-                  : 'Brouillon — non visible des membres.'}
+                  ? t('devo.scheduledNotYet')
+                  : t('devo.draftHidden')}
             </DetailLead>
 
-            <DetailSection title="Informations">
-              <Field label="Date">{detail.date}</Field>
-              <Field label="Verset clé">
+            <DetailSection title={t('devo.info')}>
+              <Field label={t('devo.date')}>{detail.date}</Field>
+              <Field label={t('devo.keyVerse')}>
                 <span className="cds-verse-ref">{detail.verseRef}</span>
               </Field>
-              <Field label="Auteur">{detail.author || '—'}</Field>
-              <Field label="Statut">
+              <Field label={t('devo.authorField')}>{detail.author || '—'}</Field>
+              <Field label={t('devo.colStatus')}>
                 <StatusBadge status={detail.status} />
               </Field>
-              <Field label="Publication">{new Date(detail.publishAt).toLocaleString('fr-FR')}</Field>
+              <Field label={t('devo.publication.field')}>{new Date(detail.publishAt).toLocaleString(dateLocale())}</Field>
             </DetailSection>
           </>
         )}

@@ -1,6 +1,14 @@
 import { ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  t,
+  currentLang,
+  STATUS_MAP,
+  ROLE_MAP,
+  CATEGORY_MAP,
+  type Tone as I18nTone,
+} from '../i18n';
+import {
   Dashboard,
   Favorite,
   Money,
@@ -16,31 +24,33 @@ import {
 
 /* ───────────────────────────────────────────────────────────────
    Navigation partagée — pilote la side nav (AppShell) et les tabs
-   (PageHead). Les libellés/routes restent ceux de l'app existante.
+   (PageHead). `labelKey`/`categoryKey` sont des clés i18n résolues à
+   l'affichage via t() : la nav devient bilingue sans dupliquer la liste.
    ─────────────────────────────────────────────────────────────── */
 export interface NavItem {
   id: string;
   path: string;
-  label: string;
+  /** Clé i18n du libellé (résolue par t() à l'affichage). */
+  labelKey: string;
   icon: typeof Dashboard;
-  category: string | null;
+  /** Clé i18n de la catégorie, ou null (élément hors catégorie). */
+  categoryKey: string | null;
 }
 
 export const NAV: NavItem[] = [
-  { id: 'overview', path: '/', label: "Vue d'ensemble", icon: Dashboard, category: null },
-  { id: 'care', path: '/care', label: 'Soin pastoral', icon: Favorite, category: 'Communauté' },
-  { id: 'people', path: '/people', label: 'Membres', icon: UserMultiple, category: 'Communauté' },
-  { id: 'community', path: '/community', label: 'Communauté', icon: Group, category: 'Communauté' },
-  { id: 'giving', path: '/giving', label: 'Dons', icon: Money, category: 'Finance' },
-  { id: 'content', path: '/content', label: 'Contenus', icon: Video, category: 'Contenu' },
-  { id: 'devotions', path: '/devotions', label: 'Dévotions', icon: Book, category: 'Contenu' },
-  { id: 'communications', path: '/communications', label: 'Communications', icon: SendAlt, category: 'Diffusion' },
-  { id: 'activity', path: '/activity', label: 'Activité', icon: Activity, category: 'Supervision' },
+  { id: 'overview', path: '/', labelKey: 'nav.overview', icon: Dashboard, categoryKey: null },
+  { id: 'care', path: '/care', labelKey: 'nav.care', icon: Favorite, categoryKey: 'nav.cat.community' },
+  { id: 'people', path: '/people', labelKey: 'nav.people', icon: UserMultiple, categoryKey: 'nav.cat.community' },
+  { id: 'community', path: '/community', labelKey: 'nav.community', icon: Group, categoryKey: 'nav.cat.community' },
+  { id: 'giving', path: '/giving', labelKey: 'nav.giving', icon: Money, categoryKey: 'nav.cat.finance' },
+  { id: 'content', path: '/content', labelKey: 'nav.content', icon: Video, categoryKey: 'nav.cat.content' },
+  { id: 'devotions', path: '/devotions', labelKey: 'nav.devotions', icon: Book, categoryKey: 'nav.cat.content' },
+  { id: 'communications', path: '/communications', labelKey: 'nav.communications', icon: SendAlt, categoryKey: 'nav.cat.broadcast' },
+  { id: 'activity', path: '/activity', labelKey: 'nav.activity', icon: Activity, categoryKey: 'nav.cat.supervision' },
 ];
 
 /* ── Tag / pill ── */
-export type Tone =
-  | 'gray' | 'blue' | 'red' | 'green' | 'yellow' | 'purple' | 'magenta' | 'teal';
+export type Tone = I18nTone;
 
 export function Tag({ tone = 'gray', children }: { tone?: Tone; children: ReactNode }) {
   return <span className={`cds-tag cds-tag--${tone}`}>{children}</span>;
@@ -50,63 +60,33 @@ export function LiveTag({ children = 'LIVE' }: { children?: ReactNode }) {
   return <span className="cds-tag cds-tag--live">{children}</span>;
 }
 
-/* ── StatusBadge — source unique de vérité statut → couleur + libellé FR ──
-   Évite que chaque page recalcule son ton et affiche l'anglais brut. */
-const STATUS_MAP: Record<string, { tone: Tone; label: string }> = {
-  // Contenu / dévotions
-  published: { tone: 'green', label: 'Publié' },
-  scheduled: { tone: 'yellow', label: 'Programmé' },
-  draft: { tone: 'gray', label: 'Brouillon' },
-  // Rendez-vous
-  confirmed: { tone: 'green', label: 'Confirmé' },
-  tentative: { tone: 'yellow', label: 'À confirmer' },
-  cancelled: { tone: 'red', label: 'Annulé' },
-  // Dons
-  received: { tone: 'green', label: 'Reçu' },
-  pending: { tone: 'yellow', label: 'En attente' },
-  failed: { tone: 'red', label: 'Échoué' },
-  // Prières
-  approved: { tone: 'green', label: 'Approuvée' },
-  answered: { tone: 'blue', label: 'Répondue' },
-  rejected: { tone: 'red', label: 'Rejetée' },
-};
-
+/* ── StatusBadge — source unique de vérité statut → couleur + libellé bilingue ──
+   Les libellés FR/EN vivent dans i18n (STATUS_MAP) ; on choisit selon la langue. */
 export function StatusBadge({ status }: { status: string }) {
-  const m = STATUS_MAP[status] ?? { tone: 'gray' as Tone, label: status };
-  return <Tag tone={m.tone}>{m.label}</Tag>;
+  const m = STATUS_MAP[status];
+  return <Tag tone={m?.tone ?? 'gray'}>{statusLabel(status)}</Tag>;
 }
 
-/** Libellé FR d'un statut (pour les phrases descriptives), sans le badge. */
+/** Libellé localisé d'un statut (pour les phrases descriptives), sans le badge. */
 export function statusLabel(status: string): string {
-  return STATUS_MAP[status]?.label ?? status;
+  const m = STATUS_MAP[status];
+  return m ? m[currentLang()] : status;
 }
 
-/* ── Rôles : libellé + couleur FR (miroir des rôles backend) ── */
-const ROLE_MAP: Record<string, { tone: Tone; label: string }> = {
-  admin: { tone: 'purple', label: 'Administrateur' },
-  pastor: { tone: 'blue', label: 'Pasteur' },
-  group_leader: { tone: 'teal', label: 'Responsable' },
-  member: { tone: 'gray', label: 'Membre' },
-};
+/* ── Rôles : libellé + couleur bilingues (miroir des rôles backend) ── */
 export function RoleBadge({ role }: { role: string }) {
-  const m = ROLE_MAP[role] ?? { tone: 'gray' as Tone, label: role };
-  return <Tag tone={m.tone}>{m.label}</Tag>;
+  const m = ROLE_MAP[role];
+  return <Tag tone={m?.tone ?? 'gray'}>{roleLabel(role)}</Tag>;
 }
 export function roleLabel(role: string): string {
-  return ROLE_MAP[role]?.label ?? role;
+  const m = ROLE_MAP[role];
+  return m ? m[currentLang()] : role;
 }
 
-/* ── Catégories de contenu : libellé FR (miroir de l'enum backend) ── */
-const CATEGORY_LABEL: Record<string, string> = {
-  sermon: 'Sermon',
-  podcast: 'Podcast',
-  teaching: 'Enseignement',
-  worship: 'Louange',
-  testimony: 'Témoignage',
-  other: 'Autre',
-};
+/* ── Catégories de contenu : libellé bilingue (miroir de l'enum backend) ── */
 export function categoryLabel(category: string): string {
-  return CATEGORY_LABEL[category] ?? category;
+  const m = CATEGORY_MAP[category];
+  return m ? m[currentLang()] : category;
 }
 export function CategoryBadge({ category }: { category: string }) {
   return <Tag tone="gray">{categoryLabel(category)}</Tag>;
@@ -329,7 +309,7 @@ export function PageHead({
           IPCK House
         </a>
         <span className="sep">/</span>
-        <span>Admin</span>
+        <span>{t('app.admin')}</span>
         <span className="sep">/</span>
         <span>{title}</span>
       </div>
@@ -341,17 +321,17 @@ export function PageHead({
         {actions && <div className="cds-page-actions">{actions}</div>}
       </div>
       <div className="cds-tabs" role="tablist">
-        {NAV.map((t) => {
-          const active = location.pathname === t.path;
+        {NAV.map((tab) => {
+          const active = location.pathname === tab.path;
           return (
             <button
-              key={t.id}
+              key={tab.id}
               role="tab"
               aria-selected={active}
               className={'cds-tab' + (active ? ' is-active' : '')}
-              onClick={() => navigate(t.path)}
+              onClick={() => navigate(tab.path)}
             >
-              {t.label}
+              {t(tab.labelKey)}
             </button>
           );
         })}

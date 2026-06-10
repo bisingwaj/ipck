@@ -5,6 +5,7 @@ import { UserMultiple } from '@carbon/icons-react';
 import { PageHead, Panel, Empty, RoleBadge, Avatar } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 import { DetailPanel, DetailSection, DetailLead, Field } from '../components/DetailPanel';
+import { t, dateLocale } from '../i18n';
 
 interface Member {
   id: string;
@@ -16,29 +17,24 @@ interface Member {
   createdAt: string;
 }
 
-const ROLE_DESC: Record<string, string> = {
-  admin: 'Administrateur — accès complet au dashboard, dont les exports financiers.',
-  pastor: 'Pasteur — gère le soin pastoral, les contenus et la communauté.',
-  group_leader: 'Responsable de groupe — anime un groupe de maison.',
-  member: 'Membre de la communauté — utilise l’app mobile.',
-};
+const roleDesc = (role: string) => t(`role.desc.${role}`);
 
 const hasName = (m: Member) => !!`${m.firstName ?? ''} ${m.lastName ?? ''}`.trim();
 const fullName = (m: { firstName: string | null; lastName: string | null }) =>
-  `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || 'Membre';
+  `${m.firstName ?? ''} ${m.lastName ?? ''}`.trim() || t('people.member');
 
 /** Graine d'avatar : le nom si présent, sinon le téléphone (lignes distinctes). */
 const avatarSeed = (m: Member) => (hasName(m) ? fullName(m) : m.phone || m.id);
 
-/** Date courte FR ("31 mai 2026"). */
+/** Date courte localisée ("31 mai 2026" / "May 31, 2026"). */
 const dateShort = (iso: string) =>
-  new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  new Date(iso).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** Streak : flamme + valeur si actif, "—" discret sinon. */
 function Streak({ count }: { count: number }) {
   if (count <= 0) return <span className="text-05">—</span>;
   return (
-    <span className="cds-streak" title={`${count} jour(s) consécutif(s)`}>
+    <span className="cds-streak" title={`${count} ${t('people.streakDays')}`}>
       <span className="cds-streak__flame">🔥</span>
       {count}
     </span>
@@ -59,29 +55,29 @@ export default function People() {
 
   return (
     <>
-      <PageHead title="Membres" subtitle="Annuaire de la communauté & nouveaux arrivants" />
+      <PageHead title={t('people.title')} subtitle={t('people.subtitle')} />
       <div className="cds-tab-panel">
         <div className="cds-stack">
           <div className="cds-split" style={{ gridTemplateColumns: '1.6fr 1fr' }}>
             <Panel
-              title="Annuaire"
-              sub={members.data ? `${members.data.length} membres` : undefined}
+              title={t('people.directory')}
+              sub={members.data ? `${members.data.length} ${t('people.members')}` : undefined}
               actions={<FreshnessBadge query={members} />}
             >
               <QueryBoundary
                 query={members}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty icon={<UserMultiple size={20} />}>Aucun membre dans l'annuaire.</Empty>}
-                loadingLabel="Chargement de l'annuaire…"
+                empty={<Empty icon={<UserMultiple size={20} />}>{t('people.emptyDirectory')}</Empty>}
+                loadingLabel={t('people.loadingDirectory')}
               >
                 {(rows) => (
                   <table className="cds-data-table cds-data-table--zebra">
                     <thead>
                       <tr>
-                        <th>Membre</th>
-                        <th>Téléphone</th>
-                        <th>Rôle</th>
-                        <th className="num">Streak</th>
+                        <th>{t('people.colMember')}</th>
+                        <th>{t('people.colPhone')}</th>
+                        <th>{t('people.colRole')}</th>
+                        <th className="num">{t('people.colStreak')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -103,7 +99,7 @@ export default function People() {
                               <Avatar name={avatarSeed(m)} size={28} />
                               <div className="cds-namecell__body">
                                 <div className="cds-namecell__title">{fullName(m)}</div>
-                                {!hasName(m) && <div className="cds-namecell__sub">Profil incomplet</div>}
+                                {!hasName(m) && <div className="cds-namecell__sub">{t('people.incompleteProfile')}</div>}
                               </div>
                             </div>
                           </td>
@@ -123,22 +119,22 @@ export default function People() {
             </Panel>
 
             <Panel
-              title="Nouveaux membres"
-              sub={fresh.data ? `${fresh.data.length} récents` : undefined}
+              title={t('people.newMembers')}
+              sub={fresh.data ? `${fresh.data.length} ${t('people.recent')}` : undefined}
               actions={<FreshnessBadge query={fresh} />}
             >
               <QueryBoundary
                 query={fresh}
                 isEmpty={(d) => d.length === 0}
-                empty={<Empty>Aucun nouveau membre</Empty>}
-                loadingLabel="Chargement…"
+                empty={<Empty>{t('people.emptyNew')}</Empty>}
+                loadingLabel={t('people.loading')}
               >
                 {(rows) => (
                   <table className="cds-data-table cds-data-table--compact">
                     <thead>
                       <tr>
-                        <th>Membre</th>
-                        <th>Inscrit le</th>
+                        <th>{t('people.colMember')}</th>
+                        <th>{t('people.colJoined')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -178,43 +174,40 @@ export default function People() {
         open={!!detail}
         onClose={() => setDetail(null)}
         media={detail && <Avatar name={avatarSeed(detail)} size={44} />}
-        eyebrow="Membre"
-        title={detail ? fullName(detail) : 'Membre'}
+        eyebrow={t('people.eyebrow')}
+        title={detail ? fullName(detail) : t('people.member')}
         subtitle={detail && <RoleBadge role={detail.role} />}
       >
         {detail && (
           <>
             <DetailLead>
-              <strong>{fullName(detail)}</strong> a rejoint l'IPCK le{' '}
-              {new Date(detail.createdAt).toLocaleDateString('fr-FR', {
+              <strong>{fullName(detail)}</strong> {t('people.joinedOn')}{' '}
+              {new Date(detail.createdAt).toLocaleDateString(dateLocale(), {
                 day: 'numeric',
                 month: 'long',
                 year: 'numeric',
               })}
-              . {ROLE_DESC[detail.role] ?? ''}{' '}
+              . {roleDesc(detail.role)}{' '}
               {detail.streakCount > 0
-                ? `Série de lecture en cours : ${detail.streakCount} jour(s).`
-                : 'Aucune série de lecture en cours.'}
+                ? `${t('people.streakOngoing')} ${detail.streakCount} ${t('people.streakDaysShort')}`
+                : t('people.noStreak')}
             </DetailLead>
 
-            <DetailSection title="Identité">
-              <Field label="Nom">{fullName(detail)}</Field>
-              <Field label="Téléphone">
+            <DetailSection title={t('people.identity')}>
+              <Field label={t('people.name')}>{fullName(detail)}</Field>
+              <Field label={t('people.colPhone')}>
                 <span className="text-mono">{detail.phone}</span>
               </Field>
-              <Field label="Rôle" hint={ROLE_DESC[detail.role]}>
+              <Field label={t('people.colRole')} hint={roleDesc(detail.role)}>
                 <RoleBadge role={detail.role} />
               </Field>
             </DetailSection>
 
-            <DetailSection title="Engagement">
-              <Field
-                label="Série"
-                hint="Nombre de jours consécutifs de lecture de la dévotion."
-              >
+            <DetailSection title={t('people.engagement')}>
+              <Field label={t('people.streak')} hint={t('people.streakHint')}>
                 <Streak count={detail.streakCount} />
               </Field>
-              <Field label="Inscrit le">{new Date(detail.createdAt).toLocaleString('fr-FR')}</Field>
+              <Field label={t('people.colJoined')}>{new Date(detail.createdAt).toLocaleString(dateLocale())}</Field>
             </DetailSection>
           </>
         )}

@@ -3,6 +3,7 @@ import { UseQueryResult } from '@tanstack/react-query';
 import { Loading } from '@carbon/react';
 import { Renew, WarningAlt, CloudOffline } from '@carbon/icons-react';
 import { toApiError } from '../api/errors';
+import { t } from '../i18n';
 
 /**
  * Principe 2 (cycle d'état explicite) & 6 (rien de silencieux) :
@@ -43,7 +44,7 @@ export function QueryBoundary<T>({
 
   // 3) Vide.
   if (query.data !== undefined && isEmpty?.(query.data)) {
-    return <>{empty ?? <div className="cds-empty">Aucune donnée.</div>}</>;
+    return <>{empty ?? <div className="cds-empty">{t('state.noData')}</div>}</>;
   }
 
   // 4) Succès (data garantie définie ici).
@@ -69,13 +70,13 @@ export function ErrorState({
       </span>
       <div className="cds-state__body">
         <div className="cds-state__title">
-          {e.isNetwork ? 'Connexion impossible' : 'Échec du chargement'}
+          {e.isNetwork ? t('state.cannotConnect') : t('state.loadFailed')}
         </div>
         <div className="cds-state__msg">{e.message}</div>
       </div>
       {onRetry && (
         <button className="cds-btn cds-btn--ghost cds-btn--sm" onClick={onRetry} disabled={retrying}>
-          {retrying ? 'Nouvel essai…' : 'Réessayer'}
+          {retrying ? t('state.retrying') : t('state.retry')}
           <Renew size={16} />
         </button>
       )}
@@ -90,15 +91,15 @@ export function ErrorState({
 export function FreshnessBadge({ query }: { query: UseQueryResult<unknown> }) {
   if (query.isFetching && !query.isLoading) {
     return (
-      <span className="cds-fresh cds-fresh--syncing" title="Synchronisation avec le serveur">
-        <Renew size={12} /> Actualisation…
+      <span className="cds-fresh cds-fresh--syncing" title={t('state.syncTitle')}>
+        <Renew size={12} /> {t('state.syncing')}
       </span>
     );
   }
   if (query.isError && query.data !== undefined) {
     return (
-      <span className="cds-fresh cds-fresh--stale" title="La dernière synchronisation a échoué">
-        <WarningAlt size={12} /> Données possiblement obsolètes
+      <span className="cds-fresh cds-fresh--stale" title={t('state.staleTitle')}>
+        <WarningAlt size={12} /> {t('state.stale')}
       </span>
     );
   }
