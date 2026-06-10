@@ -89,43 +89,50 @@ export class GroupsController {
     return this.groups.update(user.id, user.role, id, dto);
   }
 
-  // ── Gestion des membres (staff) ──
+  // ── Gestion des membres (staff ou leader du groupe) ──
   @Get(':id/members')
-  @Roles('pastor')
-  @ApiOperation({ summary: 'Membres du groupe (staff)' })
-  members(@Param('id') id: string) {
-    return this.groups.listMembers(id);
+  @ApiOperation({ summary: 'Membres du groupe (staff ou leader du groupe)' })
+  members(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.groups.listMembers(id, user.id, user.role);
   }
 
   @Post(':id/members')
   @HttpCode(HttpStatus.OK)
-  @Roles('pastor')
-  @ApiOperation({ summary: 'Ajoute un membre au groupe (staff)' })
-  addMember(@Param('id') id: string, @Body() dto: AddMemberDto) {
-    return this.groups.addMember(id, dto.userId);
+  @ApiOperation({ summary: 'Ajoute un membre au groupe (staff ou leader du groupe)' })
+  addMember(@CurrentUser() user: AuthUser, @Param('id') id: string, @Body() dto: AddMemberDto) {
+    return this.groups.addMember(id, user.id, user.role, dto.userId);
   }
 
   @Delete(':id/members/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles('pastor')
-  @ApiOperation({ summary: 'Retire un membre du groupe (staff)' })
-  removeMember(@Param('id') id: string, @Param('userId') userId: string) {
-    return this.groups.removeMember(id, userId);
+  @ApiOperation({ summary: 'Retire un membre du groupe (staff ou leader du groupe)' })
+  removeMember(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.groups.removeMember(id, user.id, user.role, userId);
   }
 
-  // ── Modération de la conversation (staff) ──
+  // ── Modération de la conversation (staff ou leader du groupe) ──
   @Get(':id/admin/messages')
-  @Roles('pastor')
-  @ApiOperation({ summary: 'Conversation du groupe pour modération (staff)' })
-  adminMessages(@Param('id') id: string, @Query() query: PaginationQueryDto) {
-    return this.groups.messagesForStaff(id, query);
+  @ApiOperation({ summary: 'Conversation du groupe pour modération (staff ou leader du groupe)' })
+  adminMessages(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.groups.messagesForStaff(id, user.id, user.role, query);
   }
 
   @Delete(':id/messages/:messageId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @Roles('pastor')
-  @ApiOperation({ summary: 'Supprime un message du groupe (staff)' })
-  deleteMessage(@Param('id') id: string, @Param('messageId') messageId: string) {
-    return this.groups.deleteMessage(id, messageId);
+  @ApiOperation({ summary: 'Supprime un message du groupe (staff ou leader du groupe)' })
+  deleteMessage(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.groups.deleteMessage(id, user.id, user.role, messageId);
   }
 }
