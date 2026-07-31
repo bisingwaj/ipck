@@ -47,13 +47,9 @@ export default function PrayerDetailScreen() {
     );
   }
 
-  // Le mur de prière se valide une fois par jour : si l'utilisateur a déjà soutenu
-  // une intention (celle-ci ou une autre), tout le mur est verrouillé.
-  const wallValidated = prayed || wall.some(x => x.iPrayed);
-
-  // Soutien à sens unique : une fois le mur validé, plus d'accès au soutien.
+  // Soutien à sens unique : on peut prier pour une requête une fois.
   const onPray = async () => {
-    if (wallValidated) return; // mur déjà validé → verrouillé
+    if (prayed) return;
     setPrayed(true);
     setCount(c => c + 1);
     try {
@@ -62,12 +58,15 @@ export default function PrayerDetailScreen() {
       if (res && res.blessingsAwarded > 0) {
         toast.success(
           'Amen 🙏',
-          `Thank you for lifting this need before the Lord. ${res.blessingsAwarded} Blessings have been added to your Grace Reserve. "The prayer of a righteous person is powerful." (James 5:16)`,
+          `Thank you for lifting this need before the Lord. +${res.blessingsAwarded} Blessings have been added to your Grace Reserve. "The prayer of a righteous person is powerful." (James 5:16)`,
         );
+      } else {
+        toast.success('Amen 🙏', 'Thank you for lifting this need before the Lord.');
       }
     } catch {
       setPrayed(false);
       setCount(c => Math.max(0, c - 1));
+      toast.error('Error', 'Could not register your prayer. Please try again.');
     }
   };
 
@@ -104,12 +103,12 @@ export default function PrayerDetailScreen() {
 
         <Pressable
           onPress={onPray}
-          disabled={wallValidated}
-          style={[styles.bigBtn, prayed && { backgroundColor: tokens.success }, wallValidated && !prayed && styles.bigBtnLocked]}
+          disabled={prayed}
+          style={[styles.bigBtn, prayed && { backgroundColor: tokens.success }]}
         >
-          <Icon name={prayed ? 'check' : wallValidated ? 'lock' : 'pray'} size={20} color={prayed ? '#fff' : wallValidated ? tokens.textTertiary : tokens.primary} strokeWidth={prayed ? 2.5 : 2} />
-          <Text style={[styles.bigBtnTxt, prayed && { color: '#fff' }, wallValidated && !prayed && { color: tokens.textTertiary }]}>
-            {prayed ? 'You prayed for this' : wallValidated ? 'Prayer wall validated today' : 'I\'m praying'}
+          <Icon name={prayed ? 'check' : 'pray'} size={20} color={prayed ? '#fff' : tokens.primary} strokeWidth={prayed ? 2.5 : 2} />
+          <Text style={[styles.bigBtnTxt, prayed && { color: '#fff' }]}>
+            {prayed ? 'You prayed for this' : 'I\'m praying'}
           </Text>
         </Pressable>
 

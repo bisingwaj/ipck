@@ -11,24 +11,35 @@ export default function PrayerWallScreen() {
   const nav = useNavigation<any>();
   const prayerWall = usePrayerWall();
   const pray = usePrayForRequest();
-  const [prayedId, setPrayedId] = useState<string | null>(null);
-  // Le mur se valide une fois par jour : soutenir une intention valide tout le mur
-  // et verrouille l'accès au soutien (notification du gain de Blessings).
-  const validated = !!prayedId || prayerWall.some(p => p.iPrayed);
+  const [optimisticPrayedIds, setOptimisticPrayedIds] = useState<Set<string>>(new Set());
+  
+  // Un indicateur visuel pour savoir si l'utilisateur a déjà prié aujourd'hui
+  // (et potentiellement gagné sa récompense journalière).
+  const hasPrayedToday = prayerWall.some(p => p.iPrayed) || optimisticPrayedIds.size > 0;
 
   const onPray = (id: string) => {
-    if (validated) return; // mur déjà validé → verrouillé
-    setPrayedId(id); // optimiste : verrouille tout le mur
+    if (optimisticPrayedIds.has(id)) return;
+    
+    setOptimisticPrayedIds(prev => new Set(prev).add(id));
+    
     pray.mutate(id, {
       onSuccess: (res) => {
         if (res && res.blessingsAwarded > 0) {
           toast.success(
             'Amen 🙏',
-            `Thank you for standing in the gap. ${res.blessingsAwarded} Blessings have been added to your Grace Reserve. The prayer wall is sealed for today. "Carry each other's burdens." (Galatians 6:2)`,
+            `Thank you for standing in the gap. +${res.blessingsAwarded} Blessings have been added to your Grace Reserve. "Carry each other's burdens."`,
           );
+        } else {
+          toast.success('Amen 🙏', 'Thank you for standing in the gap.');
         }
       },
-      onError: () => setPrayedId(null), // rollback si échec
+      onError: () => {
+        setOptimisticPrayedIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      },
     });
   };
 
@@ -45,17 +56,17 @@ export default function PrayerWallScreen() {
         <Icon name="chevron" size={18} color={tokens.textTertiary} />
       </Pressable>
 
-      {validated && (
+      {hasPrayedToday && (
         <View style={styles.lockedBanner}>
           <View style={styles.lockedIcon}><Icon name="check" size={16} color={tokens.success} strokeWidth={3} /></View>
           <Text style={styles.lockedTxt}>
-            <Text style={styles.lockedBold}>Prayer wall validated today.</Text> +5 Blessings earned — come back tomorrow.
+            <Text style={styles.lockedBold}>Daily Grace received.</Text> +5 Blessings earned today for standing in the gap.
           </Text>
         </View>
       )}
 
       {prayerWall.map(p => {
-        const mine = prayedId === p.id || p.iPrayed; // l'intention que l'utilisateur a soutenue
+        const mine = optimisticPrayedIds.has(p.id) || p.iPrayed;
         return (
           <Pressable key={p.id} onPress={() => nav.navigate('PrayerDetail', { id: p.id })} style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -70,25 +81,18 @@ export default function PrayerWallScreen() {
             </View>
             <Text style={styles.text}>{p.text}</Text>
             <View style={styles.cardFoot}>
-              {validated ? (
-                mine ? (
-                  <View style={[styles.amenBtn, styles.amenBtnOn]}>
-                    <Icon name="check" size={14} color="#fff" strokeWidth={3} />
-                    <Text style={[styles.amenTxt, { color: '#fff' }]}>You prayed</Text>
-                  </View>
-                ) : (
-                  <View style={styles.amenBtnLocked}>
-                    <Icon name="lock" size={13} color={tokens.textTertiary} />
-                    <Text style={[styles.amenTxt, { color: tokens.textTertiary }]}>Validated today</Text>
-                  </View>
-                )
+              {mine ? (
+                <View style={[styles.amenBtn, styles.amenBtnOn]}>
+                  <Icon name="check" size={14} color="#fff" strokeWidth={3} />
+                  <Text style={[styles.amenTxt, { color: '#fff' }]}>You prayed</Text>
+                </View>
               ) : (
                 <Pressable onPress={() => onPray(p.id)} style={styles.amenBtn}>
                   <Icon name="pray" size={14} color={tokens.text} />
                   <Text style={styles.amenTxt}>I'll pray</Text>
                 </Pressable>
               )}
-              <Text style={styles.count}>{p.amen + (mine && !p.iPrayed ? 1 : 0)} prayed</Text>
+              <Text style={styles.count}>{p.amen + (optimisticPrayedIds.has(p.id) && !p.iPrayed ? 1 : 0)} prayed</Text>
             </View>
           </Pressable>
         );

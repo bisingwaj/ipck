@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, TextInput } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { tokens } from '../../theme/tokens';
 import { fonts } from '../../theme/typography';
@@ -16,6 +16,8 @@ export default function WatchListScreen() {
   const content = useContent();
   const live = useLiveContent();
   const [category, setCategory] = useState<ContentCategory | 'all'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
 
   // Catégories réellement présentes (dynamique) + comptage.
   const presentCategories = useMemo(
@@ -25,22 +27,52 @@ export default function WatchListScreen() {
 
   // Sections à rendre selon le filtre. Le contenu live est dans la bannière → exclu des listes.
   const sections = useMemo(() => {
-    const vod = content.filter(c => !c.isLive);
+    let vod = content.filter(c => !c.isLive);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      vod = vod.filter(c => 
+        c.title.toLowerCase().includes(q) || 
+        (c.speaker && c.speaker.toLowerCase().includes(q)) || 
+        (c.series && c.series.toLowerCase().includes(q))
+      );
+    }
     const cats = category === 'all' ? presentCategories : presentCategories.filter(c => c === category);
     return cats
       .map(cat => ({ cat, items: vod.filter(c => c.category === cat) }))
       .filter(s => s.items.length > 0);
-  }, [content, category, presentCategories]);
+  }, [content, category, presentCategories, searchQuery]);
 
   return (
     <ScreenContainer>
       <TopBar
         titleLarge="Watch"
-        actions={[{ icon: 'search', onPress: () => toast.info('Coming soon', 'Search is on its way.') }]}
+        actions={[{ icon: 'search', onPress: () => {
+          setIsSearching(!isSearching);
+          if (isSearching) setSearchQuery('');
+        }}]}
       />
 
+      {isSearching && (
+        <View style={styles.searchWrap}>
+          <Icon name="search" size={18} color={tokens.textTertiary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search sermons, series, speakers..."
+            placeholderTextColor={tokens.textTertiary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoFocus
+          />
+          {!!searchQuery && (
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={8}>
+              <Icon name="close" size={18} color={tokens.textSecondary} />
+            </Pressable>
+          )}
+        </View>
+      )}
+
       {/* Bannière live — pilotée par le contenu marqué isLive depuis le dashboard */}
-      {live && (
+      {!isSearching && live && (
         <Pressable onPress={() => nav.navigate('Live')} style={styles.liveBanner}>
           <View style={StyleSheet.absoluteFill}>
             <GeoArt kind="live" height={160} />
@@ -113,6 +145,8 @@ function ContentRow({ item, onOpen }: { item: Content; onOpen: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  searchWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: tokens.surface, borderRadius: 12, paddingHorizontal: 12, height: 44, marginBottom: 16, gap: 8 },
+  searchInput: { flex: 1, fontFamily: fonts.ui, fontSize: 15, color: tokens.text, padding: 0 },
   liveBanner: { height: 160, borderRadius: 14, overflow: 'hidden', marginBottom: 18, flexDirection: 'row' },
   liveOverlay: { position: 'absolute', inset: 0, backgroundColor: 'rgba(20,24,31,0.5)' } as any,
   liveEyebrow: { fontFamily: fonts.uiBold, fontSize: 10, letterSpacing: 1.4, color: 'rgba(255,255,255,0.7)' },

@@ -2,6 +2,7 @@
   "expo": {
     "name": "IPCK Connect",
     "slug": "ipck-connect",
+    "icon": "./assets/icon.png",
     "scheme": "ipckconnect",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -22,7 +23,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#1F6FEB"
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
       },
       "package": "cd.ipck.connect"
     },

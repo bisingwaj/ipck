@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Loading } from '@carbon/react';
 import { useAuth } from './auth/AuthContext';
+import { useLang } from './i18n';
 import AppShell from './components/AppShell';
 import Login from './pages/Login';
 import Overview from './pages/Overview';
@@ -15,14 +16,15 @@ import Communications from './pages/Communications';
 
 function Protected({ children }: { children: JSX.Element }) {
   const { isStaff, ready } = useAuth();
+  const { t } = useLang();
   const hasToken = !!localStorage.getItem('ipck_admin_token');
   // Principe 2 : tant que la session n'est pas réhydratée, on n'affirme rien
   // (ni connecté, ni déconnecté) — on évite le faux écran de login.
   if (hasToken && !ready) {
     return (
       <div className="cds-state cds-state--loading" style={{ minHeight: '100vh' }}>
-        <Loading withOverlay={false} description="Vérification de la session…" />
-        <span className="cds-state__label">Vérification de la session…</span>
+        <Loading withOverlay={false} description={t('state.sessionCheck')} />
+        <span className="cds-state__label">{t('state.sessionCheck')}</span>
       </div>
     );
   }
@@ -31,7 +33,12 @@ function Protected({ children }: { children: JSX.Element }) {
 }
 
 export default function App() {
+  // Au changement de langue, on remonte tout l'arbre routé pour que même les
+  // helpers « plats » (statusLabel, t…) se re-rendent. display:contents évite
+  // d'introduire une boîte de mise en page parasite.
+  const { lang } = useLang();
   return (
+    <div key={lang} style={{ display: 'contents' }}>
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/" element={<Protected><Overview /></Protected>} />
@@ -45,5 +52,6 @@ export default function App() {
       <Route path="/activity" element={<Protected><ActivityPage /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </div>
   );
 }

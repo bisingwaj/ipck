@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { UserMultiple, Money, VideoChat, Favorite, Book } from '@carbon/icons-react';
 import { api } from '../api/client';
+import { useLang } from '../i18n';
 import { PageHead, Tile, Panel, Meter } from '../components/ui';
 import { QueryBoundary, FreshnessBadge } from '../components/state';
 
@@ -18,30 +19,31 @@ interface EngagementMetric {
   target: number;
 }
 
-// Référentiel des KPIs : libellé FR (le backend renvoie l'anglais), icône,
-// page de détail, et format (monétaire ou nombre). Source unique côté front.
+// Référentiel des KPIs : clé i18n du libellé (le backend renvoie l'anglais),
+// icône, page de détail, et format (monétaire ou nombre). Source unique front.
 interface KpiMeta {
-  label: string;
+  labelKey: string;
   icon: typeof Money;
   to?: string;
   money?: boolean;
 }
 const KPI_META: Record<string, KpiMeta> = {
-  members: { label: 'Membres actifs', icon: UserMultiple, to: '/people' },
-  giving: { label: 'Dons · ce mois-ci', icon: Money, to: '/giving', money: true },
-  viewers: { label: 'Direct · pic du jour', icon: VideoChat, to: '/content' },
-  prayers: { label: 'File de prières · en attente', icon: Favorite, to: '/care' },
-  devo: { label: 'Complétion dévotion', icon: Book, to: '/devotions' },
+  members: { labelKey: 'kpi.members', icon: UserMultiple, to: '/people' },
+  giving: { labelKey: 'kpi.giving', icon: Money, to: '/giving', money: true },
+  viewers: { labelKey: 'kpi.viewers', icon: VideoChat, to: '/content' },
+  prayers: { labelKey: 'kpi.prayers', icon: Favorite, to: '/care' },
+  devo: { labelKey: 'kpi.devo', icon: Book, to: '/devotions' },
 };
 
-// Métriques d'engagement : traduction par label backend connu.
-const ENGAGEMENT_LABEL: Record<string, string> = {
-  'Devotional completion': 'Complétion dévotion',
-  'Members active 7d': 'Membres actifs (7 j)',
+// Métriques d'engagement : clé i18n par label backend connu.
+const ENGAGEMENT_KEY: Record<string, string> = {
+  'Devotional completion': 'engagement.devotionalCompletion',
+  'Members active 7d': 'engagement.membersActive7d',
 };
 
 export default function Overview() {
   const navigate = useNavigate();
+  const { lang, t } = useLang();
   const overview = useQuery({
     queryKey: ['overview'],
     queryFn: async () => (await api.get('/admin/overview')).data as { kpis: Kpi[] },
@@ -54,12 +56,12 @@ export default function Overview() {
   return (
     <>
       <PageHead
-        title="Vue d'ensemble"
-        subtitle="Indicateurs clés en direct · communauté, soin, dons & contenus"
+        title={t('overview.title')}
+        subtitle={t('overview.subtitle')}
         actions={<FreshnessBadge query={overview} />}
       />
       <div className="cds-tab-panel">
-        <QueryBoundary query={overview} loadingLabel="Chargement des indicateurs…">
+        <QueryBoundary query={overview} loadingLabel={t('overview.loadingKpis')}>
           {(data) => (
             <div className="cds-stack">
               <div
@@ -75,14 +77,16 @@ export default function Overview() {
                   const num = k.value ?? 0;
                   const value = meta?.money
                     ? `$${num.toLocaleString('en-US')}`
-                    : num.toLocaleString('fr-FR');
+                    : num.toLocaleString(lang === 'fr' ? 'fr-FR' : 'en-US');
                   return (
                     <Tile
                       key={k.id}
-                      label={meta?.label ?? k.label}
+                      label={meta ? t(meta.labelKey) : k.label}
                       value={value}
                       live={k.live}
-                      caption={k.live ? 'en direct' : meta?.to ? 'Voir le détail →' : undefined}
+                      caption={
+                        k.live ? t('overview.live') : meta?.to ? t('overview.seeDetail') : undefined
+                      }
                       icon={Icon ? <Icon size={16} /> : undefined}
                       onClick={meta?.to ? () => navigate(meta.to!) : undefined}
                     />
@@ -91,15 +95,15 @@ export default function Overview() {
               </div>
 
               <Panel
-                title="Engagement"
-                sub="Activité des membres sur 7 jours · vs cible"
+                title={t('overview.engagement')}
+                sub={t('overview.engagementSub')}
                 actions={<FreshnessBadge query={engagement} />}
               >
                 <QueryBoundary
                   query={engagement}
                   isEmpty={(d) => d.length === 0}
-                  empty={<p className="cds-tile__caption">Aucune donnée d'engagement.</p>}
-                  loadingLabel="Chargement de l'engagement…"
+                  empty={<p className="cds-tile__caption">{t('overview.engagementEmpty')}</p>}
+                  loadingLabel={t('overview.loadingEngagement')}
                 >
                   {(metrics) => (
                     <div
@@ -114,11 +118,11 @@ export default function Overview() {
                         return (
                           <Tile
                             key={m.label}
-                            label={ENGAGEMENT_LABEL[m.label] ?? m.label}
+                            label={ENGAGEMENT_KEY[m.label] ? t(ENGAGEMENT_KEY[m.label]) : m.label}
                             value={`${pct}%`}
                             delta={pct - target}
                             good
-                            caption={`cible ${target}%`}
+                            caption={`${t('overview.target')} ${target}%`}
                           >
                             <Meter pct={pct} target={target} tone={onTarget ? 'green' : 'yellow'} />
                           </Tile>
